@@ -12,27 +12,11 @@ from ..model.base_model import Package, TeX
 from ..model.raw import Raw
 
 
-def _collect_packages(
-    node: TeX, seen: set[Package | str] | None = None
-) -> set[Package | str]:
-    """Recursively collect all required packages from a TeX tree.
-
-    Args:
-        node: Root of the TeX tree to scan
-        seen: Set of already-seen packages (for cycle detection)
-
-    Returns:
-        Set of all packages required by the tree
-    """
-    if seen is None:
-        seen = set()
-
+def _collect_packages(node: TeX) -> set[Package | str]:
+    """Recursively collect all required packages from a TeX tree."""
     packages = set(node.required_packages)
-
-    # Recursively collect from children
     for child in node.children:
-        packages.update(_collect_packages(child, seen))
-
+        packages.update(_collect_packages(child))
     return packages
 
 

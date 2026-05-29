@@ -1,21 +1,15 @@
 #!/bin/bash
-# Build the demo LaTeX document using tectonic
+# Build a .pytex document into a PDF using tectonic.
+# Usage: ./build.sh [input.pytex]   (defaults to example.pytex)
 
 set -e  # Exit on error
 
-echo "Building PyLaTeX demo document with tectonic..."
+INPUT="${1:-example.pytex}"
+PDF="${INPUT%.pytex}.pdf"
+
+echo "Building PyTeX document: $INPUT"
 echo "================================================"
-echo
 
-# Run the Python demo to generate the .tex file
-echo "Step 1: Generating LaTeX file..."
-python src/main.py > /dev/null
-
-echo "✓ LaTeX file generated: demo_output.tex"
-echo
-echo "Step 2: Compiling with tectonic..."
-
-# Check if tectonic is installed
 if ! command -v tectonic &> /dev/null; then
     echo "Error: tectonic is not installed!"
     echo "Install it with:"
@@ -26,20 +20,15 @@ if ! command -v tectonic &> /dev/null; then
     exit 1
 fi
 
-# Compile the document
-tectonic demo_output.tex
+# Generate the .tex file and (with --compile) the PDF via tectonic.
+python -m pytex.scripts.build_pytex "$INPUT" --compile
 
-echo
 echo "================================================"
-echo "✅ Build complete!"
-echo "📄 PDF output: demo_output.pdf ($(du -h demo_output.pdf | cut -f1))"
-echo "================================================"
+echo "Build complete! PDF output: $PDF"
 
 # Open the PDF if possible
 if command -v xdg-open &> /dev/null; then
-    echo "Opening PDF..."
-    xdg-open demo_output.pdf 2>/dev/null &
+    xdg-open "$PDF" 2>/dev/null &
 elif command -v open &> /dev/null; then
-    echo "Opening PDF..."
-    open demo_output.pdf
+    open "$PDF"
 fi

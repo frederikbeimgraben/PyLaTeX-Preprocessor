@@ -1,14 +1,14 @@
 """Strongly-typed LaTeX builtin macros.
 
 This module provides type-safe wrappers for common LaTeX commands.
-Each macro is implemented as a dedicated class with proper type hints,
-enabling IDE autocomplete and static type checking.
+Each macro is a dedicated class declaring its LaTeX command id and arity via
+``MACRO_ID`` / ``N_POSITIONAL`` class attributes (see ``BaseMacro``). The
+typed constructor signatures live in the accompanying ``.pyi`` stub.
 """
 
-from typing import Protocol, override
+from typing import ClassVar, Protocol, override
 
 from ...model.base_macro import BaseMacro
-from ...model.base_model import TeX
 
 # ============================================================================
 # Utility Macros
@@ -18,20 +18,7 @@ from ...model.base_model import TeX
 class _Relax(BaseMacro):
     """The \\relax macro - does nothing, used as a no-op or separator."""
 
-    @property
-    @override
-    def id(self) -> str:
-        return "relax"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 0
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "relax"
 
 
 Relax = _Relax()
@@ -40,20 +27,7 @@ Relax = _Relax()
 class _Newline(BaseMacro):
     """The \\\\ (newline/line break) macro."""
 
-    @property
-    @override
-    def id(self) -> str:
-        return "\\"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 0
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "\\"
 
 
 Newline = _Newline()
@@ -67,79 +41,69 @@ Newline = _Newline()
 class Bold(BaseMacro):
     """The \\textbf macro - renders text in bold.
 
-    Args:
-        content: The text content to render in bold.
-
     Example:
         Bold(Raw("important text"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "textbf"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "textbf"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Italic(BaseMacro):
     """The \\textit macro - renders text in italic.
 
-    Args:
-        content: The text content to render in italic.
-
     Example:
         Italic(Raw("emphasized text"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "textit"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "textit"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Texttt(BaseMacro):
     """The \\texttt macro - renders text in monospace (typewriter) font.
 
-    Args:
-        content: The text content to render in monospace.
-
     Example:
         Texttt(Raw("code snippet"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "texttt"
+    MACRO_ID: ClassVar[str] = "texttt"
+    N_POSITIONAL: ClassVar[int] = 1
 
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
 
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+class Underline(BaseMacro):
+    """The \\underline macro - underlines text."""
+
+    MACRO_ID: ClassVar[str] = "underline"
+    N_POSITIONAL: ClassVar[int] = 1
+
+
+class Emph(BaseMacro):
+    """The \\emph macro - semantic emphasis."""
+
+    MACRO_ID: ClassVar[str] = "emph"
+    N_POSITIONAL: ClassVar[int] = 1
+
+
+class SmallCaps(BaseMacro):
+    """The \\textsc macro - small capitals."""
+
+    MACRO_ID: ClassVar[str] = "textsc"
+    N_POSITIONAL: ClassVar[int] = 1
+
+
+class Superscript(BaseMacro):
+    """The \\textsuperscript macro."""
+
+    MACRO_ID: ClassVar[str] = "textsuperscript"
+    N_POSITIONAL: ClassVar[int] = 1
+
+
+class Subscript(BaseMacro):
+    """The \\textsubscript macro."""
+
+    MACRO_ID: ClassVar[str] = "textsubscript"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 # ============================================================================
@@ -150,231 +114,56 @@ class Texttt(BaseMacro):
 class Section(BaseMacro):
     """The \\section macro - top-level section heading.
 
-    Args:
-        title: The section title.
-
     Example:
         Section(Raw("Introduction"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "section"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "section"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Subsection(BaseMacro):
     """The \\subsection macro - second-level section heading.
 
-    Args:
-        title: The subsection title.
-
     Example:
         Subsection(Raw("Background"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "subsection"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "subsection"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Subsubsection(BaseMacro):
     """The \\subsubsection macro - third-level section heading.
 
-    Args:
-        title: The subsubsection title.
-
     Example:
         Subsubsection(Raw("Details"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "subsubsection"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "subsubsection"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Paragraph(BaseMacro):
     """The \\paragraph macro - fourth-level section heading.
 
-    Args:
-        title: The paragraph title.
-
     Example:
         Paragraph(Raw("Note"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "paragraph"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "paragraph"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 class Subparagraph(BaseMacro):
     """The \\subparagraph macro - fifth-level section heading.
 
-    Args:
-        title: The subparagraph title.
-
     Example:
         Subparagraph(Raw("Remark"))
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "subparagraph"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
-
-# ============================================================================
-# Additional Text Formatting Macros
-# ============================================================================
-
-
-class Underline(BaseMacro):
-    """The \\underline macro - underlines text."""
-
-    @property
-    @override
-    def id(self) -> str:
-        return "underline"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
-
-class Emph(BaseMacro):
-    """The \\emph macro - semantic emphasis."""
-
-    @property
-    @override
-    def id(self) -> str:
-        return "emph"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
-
-class SmallCaps(BaseMacro):
-    """The \\textsc macro - small capitals."""
-
-    @property
-    @override
-    def id(self) -> str:
-        return "textsc"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
-
-class Superscript(BaseMacro):
-    """The \\textsuperscript macro."""
-
-    @property
-    @override
-    def id(self) -> str:
-        return "textsuperscript"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
-
-class Subscript(BaseMacro):
-    """The \\textsubscript macro."""
-
-    @property
-    @override
-    def id(self) -> str:
-        return "textsubscript"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "subparagraph"
+    N_POSITIONAL: ClassVar[int] = 1
 
 
 # ============================================================================
@@ -385,15 +174,7 @@ class Subscript(BaseMacro):
 class _FontSize(BaseMacro, Protocol):
     """Base for font size declarations: {\\cmd content}."""
 
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 1
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    N_POSITIONAL: ClassVar[int] = 1
 
     @override
     def serialize_indented(self, indent: int) -> str:
@@ -403,52 +184,31 @@ class _FontSize(BaseMacro, Protocol):
 
 
 class Tiny(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "tiny"
+    MACRO_ID: ClassVar[str] = "tiny"
 
 
 class Small(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "small"
+    MACRO_ID: ClassVar[str] = "small"
 
 
 class Large(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "large"
+    MACRO_ID: ClassVar[str] = "large"
 
 
 class LargeLarge(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "Large"
+    MACRO_ID: ClassVar[str] = "Large"
 
 
 class LargeLargeLarge(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "LARGE"
+    MACRO_ID: ClassVar[str] = "LARGE"
 
 
 class Huge(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "huge"
+    MACRO_ID: ClassVar[str] = "huge"
 
 
 class HugeHuge(_FontSize):
-    @property
-    @override
-    def id(self) -> str:
-        return "Huge"
+    MACRO_ID: ClassVar[str] = "Huge"
 
 
 # ============================================================================
@@ -459,10 +219,6 @@ class HugeHuge(_FontSize):
 class Href(BaseMacro):
     """The \\href macro - creates a hyperlink.
 
-    Args:
-        url: The URL target of the hyperlink.
-        text: The visible link text.
-
     Example:
         Href(Raw("https://example.com"), Raw("Example Site"))
 
@@ -470,17 +226,5 @@ class Href(BaseMacro):
         Requires the hyperref package in your LaTeX document.
     """
 
-    @property
-    @override
-    def id(self) -> str:
-        return "href"
-
-    @property
-    @override
-    def n_positional(self) -> int:
-        return 2
-
-    @property
-    @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    MACRO_ID: ClassVar[str] = "href"
+    N_POSITIONAL: ClassVar[int] = 2
