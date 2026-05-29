@@ -43,7 +43,6 @@ from .config import (
 )
 from .fonts import fonts_block
 from .infoblocks import infoblocks_preamble
-from .listings_setup import listings_packages, listings_setup_block
 from .logos import logos_block
 from .titlepage import title_metadata_block, title_page_defs
 from .variants import Variant
@@ -117,11 +116,10 @@ def HSRTReport(
     # Package list
     # ------------------------------------------------------------------
     packages: set[Package | str] = set(IMPORTS_PACKAGES)
-    packages.update(listings_packages())
     if has_bibliography:
-        packages.add(biblatex_package(
-            backend=bibliography_backend, style=bibliography_style
-        ))
+        packages.add(
+            biblatex_package(backend=bibliography_backend, style=bibliography_style)
+        )
         packages.update(bibliography_packages())
 
     # ------------------------------------------------------------------
@@ -147,7 +145,6 @@ def HSRTReport(
             typography_block(),
             pagebreaks_block(),
             cleveref_block(),
-            listings_setup_block(),
             logos_setup,
             infoblocks_preamble(),
             watermark_block(watermark_text),
@@ -170,7 +167,9 @@ def HSRTReport(
         parts.append(acronyms)
     if preamble is not None:
         parts.append(
-            preamble if isinstance(preamble, TeX) else Raw(preamble, escape_spaces=False)
+            preamble
+            if isinstance(preamble, TeX)
+            else Raw(preamble, escape_spaces=False)
         )
     parts.append(at_begin_document_block(toc))
     parts.append(at_end_document_block(has_glossary, has_acronyms, has_bibliography))
