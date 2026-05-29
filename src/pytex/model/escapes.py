@@ -18,6 +18,7 @@ merge in extra objects via the ``namespace`` argument.
 
 import importlib
 import re
+from typing import cast
 
 # (opener, closer) pairs. Order matters only for readability.
 _OPENERS: tuple[tuple[str, str], ...] = (
@@ -39,6 +40,17 @@ def default_namespace() -> dict[str, object]:
         module = importlib.import_module("pytex")
         names: list[str] = list(getattr(module, "__all__", []))
         _default_ns_cache = {name: getattr(module, name) for name in names}
+
+        # Also include pytex_hsrtreport and pytex_komascript if available
+        for module_name in ["pytex_hsrtreport", "pytex_komascript"]:
+            try:
+                mod = importlib.import_module(module_name)
+                mod_names = list(getattr(mod, "__all__", []))
+                for name in cast(list[str], mod_names):
+                    _default_ns_cache[name] = getattr(mod, name)
+            except (ImportError, AttributeError):
+                pass  # Module not available, skip it
+
     return dict(_default_ns_cache)
 
 

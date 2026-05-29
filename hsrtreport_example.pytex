@@ -11,6 +11,7 @@ from pytex import (
     acr,
     gls,
 )
+from pytex.library import IncludeTeX
 from pytex_hsrtreport import HSRTReport, InfoBox, VotingResults, WarningBox
 
 __pytex__ = HSRTReport(
@@ -41,6 +42,7 @@ __pytex__ = HSRTReport(
         ),
         Section(Raw("Abstimmung")),
         VotingResults(Raw("Antrag zur Geschäftsordnung"), yes=12, no=3, abstain=2),
+        IncludeTeX("example.tex"),
     ),
     title="Template für wissenschaftliche Arbeiten",
     author="Hans Maria Muster",
