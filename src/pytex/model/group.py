@@ -4,14 +4,15 @@ from typing import override
 from ..library.builtins import Relax
 from .base_model import TeX
 from .helpers import CLOSING_BRACE, OPENING_BRACE
+from .raw import coerce_tex
 
 
 @dataclass
 class Group(TeX):
     _children: tuple[TeX, ...] = tuple()
 
-    def __init__(self, *args: TeX) -> None:
-        self._children = args
+    def __init__(self, *args: TeX | str) -> None:
+        self._children = tuple(coerce_tex(a) for a in args)
 
     @property
     @override

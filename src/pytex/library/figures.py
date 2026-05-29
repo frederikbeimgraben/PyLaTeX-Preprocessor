@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import override
 
 from ..model.base_model import Package, TeX
-
+from ..model.raw import coerce_tex
 
 # ============================================================================
 # Graphics
@@ -51,15 +51,29 @@ class IncludeGraphics(TeX):
 # ============================================================================
 
 
-@dataclass
+@dataclass(init=False)
 class Figure(TeX):
     """figure float environment."""
 
     content: TeX
-    caption: TeX | None = None
-    label: str | None = None
-    position: str = "htbp"
-    centered: bool = True
+    caption: TeX | None
+    label: str | None
+    position: str
+    centered: bool
+
+    def __init__(
+        self,
+        content: TeX | str,
+        caption: "TeX | str | None" = None,
+        label: "str | None" = None,
+        position: str = "htbp",
+        centered: bool = True,
+    ) -> None:
+        self.content = coerce_tex(content)
+        self.caption = coerce_tex(caption) if caption is not None else None
+        self.label = label
+        self.position = position
+        self.centered = centered
 
     @property
     @override
@@ -105,9 +119,12 @@ class _HLine(TeX):
 HLine = _HLine()
 
 
-@dataclass
+@dataclass(init=False)
 class _Row(TeX):
     cells: tuple[TeX, ...]
+
+    def __init__(self, *cells: TeX | str) -> None:
+        self.cells = tuple(coerce_tex(c) for c in cells)
 
     @property
     @override
@@ -119,9 +136,9 @@ class _Row(TeX):
         return " & ".join(c.serialize() for c in self.cells) + " \\\\"
 
 
-def Row(*cells: TeX) -> _Row:
+def Row(*cells: TeX | str) -> _Row:
     """A table row: Row(cell1, cell2, ...) → cell1 & cell2 \\\\"""
-    return _Row(cells=cells)
+    return _Row(*cells)
 
 
 @dataclass
@@ -139,27 +156,37 @@ class Tabular(TeX):
     @override
     def serialize(self) -> str:
         rows_str = "\n  ".join(r.serialize() for r in self.rows)
-        return (
-            f"\\begin{{tabular}}{{{self.columns}}}\n"
-            f"  {rows_str}\n"
-            f"\\end{{tabular}}"
-        )
+        return f"\\begin{{tabular}}{{{self.columns}}}\n  {rows_str}\n\\end{{tabular}}"
 
 
-def tabular(columns: str, *rows: _Row | _HLine) -> Tabular:
+def tabular(columns: str, *rows: "_Row | _HLine") -> Tabular:
     """Create a Tabular. tabular('l|c|r', Row(...), HLine, Row(...))"""
     return Tabular(columns=columns, rows=rows)
 
 
-@dataclass
+@dataclass(init=False)
 class Table(TeX):
     """table float environment."""
 
     content: TeX
-    caption: TeX | None = None
-    label: str | None = None
-    position: str = "htbp"
-    centered: bool = True
+    caption: TeX | None
+    label: str | None
+    position: str
+    centered: bool
+
+    def __init__(
+        self,
+        content: TeX | str,
+        caption: "TeX | str | None" = None,
+        label: "str | None" = None,
+        position: str = "htbp",
+        centered: bool = True,
+    ) -> None:
+        self.content = coerce_tex(content)
+        self.caption = coerce_tex(caption) if caption is not None else None
+        self.label = label
+        self.position = position
+        self.centered = centered
 
     @property
     @override

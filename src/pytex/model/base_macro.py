@@ -3,6 +3,7 @@ from typing import Protocol, override
 
 from .base_model import TeX
 from .helpers import BACKSLASH, CLOSING_BRACE, OPENING_BRACE
+from .raw import coerce_tex
 
 
 class BaseMacro(TeX, Protocol):
@@ -27,18 +28,22 @@ class BaseMacro(TeX, Protocol):
         return self._kwargs if self._kwargs is not None else dict()
 
     @override
-    def __init__(self, *args: "TeX", **kwargs: "TeX") -> None:
-        if not len(args) == self.n_positional:
+    def __init__(self, *args: TeX | str, **kwargs: TeX | str) -> None:
+        coerced_args = tuple(coerce_tex(a) for a in args)
+        coerced_kwargs: dict[str, TeX] = {k: coerce_tex(v) for k, v in kwargs.items()}
+
+        if not len(coerced_args) == self.n_positional:
             raise ValueError(
-                f"Invalid parameter count: {len(args)} != {self.n_positional}!"
+                f"Invalid parameter count: {len(coerced_args)} != {self.n_positional}!"
             )
 
+        last_key: str = ""
         last_value: TeX | None = None
 
         if any(
             (last_key := key) not in self.keyword_args
             or not isinstance((last_value := value), self.keyword_args[key][0])
-            for key, value in kwargs.items()
+            for key, value in coerced_kwargs.items()
         ):
             if last_key not in self.keyword_args:
                 raise ValueError(
@@ -50,11 +55,11 @@ class BaseMacro(TeX, Protocol):
                 )
 
         for key, (_, default) in self.keyword_args.items():
-            if key not in kwargs:
-                kwargs[key] = default
+            if key not in coerced_kwargs:
+                coerced_kwargs[key] = default
 
-        self._args = args
-        self._kwargs = kwargs
+        self._args = coerced_args
+        self._kwargs = coerced_kwargs
 
     @property
     @override

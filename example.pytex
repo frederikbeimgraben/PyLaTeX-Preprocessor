@@ -9,7 +9,6 @@ from pytex import (
     Itemize,
     NewPage,
     Raw,
-    RawTeX,
     Section,
     Subsection,
     Texttt,
@@ -51,7 +50,7 @@ def hello():
 hello()"""),
         Section(Raw("Raw LaTeX Support")),
         Raw("You can also include raw LaTeX:"),
-        RawTeX(r"\LaTeX\ is powerful!"),
+        Raw(r"\LaTeX\ is powerful!", escape_spaces=False),
         Section(Raw("Conclusion")),
         Raw(
             "The .pytex format provides a clean, type-safe way to write LaTeX documents."

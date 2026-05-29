@@ -41,7 +41,7 @@ from .figures import (
     Tabular,
     tabular,
 )
-from .inclusion import Include, IncludeTeX, RawTeX
+from .inclusion import Include, IncludeTeX
 from .markdown import Markdown
 from .math import (
     Align,
@@ -134,7 +134,6 @@ __all__ = [
     # File inclusion
     "Include",
     "IncludeTeX",
-    "RawTeX",
     # Markdown
     "Markdown",
 ]

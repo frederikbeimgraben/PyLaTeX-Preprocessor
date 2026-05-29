@@ -3,14 +3,19 @@ from typing import override
 
 from ...model.base_model import TeX
 from ...model.group import Group
+from ...model.raw import coerce_tex
 
 
-@dataclass
+@dataclass(init=False)
 class Environment(TeX):
     """LaTeX environment wrapper (\\begin{name}...\\end{name})"""
 
     name: str
     body: TeX
+
+    def __init__(self, name: str, body: TeX | str) -> None:
+        self.name = name
+        self.body = coerce_tex(body)
 
     @property
     @override
@@ -19,31 +24,14 @@ class Environment(TeX):
 
     @override
     def serialize(self, indent: int = 0) -> str:
-        r"""Serialize with optional indentation.
-
-        Args:
-            indent: Indentation level (default: 0)
-
-        Returns:
-            Serialized LaTeX string with proper indentation
-        """
         return self.serialize_indented(indent)
 
     def serialize_indented(self, indent: int) -> str:
-        r"""Serialize with indentation.
-
-        Args:
-            indent: Indentation level
-
-        Returns:
-            Serialized LaTeX string with proper indentation
-        """
         from ...model.serialization import serialize_with_indent
 
         indent_str = "  " * indent
         body_str = serialize_with_indent(self.body, indent + 1)
 
-        # Remove leading/trailing whitespace from body and indent it
         body_lines = body_str.strip().split("\n")
         indented_body = "\n".join(
             ("  " * (indent + 1)) + line if line.strip() else line
@@ -57,11 +45,14 @@ class Environment(TeX):
         )
 
 
-@dataclass
+@dataclass(init=False)
 class Item(TeX):
     """LaTeX \\item for lists"""
 
     content: TeX
+
+    def __init__(self, content: TeX | str) -> None:
+        self.content = coerce_tex(content)
 
     @property
     @override
@@ -70,25 +61,9 @@ class Item(TeX):
 
     @override
     def serialize(self, indent: int = 0) -> str:
-        """Serialize with optional indentation.
-
-        Args:
-            indent: Indentation level (default: 0)
-
-        Returns:
-            Serialized LaTeX string
-        """
         return self.serialize_indented(indent)
 
     def serialize_indented(self, indent: int) -> str:
-        """Serialize with indentation.
-
-        Args:
-            indent: Indentation level
-
-        Returns:
-            Serialized LaTeX string
-        """
         from ...model.serialization import serialize_with_indent
 
         indent_str = "  " * indent
@@ -96,17 +71,17 @@ class Item(TeX):
         return f"{indent_str}\\item {content_str}"
 
 
-def Itemize(*items: TeX) -> Environment:
+def Itemize(*items: TeX | str) -> Environment:
     """Create an itemize environment with items"""
     return Environment("itemize", Group(*items))
 
 
-def Enumerate(*items: TeX) -> Environment:
+def Enumerate(*items: TeX | str) -> Environment:
     """Create an enumerate environment with items"""
     return Environment("enumerate", Group(*items))
 
 
-def Quote(content: TeX) -> Environment:
+def Quote(content: TeX | str) -> Environment:
     """Create a quote environment"""
     return Environment("quote", content)
 

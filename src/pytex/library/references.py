@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import override
 
 from ..model.base_model import Package, TeX
-
+from ..model.raw import coerce_tex
 
 # ============================================================================
 # Cross-references
@@ -64,12 +64,18 @@ class PageRef(TeX):
 # ============================================================================
 
 
-@dataclass
+@dataclass(init=False)
 class Cite(TeX):
     """\\cite[note]{key1,key2,...}"""
 
     keys: tuple[str, ...]
-    note: TeX | None = None
+    note: TeX | None
+
+    def __init__(
+        self, keys: "tuple[str, ...]", note: "TeX | str | None" = None
+    ) -> None:
+        self.keys = keys
+        self.note = coerce_tex(note) if note is not None else None
 
     @property
     @override
@@ -82,7 +88,7 @@ class Cite(TeX):
         return f"\\cite{note_str}{{{','.join(self.keys)}}}"
 
 
-def cite(*keys: str, note: TeX | None = None) -> Cite:
+def cite(*keys: str, note: "TeX | str | None" = None) -> Cite:
     """Cite one or more bibliography keys. cite('key1', 'key2', note=Raw('p. 42'))"""
     return Cite(keys=keys, note=note)
 
@@ -92,11 +98,14 @@ def cite(*keys: str, note: TeX | None = None) -> Cite:
 # ============================================================================
 
 
-@dataclass
+@dataclass(init=False)
 class Footnote(TeX):
     """\\footnote{content}"""
 
     content: TeX
+
+    def __init__(self, content: TeX | str) -> None:
+        self.content = coerce_tex(content)
 
     @property
     @override
@@ -113,12 +122,16 @@ class Footnote(TeX):
 # ============================================================================
 
 
-@dataclass
+@dataclass(init=False)
 class TextColor(TeX):
     """\\textcolor{color}{content} — requires xcolor package."""
 
     color: str
     content: TeX
+
+    def __init__(self, color: str, content: TeX | str) -> None:
+        self.color = color
+        self.content = coerce_tex(content)
 
     @property
     @override
@@ -135,12 +148,16 @@ class TextColor(TeX):
         return f"\\textcolor{{{self.color}}}{{{self.content.serialize()}}}"
 
 
-@dataclass
+@dataclass(init=False)
 class ColorBox(TeX):
     """\\colorbox{color}{content} — requires xcolor package."""
 
     color: str
     content: TeX
+
+    def __init__(self, color: str, content: TeX | str) -> None:
+        self.color = color
+        self.content = coerce_tex(content)
 
     @property
     @override
@@ -157,11 +174,14 @@ class ColorBox(TeX):
         return f"\\colorbox{{{self.color}}}{{{self.content.serialize()}}}"
 
 
-@dataclass
+@dataclass(init=False)
 class FBox(TeX):
     """\\fbox{content} — framed box."""
 
     content: TeX
+
+    def __init__(self, content: TeX | str) -> None:
+        self.content = coerce_tex(content)
 
     @property
     @override
