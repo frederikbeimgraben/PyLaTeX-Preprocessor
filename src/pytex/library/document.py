@@ -77,6 +77,7 @@ class Document(TeX):
         author: Document author (str or TeX object)
         date: Document date (str, datetime, or TeX object). None = \\today
         packages: Set of packages to include (Package objects or strings)
+        class_options: Options passed to \\documentclass[...] (e.g. ["12pt", "a4paper"])
 
     Example:
         Document(
@@ -88,7 +89,8 @@ class Document(TeX):
             title="My Document",
             author="John Doe",
             toc=True,
-            packages={"amsmath", "graphicx"}
+            packages={"amsmath", "graphicx"},
+            class_options=["12pt", "a4paper"],
         )
     """
 
@@ -100,6 +102,7 @@ class Document(TeX):
     author: str | TeX | None = None
     date: str | datetime | TeX | None = None
     packages: set[Package | str] = field(default_factory=set)
+    class_options: list[str] = field(default_factory=list)
 
     @property
     @override
@@ -211,8 +214,9 @@ class Document(TeX):
         body_str = "".join(part.serialize() for part in body_parts)
 
         # Assemble complete document
+        class_opts = f"[{','.join(self.class_options)}]" if self.class_options else ""
         return (
-            f"\\documentclass{{{doc_class}}}\n"
+            f"\\documentclass{class_opts}{{{doc_class}}}\n"
             f"{preamble_str}"
             f"\\begin{{document}}\n"
             f"{body_str}\n"
