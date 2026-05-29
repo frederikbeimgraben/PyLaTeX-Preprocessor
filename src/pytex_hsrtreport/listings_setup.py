@@ -1,0 +1,54 @@
+r"""HSRT listing styles and the boxed ``blstlisting`` environment.
+
+Faithful copy of ``Modules/Content/Listings.tex``. Per-language *generic*
+listings live in :mod:`pytex.library.listings`; this module reproduces the
+project-specific styles (``htmlCode``, ``phpCode``, ``jsCode``, ``shellCode``,
+...) and the captioned boxed listing environment.
+"""
+
+LISTINGS_SETUP = r"""\RequirePackage{listings}
+\RequirePackage{xcolor}
+\RequirePackage{hyphenat}
+\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true,numbers=left,frame=single,float=H}
+\lstdefinestyle{htmlCode}{language=html,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}
+\lstdefinestyle{phpCode}{language=php,morekeywords={php},basicstyle=\footnotesize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}
+\lstdefinestyle{jsCode}{language=javascript,morekeywords=,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}
+\lstdefinestyle{shellCodeNOPASSWD}{language=sh,deletekeywords={for,kill,cat},morekeywords={sudo},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}
+\lstdefinestyle{shellCode}{language=sh,deletekeywords={},morekeywords={sudo,chmod,chown,cp,su,rm,python},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}
+\lstdefinestyle{URL}{basicstyle=\footnotesize\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}
+\definecolor{light-gray}{gray}{0.80}
+\ExplSyntaxOn
+\tl_new:N \l_listings_boxed_options_tl
+\keys_define:nn { listings/boxed }
+{
+  caption .tl_set:N = \l_listings_boxed_caption_tl,
+  shortcaption .tl_set:N = \l_listings_boxed_shortcaption_tl,
+  label .tl_set:N = \l_listings_boxed_label_tl,
+  unknown .code:n =
+  \tl_put_right:NV \l_listings_boxed_options_tl \l_keys_key_tl
+  \tl_put_right:Nn \l_listings_boxed_options_tl { = #1 , },
+}
+\box_new:N \l_listings_boxed_box
+\lstnewenvironment{blstlisting}[1][]
+{
+  \nopagebreak[4]
+  \keys_set:nn { listings/boxed } { #1 }
+  \exp_args:NV \lstset \l_listings_boxed_options_tl
+  \hbox_set:Nw \l_listings_boxed_box
+}
+{
+  \hbox_set_end:
+  \cs_set_eq:cc {c@figure} {c@lstlisting}
+  \tl_set_eq:NN \figurename \lstlistingname
+  \tl_if_empty:NF \l_listings_boxed_caption_tl
+  {
+    \tl_if_empty:NTF \l_listings_boxed_shortcaption_tl
+    { \captionof{figure}{\l_listings_boxed_caption_tl} }
+    { \captionof{figure}[\l_listings_boxed_shortcaption_tl]{\l_listings_boxed_caption_tl} }
+    \tl_if_empty:NF \l_listings_boxed_label_tl { \label{\l_listings_boxed_label_tl} }
+  }
+  \leavevmode\box_use:N \l_listings_boxed_box
+  \nopagebreak[3]
+}
+\ExplSyntaxOff
+"""

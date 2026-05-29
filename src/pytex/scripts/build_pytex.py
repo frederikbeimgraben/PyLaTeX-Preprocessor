@@ -19,6 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ..model.base_model import TeX
+
 
 def load_pytex(pytex_path: Path):
     if not pytex_path.exists():
@@ -44,6 +46,16 @@ def load_pytex(pytex_path: Path):
     )
 
 
+def render_assets(node: TeX) -> None:
+    """Render build-time assets (e.g. SVG -> PDF) across the tree."""
+    from ..library.figures.svg import SVG
+
+    if isinstance(node, SVG):
+        node.render()
+    for child in node.children:
+        render_assets(child)
+
+
 def build_pytex(
     pytex_path: Path, output_path: Path | None = None, indent: bool = False
 ):
@@ -64,6 +76,11 @@ def build_pytex(
 
     # Load the .pytex file
     tex_obj = load_pytex(pytex_path)
+
+    # Create the build directory (relative to the invocation cwd) and render
+    # any build-time assets (SVG -> PDF) into it before serialization.
+    Path("build").mkdir(exist_ok=True)
+    render_assets(tex_obj)
 
     # Serialize (with or without indentation)
     if indent:

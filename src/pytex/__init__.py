@@ -27,6 +27,7 @@ from .library.document import Document
 from .library.document_builtins import MakeTitle, NewPage, TableOfContents
 from .library.environments import Enumerate, Environment, Item, Itemize, Quote, Verbatim
 from .library.figures import (
+    SVG,
     Figure,
     HLine,
     IncludeGraphics,
@@ -35,7 +36,40 @@ from .library.figures import (
     Tabular,
     tabular,
 )
+from .library.glossaries import (
+    Acronyms,
+    AcronymEntry,
+    Glossary,
+    GlossaryEntry,
+    MakeGlossaries,
+    PrintGlossary,
+    acr,
+    acrfull,
+    acrlong,
+    gls,
+    glspl,
+)
 from .library.inclusion import Include, IncludeTeX
+from .library.listings import (
+    Bash,
+    C,
+    Cpp,
+    Html,
+    InlineCode,
+    Java,
+    JavaScript,
+    Json,
+    LaTeXListing,
+    Listing,
+    LstDefineStyle,
+    LstSet,
+    Php,
+    Python,
+    Rust,
+    Shell,
+    Sql,
+    TypeScript,
+)
 from .library.markdown import Markdown
 from .library.math import (
     Align,
@@ -119,6 +153,7 @@ __all__ = [
     "Gather",
     # Figures & tables
     "IncludeGraphics",
+    "SVG",
     "Figure",
     "Table",
     "Tabular",
@@ -139,6 +174,37 @@ __all__ = [
     # File inclusion
     "Include",
     "IncludeTeX",
+    # Glossaries
+    "Glossary",
+    "GlossaryEntry",
+    "Acronyms",
+    "AcronymEntry",
+    "MakeGlossaries",
+    "PrintGlossary",
+    "gls",
+    "glspl",
+    "acr",
+    "acrlong",
+    "acrfull",
+    # Listings
+    "Listing",
+    "LstSet",
+    "LstDefineStyle",
+    "InlineCode",
+    "Python",
+    "JavaScript",
+    "TypeScript",
+    "Cpp",
+    "C",
+    "Java",
+    "Shell",
+    "Bash",
+    "Sql",
+    "Html",
+    "Php",
+    "Rust",
+    "Json",
+    "LaTeXListing",
     # Markdown
     "Markdown",
 ]

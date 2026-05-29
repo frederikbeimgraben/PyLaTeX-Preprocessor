@@ -1,0 +1,80 @@
+from pytex import (
+    AcronymEntry,
+    Acronyms,
+    Glossary,
+    GlossaryEntry,
+    Group,
+    Python,
+    Raw,
+    Section,
+    Subsection,
+    acr,
+    gls,
+)
+from pytex_hsrtreport import HSRTReport, InfoBox, VotingResults, WarningBox
+
+glossary = Glossary(
+    GlossaryEntry(
+        "Textkoerper",
+        "Textkörper",
+        "Bereich der Arbeit zwischen Einleitung und Fazit.",
+        genitive="Textkörpers",
+        plural="Textkörper",
+    ),
+)
+
+acronyms = Acronyms(
+    AcronymEntry("MPG", "MPG", "Medizinproduktegesetz"),
+    AcronymEntry("API", "API", "Application Programming Interface"),
+)
+
+content = Group(
+    Section(Raw("Einleitung")),
+    Raw(
+        "Dieses Dokument zeigt den HSRTReport-Aufbau in pytex. Der ",
+        escape_spaces=False,
+    ),
+    gls("Textkoerper"),
+    Raw(" enthält die eigentliche Ausarbeitung.", escape_spaces=False),
+    Section(Raw("Hinweise")),
+    InfoBox(
+        Raw("Glossar- und Abkürzungslisten brauchen einen makeindex-fähigen Build.")
+    ),
+    WarningBox(Raw("Logos und Schriften liegen im konfigurierten Assets-Pfad.")),
+    Subsection(Raw("Abkürzungen")),
+    Raw("Beispiel: ", escape_spaces=False),
+    acr("API"),
+    Raw(" und ", escape_spaces=False),
+    acr("MPG"),
+    Raw(".", escape_spaces=False),
+    Section(Raw("Code")),
+    Python(
+        "def fakultaet(n):\n    return 1 if n <= 1 else n * fakultaet(n - 1)",
+        caption="Rekursive Fakultät",
+        label="lst:fak",
+    ),
+    Section(Raw("Abstimmung")),
+    VotingResults(Raw("Antrag zur Geschäftsordnung"), yes=12, no=3, abstain=2),
+)
+
+__pytex__ = HSRTReport(
+    content=content,
+    title="Template für wissenschaftliche Arbeiten",
+    author="Hans Maria Muster",
+    created_on="01.01.2026",
+    module_name="METIX.Y – Mustermodul – WiSe 25/26",
+    abstract="Kurze Zusammenfassung der Arbeit auf der Titelseite.",
+    keywords="pytex, HSRT, LaTeX, Template",
+    variant="INF_meti",
+    toc=True,
+    wordcount=True,
+    glossary=glossary,
+    acronyms=acronyms,
+    title_page_data=[
+        ("Vorgelegt von", "Hans Maria Muster"),
+        ("Studiengang", "Medizinisch Technische Informatik B.Sc."),
+        ("Dozent:in", "Prof. Dr. Max Mustermann"),
+        ("Semester", "Wintersemester 2025/2026"),
+    ],
+    assets_path="HSRTReport-Template/src/HSRTReport",
+)

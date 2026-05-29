@@ -231,3 +231,46 @@ class RecalcTypeArea(TeX):
     @override
     def serialize(self) -> str:
         return "\\recalctypearea"
+
+
+# ============================================================================
+# Matter divisions (scrbook / scrreprt)
+# ============================================================================
+
+
+@dataclass
+class _BareCommand(TeX):
+    """A no-argument control sequence, e.g. ``\\frontmatter``."""
+
+    COMMAND: ClassVar[str] = ""
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return ()
+
+    @override
+    def serialize(self) -> str:
+        return f"\\{self.COMMAND}"
+
+
+class _FrontMatter(_BareCommand):
+    COMMAND: ClassVar[str] = "frontmatter"
+
+
+class _MainMatter(_BareCommand):
+    COMMAND: ClassVar[str] = "mainmatter"
+
+
+class _BackMatter(_BareCommand):
+    COMMAND: ClassVar[str] = "backmatter"
+
+
+class _Appendix(_BareCommand):
+    COMMAND: ClassVar[str] = "appendix"
+
+
+FrontMatter = _FrontMatter()
+MainMatter = _MainMatter()
+BackMatter = _BackMatter()
+Appendix = _Appendix()

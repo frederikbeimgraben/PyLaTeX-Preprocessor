@@ -95,6 +95,7 @@ class KomaDocument(TeX):
         date: str | datetime | TeX | None = None,
         toc: bool = False,
         packages: set[Package | str] | None = None,
+        manage_packages: bool = True,
         preamble: TeX | None = None,
         font_size: str | None = None,
         paper_size: str | None = None,
@@ -181,6 +182,7 @@ class KomaDocument(TeX):
             date=date,
             packages=all_packages,
             class_options=class_options,
+            manage_packages=manage_packages,
         )
 
     @staticmethod

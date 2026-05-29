@@ -55,6 +55,9 @@ class Document(TeX):
     date: str | datetime | TeX | None = None
     packages: set[Package | str] = field(default_factory=set)
     class_options: list[str] = field(default_factory=list)
+    manage_packages: bool = True
+    """When False, no ``\\usepackage`` lines are auto-generated; the preamble is
+    expected to load every package itself (e.g. to control package options)."""
 
     @property
     @override
@@ -90,20 +93,25 @@ class Document(TeX):
         """Generate preamble content including packages and metadata."""
         preamble_parts: list[TeX] = []
 
-        # Collect all packages (from explicit list + from content tree)
-        all_packages = set(self.packages)
-        all_packages.update(collect_packages(self.content))
-        if self.preamble:
-            all_packages.update(collect_packages(self.preamble))
+        if self.manage_packages:
+            # Collect all packages (from explicit list + from content tree)
+            all_packages = set(self.packages)
+            all_packages.update(collect_packages(self.content))
+            if self.preamble:
+                all_packages.update(collect_packages(self.preamble))
 
-        # Resolve dependencies and conflicts
-        resolved_packages = resolve_package_dependencies(all_packages)
+            # Resolve dependencies and conflicts
+            resolved_packages = resolve_package_dependencies(all_packages)
 
-        # Generate \usepackage commands
-        for pkg_name in sorted(resolved_packages):
-            preamble_parts.append(
-                Raw(f"\\usepackage{{{pkg_name}}}\n", escape_spaces=False, safe=False)
-            )
+            # Generate \usepackage commands
+            for pkg_name in sorted(resolved_packages):
+                preamble_parts.append(
+                    Raw(
+                        f"\\usepackage{{{pkg_name}}}\n",
+                        escape_spaces=False,
+                        safe=False,
+                    )
+                )
 
         # Add custom preamble content if provided
         if self.preamble is not None:

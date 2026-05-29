@@ -14,6 +14,7 @@ class Raw(TeX):
     content: SupportsStr
     safe: bool = False
     escape_spaces: bool = True
+    namespace: dict[str, object] | None = None
 
     @property
     @override
@@ -45,13 +46,14 @@ class Raw(TeX):
         Returns:
             Serialized string
         """
-        content = str(self.content)
+        from .escapes import evaluate_escapes
+
+        content = evaluate_escapes(
+            str(self.content), self.namespace, self.escape_spaces
+        )
 
         if self.safe and content.count("{") != content.count("}"):
             raise ValueError
-
-        if self.escape_spaces:
-            content = content.replace(" ", "~")
 
         return content
 

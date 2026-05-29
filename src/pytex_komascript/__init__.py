@@ -26,15 +26,19 @@ Example:
 
 from .commands import (
     AddToKomaFont,
+    Appendix,
     ArgCommand,
+    BackMatter,
     CFoot,
     CHead,
     ClearPairOfPageStyles,
     Dedication,
     Extratitle,
+    FrontMatter,
     IFoot,
     IHead,
     KomaOptions,
+    MainMatter,
     OFoot,
     OHead,
     Pagestyle,
@@ -78,4 +82,9 @@ __all__ = [
     "AddToKomaFont",
     "KomaOptions",
     "RecalcTypeArea",
+    # Matter divisions
+    "FrontMatter",
+    "MainMatter",
+    "BackMatter",
+    "Appendix",
 ]

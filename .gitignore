@@ -167,3 +167,6 @@ cython_debug/
 *.tex
 
 *.pdf
+*.acn
+*.glo
+*.ist

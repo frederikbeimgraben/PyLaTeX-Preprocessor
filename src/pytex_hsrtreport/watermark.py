@@ -1,0 +1,51 @@
+r"""Page watermark (faithful copy of ``Modules/Layout/Watermark.tex``).
+
+The watermark text is supplied from Python (``\waterMarkText`` is always defined
+so the package machinery has a value, empty = no visible watermark).
+"""
+
+
+def watermark_block(text: str = "") -> str:
+    """Return the watermark setup with ``\\waterMarkText`` bound to ``text``."""
+    return (
+        r"\RequirePackage{draftwatermark}"
+        "\n"
+        r"\RequirePackage{ifthen}"
+        "\n"
+        r"\RequirePackage{pgffor}"
+        "\n"
+        r"\RequirePackage{accsupp}"
+        "\n"
+        r"\RequirePackage{xcolor}"
+        "\n"
+        rf"\newcommand{{\waterMarkText}}{{{text}}}"
+        "\n"
+        r"\newcounter{it}"
+        "\n"
+        r"\DraftwatermarkOptions{"
+        "\n"
+        r"    scale=0.08, angle=45,"
+        "\n"
+        r"    text={"
+        "\n"
+        r"    \begin{tabular}{c}%"
+        "\n"
+        r"        \setcounter{it}{1}%"
+        "\n"
+        r"        \whiledo{\theit<100}{%"
+        "\n"
+        r"            \foreach \col in {0,...,15}{\color{black!5}\BeginAccSupp{ActualText=}\waterMarkText~~\EndAccSupp{}}\\%"
+        "\n"
+        r"            \stepcounter{it}%"
+        "\n"
+        r"        }"
+        "\n"
+        r"    \end{tabular}"
+        "\n"
+        r"    },"
+        "\n"
+        r"    color=black!12,"
+        "\n"
+        r"}"
+        "\n"
+    )

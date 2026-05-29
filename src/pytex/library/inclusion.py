@@ -9,9 +9,20 @@ from ..model.base_model import TeX
 
 @dataclass
 class IncludeTeX(TeX):
-    """Include an external .tex file via \\input{path}."""
+    """Include an external .tex file.
+
+    If the file exists locally it is read at serialization time, any
+    ``pytex`` escape expressions (``%{ pytex (...) }%`` /
+    ``\\iffalse{ pytex (...) }\\fi``) are evaluated, and the resulting LaTeX is
+    inlined. If the file cannot be found locally it falls back to a plain
+    ``\\input{path}`` so the LaTeX engine resolves it at compile time.
+
+    ``namespace`` supplies extra objects to the escape evaluation namespace
+    (which already contains the public ``pytex`` exports and Python builtins).
+    """
 
     path: str | Path
+    namespace: dict[str, object] | None = None
 
     @property
     @override
@@ -23,6 +34,14 @@ class IncludeTeX(TeX):
         return self.serialize_indented(indent)
 
     def serialize_indented(self, _indent: int) -> str:
+        from ..model.escapes import evaluate_escapes
+
+        path = Path(self.path)
+        if path.exists():
+            return evaluate_escapes(
+                path.read_text(), self.namespace, escape_spaces=False
+            )
+
         path_str = str(self.path)
         if path_str.endswith(".tex"):
             path_str = path_str[:-4]
