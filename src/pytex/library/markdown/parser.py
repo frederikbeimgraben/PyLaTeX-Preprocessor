@@ -8,7 +8,7 @@ from marko import block, inline
 if TYPE_CHECKING:
     pass
 
-from ..builtins.text_and_sections import (
+from ..builtins import (
     Bold,
     Href,
     Italic,

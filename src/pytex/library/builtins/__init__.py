@@ -1,34 +1,38 @@
 """Built-in LaTeX macros and commands.
 
 This module provides strongly-typed wrappers for common LaTeX commands,
-organized by category.
+organized by category into submodules (text, sections, fontsizes, links,
+utility).
 """
 
-from .text_and_sections import (
-    Bold,
-    Emph,
-    Href,
+from .fontsizes import (
     Huge,
     HugeHuge,
-    Italic,
     Large,
     LargeLarge,
     LargeLargeLarge,
-    Newline,
-    Paragraph,
-    Relax,
-    Section,
     Small,
-    SmallCaps,
+    Tiny,
+)
+from .links import Href
+from .sections import (
+    Paragraph,
+    Section,
     Subparagraph,
-    Subscript,
     Subsection,
     Subsubsection,
+)
+from .text import (
+    Bold,
+    Emph,
+    Italic,
+    SmallCaps,
+    Subscript,
     Superscript,
     Texttt,
-    Tiny,
     Underline,
 )
+from .utility import Newline, Relax
 
 __all__ = [
     # Utility
