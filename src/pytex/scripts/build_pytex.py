@@ -9,15 +9,18 @@ Usage:
     python build_pytex.py input.pytex --compile --indent
 
 Options:
-    --compile       Compile the .tex file to PDF using tectonic
-    --indent        Use indented output for better readability
-    -o, --output    Specify output .tex file (default: same name as input)
+    --compile        Compile the .tex file to PDF using tectonic
+    --indent         Use indented output for better readability
+    --no-makeindex   Skip makeindex processing (glossaries/acronyms)
+    -o, --output     Specify output .tex file (default: same name as input)
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 from ..model.base_model import TeX
 
@@ -98,11 +101,96 @@ def build_pytex(
     return output_path
 
 
-def compile_tex(tex_path: Path):
+def run_makeindex(basename: Path, extension: str, output_ext: str) -> bool:
+    """Run makeindex on a specific file type.
+
+    Args:
+        basename: Base path without extension
+        extension: Input file extension (e.g., 'glo', 'acn')
+        output_ext: Output file extension (e.g., 'gls', 'acr')
+
+    Returns:
+        True if makeindex was run successfully, False otherwise
+    """
+    input_file = basename.with_suffix(f".{extension}")
+    output_file = basename.with_suffix(f".{output_ext}")
+    ist_file = basename.with_suffix(".ist")
+    log_ext = "glg" if extension == "glo" else "alg"
+    log_file = basename.with_suffix(f".{log_ext}")
+
+    if not input_file.exists():
+        return False
+
+    try:
+        cmd = [
+            "makeindex",
+            "-s",
+            str(ist_file),
+            "-t",
+            str(log_file),
+            "-o",
+            str(output_file),
+            str(input_file),
+        ]
+        subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        print(f"  ✓ Processed {input_file.name} -> {output_file.name}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"  ⚠ makeindex warning for {input_file.name}:", file=sys.stderr)
+        if err := cast(str, e.stderr):
+            print(f"    {err.strip()}", file=sys.stderr)
+        return False
+    except FileNotFoundError:
+        return False
+
+
+def process_glossaries(tex_path: Path, skip_makeindex: bool = False) -> bool:
+    """Process glossaries and acronyms using makeindex.
+
+    Args:
+        tex_path: Path to the .tex file
+        skip_makeindex: If True, skip makeindex processing
+
+    Returns:
+        True if any glossary processing was done
+    """
+    if skip_makeindex:
+        return False
+
+    if not shutil.which("makeindex"):
+        print("  ⚠ makeindex not found, skipping glossary processing", file=sys.stderr)
+        return False
+
+    basename = tex_path.with_suffix("")
+    processed = False
+
+    print("Processing glossaries and acronyms...")
+
+    # Process glossary (.glo -> .gls)
+    if run_makeindex(basename, "glo", "gls"):
+        processed = True
+
+    # Process acronyms (.acn -> .acr)
+    if run_makeindex(basename, "acn", "acr"):
+        processed = True
+
+    if not processed:
+        print("  (no glossary files found)")
+
+    return processed
+
+
+def compile_tex(tex_path: Path, skip_makeindex: bool = False):
     """Compile a .tex file to PDF using tectonic.
 
     Args:
         tex_path: Path to .tex file
+        skip_makeindex: If True, skip makeindex processing for glossaries
 
     Raises:
         RuntimeError: If compilation fails
@@ -110,12 +198,25 @@ def compile_tex(tex_path: Path):
     print(f"Compiling {tex_path} to PDF...")
 
     try:
+        # First pass: generate auxiliary files
         subprocess.run(
             ["tectonic", str(tex_path)],
             capture_output=True,
             text=True,
             check=True,
         )
+
+        # Process glossaries if needed
+        if process_glossaries(tex_path, skip_makeindex):
+            # Second pass: incorporate glossaries
+            print("Running final compilation pass...")
+            subprocess.run(
+                ["tectonic", str(tex_path)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
         pdf_path = tex_path.with_suffix(".pdf")
         print(f"✓ Generated {pdf_path}")
         return pdf_path
@@ -156,6 +257,11 @@ def main():
         action="store_true",
         help="Use indented output for better readability",
     )
+    parser.add_argument(
+        "--no-makeindex",
+        action="store_true",
+        help="Skip makeindex processing for glossaries/acronyms",
+    )
 
     args = parser.parse_args()
 
@@ -169,7 +275,10 @@ def main():
 
         # Optionally compile to PDF
         if args.compile:  # pyright: ignore[reportAny]
-            compile_tex(tex_path)
+            compile_tex(
+                tex_path,
+                skip_makeindex=args.no_makeindex,  # pyright: ignore[reportAny]
+            )
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

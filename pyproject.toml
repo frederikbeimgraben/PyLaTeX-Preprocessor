@@ -22,5 +22,8 @@ build-pytex = "pytex.scripts.build_pytex:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+pytex_hsrtreport = ["Assets/**/*"]
+
 [tool.pyright]
 extraPaths = ["src"]

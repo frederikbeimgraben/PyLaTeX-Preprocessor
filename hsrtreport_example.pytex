@@ -76,5 +76,4 @@ __pytex__ = HSRTReport(
         ("Dozent:in", "Prof. Dr. Max Mustermann"),
         ("Semester", "Wintersemester 2025/2026"),
     ],
-    assets_path="HSRTReport-Template/src/HSRTReport",
 )

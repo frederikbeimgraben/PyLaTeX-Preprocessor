@@ -35,8 +35,8 @@ LOGOS_SETUP = r"""\RequirePackage{tikz}
 \testarray{LogosPaths}(\thelogoCounter)%
 \typeout{Logo \thelogoCounter: \logospath\temp@macro.pdf}%
 }
-\def\skylinePath{\classPath/Assets/Images/Skyline.pdf}
-\def\logospath{\classPath/Assets/Images/Logos/}
+\def\skylinePath{\classPath/Images/Skyline.pdf}
+\def\logospath{\classPath/Images/Logos/}
 \newcommand{\footerYShift}{1.5em}
 \newcommand{\footerXShift}{0.7em}
 \newcommand*{\IsInteger}[3]{\IfStrEq{#1}{ }{#3}{\IfInteger{#1}{#2}{#3}}}

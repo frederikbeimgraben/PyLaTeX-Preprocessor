@@ -8,6 +8,7 @@ with ``\\strcompare``/options is taken in Python here. Returns a
 """
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from pytex import Acronyms, Glossary, TeX
 from pytex.model.raw import Raw
@@ -15,8 +16,8 @@ from pytex_komascript import KomaDocument
 from pytex_komascript.document import DivValue
 
 from .bibliography import (
-    Backend,
     MAKEBIB,
+    Backend,
     add_bib_resource,
     bibliography_config,
 )
@@ -52,12 +53,20 @@ def _paper_option(paper_size: str) -> str:
     return f"paper={paper_size}"
 
 
-def _path_defs(assets_path: str) -> str:
+def _get_default_assets_path() -> str:
+    """Get the default assets path from the package installation."""
+    return str(Path(__file__).parent / "Assets")
+
+
+def _path_defs(assets_path: str | None = None) -> str:
+    if assets_path is None:
+        assets_path = _get_default_assets_path()
     return (
-        f"\\def\\classPath{{{assets_path}}}\n"
-        r"\def\fontsPath{\classPath/Assets/Fonts}"
+        f"\\def\\classPath{{{assets_path}}}"
         "\n"
-        r"\def\imagesPath{\classPath/Assets/Images}"
+        r"\def\fontsPath{\classPath/Fonts}"
+        "\n"
+        r"\def\imagesPath{\classPath/Images}"
         "\n"
         r"\providecommand{\ReportVariant}{meti}"
     )
@@ -87,6 +96,7 @@ def _at_end_document(
     parts = [
         r"\AtEndDocument{",
         r"  \clearpage\appendix\backmatter",
+        r"  \KOMAoptions{open=any}",  # Allow chapters to start on any page
         r"  \cfoot*{}\ohead*{}",
         r"  \noindent\blenderfont",
     ]
@@ -131,7 +141,7 @@ def HSRTReport(
     toc: bool = False,
     footer_logos: bool = False,
     wordcount: bool = False,
-    assets_path: str = "HSRTReport",
+    assets_path: str | None = None,
     koma_fonts: Mapping[str, str] | None = None,
 ) -> KomaDocument:
     """Build an HSRT report as a ``scrbook`` :class:`KomaDocument`.
@@ -158,9 +168,7 @@ def HSRTReport(
         HYPERREF,
     ]
     if has_bibliography:
-        parts.append(
-            bibliography_config(bibliography_backend, bibliography_style)
-        )
+        parts.append(bibliography_config(bibliography_backend, bibliography_style))
     parts.extend(
         [
             FONTS,
@@ -198,9 +206,7 @@ def HSRTReport(
         parts.append(acronyms.serialize())
     if preamble is not None:
         parts.append(
-            preamble.serialize()
-            if isinstance(preamble, TeX)
-            else str(preamble)
+            preamble.serialize() if isinstance(preamble, TeX) else str(preamble)
         )
     parts.append(_at_begin_document(toc))
     parts.append(_at_end_document(has_glossary, has_acronyms, has_bibliography))
