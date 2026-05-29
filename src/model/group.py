@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import override
 
+from library.builtins import Relax
 from model.base_model import TeX
-from model.builtins import Relax
 from model.helpers import CLOSING_BRACE, OPENING_BRACE
 
 
@@ -19,9 +19,34 @@ class Group(TeX):
         return self._children
 
     @override
-    def serialize(self) -> str:
+    def serialize(self, indent: int = 0) -> str:
+        """Serialize with optional indentation.
+
+        Args:
+            indent: Indentation level (default: 0)
+
+        Returns:
+            Serialized LaTeX string
+        """
+        return self.serialize_indented(indent)
+
+    def serialize_indented(self, indent: int) -> str:
+        """Serialize with indentation.
+
+        Args:
+            indent: Indentation level
+
+        Returns:
+            Serialized LaTeX string
+        """
+        from model.serialization import serialize_with_indent
+
+        # Groups don't add their own indentation, they just pass it through
         return (
             OPENING_BRACE
-            + "".join(Relax.serialize() + child.serialize() for child in self.children)
+            + "".join(
+                Relax.serialize() + serialize_with_indent(child, indent)
+                for child in self.children
+            )
             + CLOSING_BRACE
         )

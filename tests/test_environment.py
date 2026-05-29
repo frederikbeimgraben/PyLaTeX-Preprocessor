@@ -1,7 +1,7 @@
 """Tests for LaTeX environment classes"""
 
-from model.builtins import Bold
-from model.environment import (
+from library.builtins import Bold
+from library.environments import (
     Enumerate,
     Environment,
     Item,
@@ -22,7 +22,8 @@ class TestEnvironmentClass:
         env = Environment("testenv", body)
         serialized = env.serialize()
 
-        assert serialized == "\\begin{testenv}\ntest~content\n\\end{testenv}"
+        # Environment now indents body content by default
+        assert serialized == "\\begin{testenv}\n  test~content\n\\end{testenv}"
 
     def test_environment_with_complex_body(self):
         """Test environment with complex body content"""
@@ -195,7 +196,7 @@ class TestQuoteFunction:
 
     def test_quote_with_formatting(self):
         """Test quote with formatted content"""
-        from model.builtins import Italic
+        from library.builtins import Italic
 
         content = Italic(Raw("emphasized quote"))
         quote = Quote(content)

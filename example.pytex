@@ -1,0 +1,63 @@
+# Example .pytex file demonstrating the new features
+# This file defines a complete LaTeX document using Python syntax
+
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src import (
+        Bold,
+        Document,
+        Group,
+        Italic,
+        Item,
+        Itemize,
+        NewPage,
+        Raw,
+        RawTeX,
+        Section,
+        Subsection,
+        Texttt,
+        Verbatim,
+    )
+
+document = Document(
+    document_class="article",
+    title="PyTeX Example Document",
+    author="PyLaTeX Framework",
+    date=datetime(2024, 1, 15),
+    toc=True,
+    packages={"amsmath", "graphicx", "hyperref"},
+    content=Group(
+        Section(Raw("Introduction")),
+        Raw("This document demonstrates the new .pytex format."),
+        Raw("It combines Python syntax with LaTeX structure."),
+        NewPage,
+        Section(Raw("Features")),
+        Subsection(Raw("Basic Formatting")),
+        Raw("We can use "),
+        Bold(Raw("bold text")),
+        Raw(", "),
+        Italic(Raw("italic text")),
+        Raw(", and "),
+        Texttt(Raw("monospace code")),
+        Raw("."),
+        Subsection(Raw("Lists")),
+        Itemize(
+            Item(Raw("First item")),
+            Item(Raw("Second item")),
+            Item(Group(Raw("Third item with "), Bold(Raw("bold text")))),
+        ),
+        Subsection(Raw("Code Examples")),
+        Verbatim("""def hello():
+    print("Hello, World!")
+hello()"""),
+        Section(Raw("Raw LaTeX Support")),
+        Raw("You can also include raw LaTeX:"),
+        RawTeX(r"\LaTeX\ is powerful!"),
+        Section(Raw("Conclusion")),
+        Raw(
+            "The .pytex format provides a clean, type-safe way to write LaTeX documents."
+        ),
+    ),
+)

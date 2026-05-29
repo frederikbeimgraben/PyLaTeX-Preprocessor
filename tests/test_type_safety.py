@@ -6,7 +6,7 @@ proper compile-time and runtime type checking.
 
 import pytest
 
-from model.builtins import (
+from library.builtins import (
     Bold,
     Href,
     Italic,

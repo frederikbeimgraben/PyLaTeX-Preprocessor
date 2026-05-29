@@ -2,8 +2,8 @@
 
 import marko
 
-from model.environment import Environment, Item
-from model.markdown import parse_md
+from library.environments import Environment, Item
+from library.markdown import parse_md
 from model.raw import Raw
 
 
@@ -383,7 +383,8 @@ class TestEnvironmentClasses:
         env = Environment("testenv", content)
         serialized = env.serialize()
 
-        assert serialized == "\\begin{testenv}\ntest~content\n\\end{testenv}"
+        # Environment now indents body content
+        assert serialized == "\\begin{testenv}\n  test~content\n\\end{testenv}"
 
     def test_item_serialization(self):
         """Test Item class serialization"""

@@ -21,7 +21,30 @@ class Raw(TeX):
         return tuple()
 
     @override
-    def serialize(self) -> str:
+    def serialize(self, indent: int = 0) -> str:
+        """Serialize with optional indentation.
+
+        Raw content is not indented.
+
+        Args:
+            indent: Indentation level (ignored)
+
+        Returns:
+            Serialized string
+        """
+        return self.serialize_indented(indent)
+
+    def serialize_indented(self, _indent: int) -> str:
+        """Serialize with indentation.
+
+        Raw content is not indented.
+
+        Args:
+            indent: Indentation level (ignored)
+
+        Returns:
+            Serialized string
+        """
         content = str(self.content)
 
         if self.safe and content.count("{") != content.count("}"):

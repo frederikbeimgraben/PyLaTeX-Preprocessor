@@ -62,12 +62,35 @@ class BaseMacro(TeX, Protocol):
         return self.args
 
     @override
-    def serialize(self) -> str:
+    def serialize(self, indent: int = 0) -> str:
+        """Serialize with optional indentation.
+
+        Args:
+            indent: Indentation level (default: 0)
+
+        Returns:
+            Serialized LaTeX string
+        """
+        return self.serialize_indented(indent)
+
+    def serialize_indented(self, indent: int) -> str:
+        """Serialize with indentation.
+
+        Args:
+            indent: Indentation level
+
+        Returns:
+            Serialized LaTeX string
+        """
+        from model.serialization import serialize_with_indent
+
         kwargs = ",".join(
-            f"{key}={value.serialize()}" for key, value in self.kwargs.items()
+            f"{key}={serialize_with_indent(value, 0)}"
+            for key, value in self.kwargs.items()
         )
         args = "".join(
-            f"{OPENING_BRACE}{value.serialize()}{CLOSING_BRACE}" for value in self.args
+            f"{OPENING_BRACE}{serialize_with_indent(value, 0)}{CLOSING_BRACE}"
+            for value in self.args
         )
 
         kwargs_part = f"[{kwargs}]" if len(kwargs) != 0 else ""

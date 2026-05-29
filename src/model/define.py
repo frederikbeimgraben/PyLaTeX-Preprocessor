@@ -15,7 +15,11 @@ class DeclareRobustCommand(SimpleMacro("DeclareRobustCommand", 3)):
     default: TeX | None = None
 
     @override
-    def serialize(self) -> str:
+    def serialize(self, indent: int = 0) -> str:
+        return self.serialize_indented(indent)
+
+    @override
+    def serialize_indented(self, indent: int) -> str:
         return (
             f"\\{self.id}{OPENING_BRACE}\\{self.cmd_key}{CLOSING_BRACE}[{self.n_args}]"
             + f"[{self.default.serialize()}]"
@@ -33,7 +37,11 @@ class RedeclareRobustCommand(SimpleMacro("RedeclareRobustCommand", 3)):
     default: TeX | None = None
 
     @override
-    def serialize(self) -> str:
+    def serialize(self, indent: int = 0) -> str:
+        return self.serialize_indented(indent)
+
+    @override
+    def serialize_indented(self, indent: int) -> str:
         return (
             f"\\{self.id}{OPENING_BRACE}\\{self.cmd_key}{CLOSING_BRACE}[{self.n_args}]"
             + f"[{self.default.serialize()}]"

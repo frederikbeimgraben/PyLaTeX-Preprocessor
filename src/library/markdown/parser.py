@@ -8,8 +8,7 @@ from marko import block, inline
 if TYPE_CHECKING:
     pass
 
-from model.base_model import TeX
-from model.builtins import (
+from library.builtins.text_and_sections import (
     Bold,
     Href,
     Italic,
@@ -21,7 +20,8 @@ from model.builtins import (
     Subsubsection,
     Texttt,
 )
-from model.environment import Enumerate, Item, Itemize, Quote, Verbatim
+from library.environments.standard import Enumerate, Item, Itemize, Quote, Verbatim
+from model.base_model import TeX
 from model.group import Group
 from model.raw import Raw
 
@@ -163,3 +163,24 @@ def parse_md(element: marko.element.Element) -> TeX:
             return Group(*(parse_md(child) for child in children))
 
     return Raw("")
+
+
+def markdown_to_tex(markdown_text: str) -> TeX:
+    """Convert Markdown text to a TeX object.
+
+    Args:
+        markdown_text: Markdown formatted text string
+
+    Returns:
+        TeX object representing the parsed markdown
+
+    Example:
+        >>> tex = markdown_to_tex("# Hello\\n\\nThis is **bold**")
+        >>> print(tex.serialize())
+    """
+    doc = marko.parse(markdown_text)
+    return parse_md(doc)
+
+
+# Alias for backwards compatibility
+Markdown = markdown_to_tex

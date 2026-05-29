@@ -6,6 +6,7 @@ from typing import Protocol, Self, cast, override, runtime_checkable
 class Package:
     name: str
     conflicts: set[Self | str]
+    requires: set[Self | str]
 
 
 @runtime_checkable

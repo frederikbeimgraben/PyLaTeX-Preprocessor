@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "backend_simulator"
-version = "0.0.0"
+name = "pylatex"
+version = "0.1.0"
 authors = [
   { name="Frederik Beimgraben", email="frederik@beimgraben.net" },
 ]
-description = "Project to have less LaTeX when writing LaTeX"
+description = "Type-safe LaTeX document generation with Python"
 # readme = "README.md"
 requires-python = ">=3.13"
 dependencies = ["pydantic", "marko"]
@@ -17,7 +17,7 @@ dependencies = ["pydantic", "marko"]
 dev = ["pytest"]
 
 [project.scripts]
-main = "main:main"
+build-pytex = "scripts.build_pytex:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
