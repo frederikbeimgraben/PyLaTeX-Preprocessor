@@ -70,8 +70,10 @@ class BaseMacro(TeX, Protocol):
             f"{OPENING_BRACE}{value.serialize()}{CLOSING_BRACE}" for value in self.args
         )
 
-        kwargs_part = f"[{kwargs}]" if len(kwargs) != 0 else " "
-        return f"\\{self.id}{kwargs_part}{args}"
+        kwargs_part = f"[{kwargs}]" if len(kwargs) != 0 else ""
+        # Always add a space after macros to ensure proper spacing
+        # LaTeX will collapse multiple consecutive spaces into one
+        return f"\\{self.id}{kwargs_part}{args}\\relax "
 
 
 def SimpleMacro(

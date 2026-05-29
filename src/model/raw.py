@@ -13,6 +13,7 @@ class SupportsStr(Protocol):
 class Raw(TeX):
     content: SupportsStr
     safe: bool = True
+    escape_spaces: bool = True
 
     @property
     @override
@@ -25,5 +26,8 @@ class Raw(TeX):
 
         if self.safe and content.count("{") != content.count("}"):
             raise ValueError
+
+        if self.escape_spaces:
+            content = content.replace(" ", "~")
 
         return content

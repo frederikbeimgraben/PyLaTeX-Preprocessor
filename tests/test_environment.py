@@ -1,5 +1,6 @@
 """Tests for LaTeX environment classes"""
 
+from model.builtins import Bold
 from model.environment import (
     Enumerate,
     Environment,
@@ -16,12 +17,12 @@ class TestEnvironmentClass:
     """Test the Environment base class"""
 
     def test_environment_basic(self):
-        """Test basic environment creation and serialization"""
-        content = Raw("test content")
-        env = Environment("testenv", content)
+        """Test basic Environment creation and serialization"""
+        body = Raw("test content")
+        env = Environment("testenv", body)
         serialized = env.serialize()
 
-        assert serialized == "\\begin{testenv}\ntest content\n\\end{testenv}"
+        assert serialized == "\\begin{testenv}\ntest~content\n\\end{testenv}"
 
     def test_environment_with_complex_body(self):
         """Test environment with complex body content"""
@@ -61,24 +62,22 @@ class TestItemClass:
     """Test the Item class"""
 
     def test_item_basic(self):
-        """Test basic item creation and serialization"""
+        """Test basic Item creation and serialization"""
         content = Raw("item content")
         item = Item(content)
         serialized = item.serialize()
 
-        assert serialized == "\\item item content"
+        assert serialized == "\\item item~content"
 
     def test_item_with_formatting(self):
-        """Test item with formatted content"""
-        from model.builtins import Bold
-
+        """Test Item with formatted content"""
         content = Bold(Raw("bold item"))
         item = Item(content)
         serialized = item.serialize()
 
         assert "\\item" in serialized
         assert "\\textbf" in serialized
-        assert "bold item" in serialized
+        assert "bold~item" in serialized
 
     def test_item_children(self):
         """Test item children property"""
@@ -102,13 +101,14 @@ class TestItemizeFunction:
         assert "\\end{itemize}" in serialized
 
     def test_itemize_single_item(self):
-        """Test itemize with single item"""
-        item = Item(Raw("Single item"))
-        itemize = Itemize(item)
+        """Test Itemize with a single item"""
+        item1 = Item(Raw("Single item"))
+        itemize = Itemize(item1)
         serialized = itemize.serialize()
 
         assert "\\begin{itemize}" in serialized
-        assert "\\item Single item" in serialized
+        assert "\\end{itemize}" in serialized
+        assert "\\item Single~item" in serialized
         assert "\\end{itemize}" in serialized
 
     def test_itemize_multiple_items(self):
@@ -122,9 +122,9 @@ class TestItemizeFunction:
         serialized = itemize.serialize()
 
         assert "\\begin{itemize}" in serialized
-        assert "\\item First item" in serialized
-        assert "\\item Second item" in serialized
-        assert "\\item Third item" in serialized
+        assert "\\item First~item" in serialized
+        assert "\\item Second~item" in serialized
+        assert "\\item Third~item" in serialized
         assert "\\end{itemize}" in serialized
 
     def test_itemize_returns_environment(self):
@@ -190,7 +190,7 @@ class TestQuoteFunction:
         serialized = quote.serialize()
 
         assert "\\begin{quote}" in serialized
-        assert "This is a quote" in serialized
+        assert "This~is~a~quote" in serialized
         assert "\\end{quote}" in serialized
 
     def test_quote_with_formatting(self):
@@ -203,7 +203,7 @@ class TestQuoteFunction:
 
         assert "\\begin{quote}" in serialized
         assert "\\textit" in serialized
-        assert "emphasized quote" in serialized
+        assert "emphasized~quote" in serialized
         assert "\\end{quote}" in serialized
 
     def test_quote_returns_environment(self):
@@ -283,8 +283,8 @@ class TestNestedStructures:
 
         assert serialized.count("\\begin{itemize}") == 2
         assert serialized.count("\\end{itemize}") == 2
-        assert "Outer item" in serialized
-        assert "Nested 1" in serialized
+        assert "Outer~item" in serialized
+        assert "Nested~1" in serialized
 
     def test_quote_with_list(self):
         """Test quote containing a list"""
@@ -308,8 +308,8 @@ class TestNestedStructures:
 
         assert "\\begin{itemize}" in serialized
         assert "\\begin{enumerate}" in serialized
-        assert "Bullet point" in serialized
-        assert "Numbered point" in serialized
+        assert "Bullet~point" in serialized
+        assert "Numbered~point" in serialized
 
 
 class TestEdgeCases:

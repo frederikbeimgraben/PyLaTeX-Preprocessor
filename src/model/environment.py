@@ -59,4 +59,4 @@ def Verbatim(text: str) -> Environment:
     """Create a verbatim environment for code blocks"""
     from model.raw import Raw
 
-    return Environment("verbatim", Raw(text, safe=False))
+    return Environment("verbatim", Raw(text, safe=False, escape_spaces=False))

@@ -16,7 +16,7 @@ class TestInlineElements:
         doc = marko.parse(md)
         result = parse_md(doc)
         serialized = result.serialize()
-        assert "Hello World" in serialized
+        assert "Hello~World" in serialized
 
     def test_bold_text(self):
         """Test bold text parsing"""
@@ -25,7 +25,7 @@ class TestInlineElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\textbf" in serialized
-        assert "bold text" in serialized
+        assert "bold~text" in serialized
 
     def test_italic_text(self):
         """Test italic text parsing"""
@@ -34,7 +34,7 @@ class TestInlineElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\textit" in serialized
-        assert "italic text" in serialized
+        assert "italic~text" in serialized
 
     def test_inline_code(self):
         """Test inline code parsing"""
@@ -43,7 +43,7 @@ class TestInlineElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\texttt" in serialized
-        assert "code snippet" in serialized
+        assert "code~snippet" in serialized
 
     def test_link(self):
         """Test link parsing"""
@@ -53,7 +53,7 @@ class TestInlineElements:
         serialized = result.serialize()
         assert "\\href" in serialized
         assert "example.com" in serialized
-        assert "link text" in serialized
+        assert "link~text" in serialized
 
     def test_combined_formatting(self):
         """Test multiple inline formats together"""
@@ -93,7 +93,7 @@ class TestBlockElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\section" in serialized
-        assert "Heading 1" in serialized
+        assert "Heading~1" in serialized
 
     def test_heading_level_2(self):
         """Test h2 heading"""
@@ -102,7 +102,7 @@ class TestBlockElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\subsection" in serialized
-        assert "Heading 2" in serialized
+        assert "Heading~2" in serialized
 
     def test_heading_level_3(self):
         """Test h3 heading"""
@@ -111,7 +111,7 @@ class TestBlockElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\subsubsection" in serialized
-        assert "Heading 3" in serialized
+        assert "Heading~3" in serialized
 
     def test_heading_level_4(self):
         """Test h4 heading"""
@@ -120,7 +120,7 @@ class TestBlockElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\paragraph" in serialized
-        assert "Heading 4" in serialized
+        assert "Heading~4" in serialized
 
     def test_heading_level_5(self):
         """Test h5 heading"""
@@ -129,7 +129,7 @@ class TestBlockElements:
         result = parse_md(doc)
         serialized = result.serialize()
         assert "\\subparagraph" in serialized
-        assert "Heading 5" in serialized
+        assert "Heading~5" in serialized
 
     def test_code_block_fenced(self):
         """Test fenced code block"""
@@ -161,7 +161,7 @@ def hello():
         serialized = result.serialize()
         assert "\\begin{quote}" in serialized
         assert "\\end{quote}" in serialized
-        assert "This is a quote" in serialized
+        assert "This~is~a~quote" in serialized
 
     def test_unordered_list(self):
         """Test unordered list"""
@@ -174,9 +174,9 @@ def hello():
         assert "\\begin{itemize}" in serialized
         assert "\\end{itemize}" in serialized
         assert "\\item" in serialized
-        assert "Item 1" in serialized
-        assert "Item 2" in serialized
-        assert "Item 3" in serialized
+        assert "Item~1" in serialized
+        assert "Item~2" in serialized
+        assert "Item~3" in serialized
 
     def test_ordered_list(self):
         """Test ordered list"""
@@ -383,7 +383,7 @@ class TestEnvironmentClasses:
         env = Environment("testenv", content)
         serialized = env.serialize()
 
-        assert serialized == "\\begin{testenv}\ntest content\n\\end{testenv}"
+        assert serialized == "\\begin{testenv}\ntest~content\n\\end{testenv}"
 
     def test_item_serialization(self):
         """Test Item class serialization"""
@@ -391,7 +391,7 @@ class TestEnvironmentClasses:
         item = Item(content)
         serialized = item.serialize()
 
-        assert serialized == "\\item item content"
+        assert serialized == "\\item item~content"
 
     def test_environment_children(self):
         """Test Environment children property"""

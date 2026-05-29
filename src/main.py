@@ -1,391 +1,282 @@
 #!/usr/bin/env python3
 """
-Demo program for PyLaTeX Markdown Parser
+Demo program for PyLaTeX - Comprehensive Type Showcase
 
-This demonstrates the conversion of Markdown to LaTeX using the
-markdown parsing functionality.
+This demonstrates all available TeX types by building a complete
+document tree programmatically and serializing it to LaTeX.
 """
 
-import marko
+from model.builtins import (
+    Bold,
+    Href,
+    Italic,
+    Newline,
+    Paragraph,
+    Section,
+    Subsection,
+    Subsubsection,
+    Texttt,
+)
+from model.environment import Enumerate, Environment, Item, Itemize, Quote, Verbatim
+from model.group import Group
+from model.raw import Raw
 
-from model.markdown import parse_md
 
+def main() -> None:
+    """Build a comprehensive document tree showcasing all types"""
 
-def print_section(title: str) -> None:
-    """Print a section header"""
-    print("\n" + "=" * 80)
-    print(f" {title}")
     print("=" * 80)
+    print("PyLaTeX Comprehensive Type Showcase")
+    print("=" * 80)
+    print("\nBuilding document tree with all available types...\n")
 
-
-def demo_basic_formatting() -> None:
-    """Demonstrate basic text formatting"""
-    print_section("1. Basic Text Formatting")
-
-    markdown = """
-This is a paragraph with **bold text**, *italic text*, and `inline code`.
-
-You can also combine formatting like ***bold and italic*** together.
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_headings() -> None:
-    """Demonstrate heading levels"""
-    print_section("2. Headings")
-
-    markdown = """
-# Main Title (H1)
-
-## Section (H2)
-
-### Subsection (H3)
-
-#### Sub-subsection (H4)
-
-##### Paragraph (H5)
-
-###### Subparagraph (H6)
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_lists() -> None:
-    """Demonstrate lists"""
-    print_section("3. Lists")
-
-    markdown = """
-## Unordered List
-
-- First item
-- Second item
-- Third item with **bold text**
-
-## Ordered List
-
-1. First step
-2. Second step
-3. Third step with *emphasis*
-
-## Nested Lists
-
-- Outer item 1
-  - Nested item 1.1
-  - Nested item 1.2
-- Outer item 2
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_code_blocks() -> None:
-    """Demonstrate code blocks"""
-    print_section("4. Code Blocks")
-
-    markdown = """
-Here's some inline code: `print("Hello, World!")`
-
-And here's a code block:
-
-```python
-def fibonacci(n):
+    # Build the complete document tree
+    document = Group(
+        # Title Section
+        Section(Raw("Introduction to PyLaTeX")),
+        # Basic paragraph with formatting
+        Paragraph(
+            Group(
+                Raw("This document demonstrates "),
+                Bold(Raw("all available types")),
+                Raw(" in the PyLaTeX system. It includes "),
+                Italic(Raw("formatted text")),
+                Raw(", "),
+                Texttt(Raw("inline code")),
+                Raw(", and much more."),
+            )
+        ),
+        # Subsection: Text Formatting
+        Subsection(Raw("Text Formatting")),
+        Paragraph(
+            Group(
+                Raw("We support "),
+                Bold(Raw("bold text")),
+                Raw(", "),
+                Italic(Raw("italic text")),
+                Raw(", "),
+                Texttt(Raw("monospace text")),
+                Raw(", and even "),
+                Bold(Italic(Raw("bold italic combined"))),
+                Raw("!"),
+            )
+        ),
+        # Subsection: Links
+        Subsection(Raw("Hyperlinks")),
+        Paragraph(
+            Group(
+                Raw("Visit "),
+                Href(Raw("https://github.com"), Bold(Raw("GitHub"))),
+                Raw(" for more information. You can also check "),
+                Href(Raw("https://www.python.org"), Raw("Python.org")),
+                Raw("."),
+            )
+        ),
+        # Subsection: Lists
+        Subsection(Raw("Lists and Enumerations")),
+        Subsubsection(Raw("Unordered List")),
+        Itemize(
+            Item(Raw("First item in the list")),
+            Item(Group(Raw("Second item with "), Bold(Raw("bold text")))),
+            Item(
+                Group(
+                    Raw("Third item with "),
+                    Href(Raw("https://example.com"), Raw("a link")),
+                )
+            ),
+        ),
+        Subsubsection(Raw("Ordered List")),
+        Enumerate(
+            Item(Raw("First step")),
+            Item(Group(Raw("Second step with "), Italic(Raw("emphasis")))),
+            Item(Group(Raw("Third step with "), Texttt(Raw("code")))),
+        ),
+        # Subsection: Block Quotes
+        Subsection(Raw("Block Quotes")),
+        Paragraph(Raw("As the famous saying goes:")),
+        Quote(
+            Group(
+                Paragraph(
+                    Group(
+                        Italic(
+                            Raw('"The best way to predict the future is to invent it."')
+                        ),
+                        Raw(" — Alan Kay"),
+                    )
+                )
+            )
+        ),
+        # Subsection: Code Blocks
+        Subsection(Raw("Code Examples")),
+        Paragraph(
+            Group(
+                Raw("Here's an example using "),
+                Texttt(Raw("verbatim")),
+                Raw(" environment:"),
+            )
+        ),
+        Verbatim("""def fibonacci(n):
     if n <= 1:
         return n
     return fibonacci(n-1) + fibonacci(n-2)
 
-# Calculate the 10th Fibonacci number
-result = fibonacci(10)
-print(f"Result: {result}")
-```
-
-Indented code also works:
-
-    for i in range(5):
-        print(i)
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_links() -> None:
-    """Demonstrate links"""
-    print_section("5. Links and URLs")
-
-    markdown = """
-Visit [GitHub](https://github.com) for more information.
-
-You can also use autolinks: <https://www.python.org>
-
-Links can have [**formatted text**](https://example.com) too!
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_quotes() -> None:
-    """Demonstrate blockquotes"""
-    print_section("6. Block Quotes")
-
-    markdown = """
-As someone once said:
-
-> This is a blockquote.
-> It can span multiple lines.
->
-> And even have **formatted** text!
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_special_characters() -> None:
-    """Demonstrate special character escaping"""
-    print_section("7. Special Character Escaping")
-
-    markdown = """
-LaTeX special characters are automatically escaped:
-
-- Dollar signs: $100
-- Ampersands: Tom & Jerry
-- Percent signs: 100% complete
-- Hash symbols: #hashtag
-- Underscores: variable_name
-- Curly braces: {this} and {that}
-- Tilde: ~/home/user
-- Caret: 2^10
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_complex_document() -> None:
-    """Demonstrate a complete complex document"""
-    print_section("8. Complex Document")
-
-    markdown = """
-# Research Paper: Machine Learning
-
-## Abstract
-
-This paper explores the fundamentals of **machine learning** and its applications in modern computing.
-
-## Introduction
-
-Machine learning (ML) is a subset of *artificial intelligence* that focuses on:
-
-1. Data analysis
-2. Pattern recognition
-3. Predictive modeling
-
-### Historical Context
-
-> "Machine learning is the science of getting computers to act without being explicitly programmed."
-> — Andrew Ng
-
-## Methodology
-
-Our approach consists of three main steps:
-
-- **Data Collection**: Gathering relevant datasets
-- **Model Training**: Using algorithms like:
-  1. Linear Regression
-  2. Decision Trees
-  3. Neural Networks
-- **Evaluation**: Testing model accuracy
-
-### Code Example
-
-Here's a simple implementation:
-
-```python
-import numpy as np
-
-def train_model(X, y):
-    # Training logic
-    weights = np.random.randn(X.shape[1])
-    return weights
-```
-
-## Results
-
-We achieved an accuracy of 95% on the test dataset. For more details, visit our [GitHub repository](https://github.com/example/ml-project).
-
-### Performance Metrics
-
-- Precision: 0.94
-- Recall: 0.96
-- F1-Score: 0.95
-
-## Conclusion
-
-Machine learning continues to revolutionize various industries. Key takeaways:
-
-1. Data quality is crucial
-2. Model selection depends on the problem
-3. Continuous evaluation is necessary
-
----
-
-*Thank you for reading!*
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    print("\n📄 LaTeX Output:")
-    print(result.serialize())
-
-
-def demo_latex_document() -> None:
-    """Generate a complete LaTeX document"""
-    print_section("9. Complete LaTeX Document Generation")
-
-    markdown = """
-# Introduction to Python
-
-Python is a **high-level**, *general-purpose* programming language.
-
-## Key Features
-
-1. Easy to learn
-2. Powerful libraries
-3. Cross-platform support
-
-## Example Code
-
-```python
-def greet(name):
-    return f"Hello, {name}!"
-
-print(greet("World"))
-```
-
-Visit [Python.org](https://www.python.org) for more information.
-"""
-
-    print("\n📝 Markdown Input:")
-    print(markdown)
-
-    doc = marko.parse(markdown)
-    result = parse_md(doc)
-
-    # Wrap in a complete LaTeX document
-    latex_document = f"""\\documentclass{{article}}
+# Calculate Fibonacci numbers
+for i in range(10):
+    print(f"fib({i}) = {fibonacci(i)}")"""),
+        # Subsection: Special Characters
+        Subsection(Raw("Special Characters")),
+        Paragraph(Raw("LaTeX special characters are properly escaped:")),
+        Itemize(
+            Item(Raw("Dollar signs: \\$100")),
+            Item(Raw("Ampersands: Tom \\& Jerry")),
+            Item(Raw("Percent: 100\\% complete")),
+            Item(Raw("Hash: \\#hashtag")),
+            Item(Raw("Underscore: variable\\_name")),
+            Item(Raw("Braces: \\{curly\\} braces")),
+            Item(Raw("Tilde: \\textasciitilde{}/home/user")),
+            Item(Raw("Caret: 2\\textasciicircum{}10")),
+        ),
+        # Subsection: Nested Structures
+        Subsection(Raw("Nested Structures")),
+        Paragraph(Raw("Complex nesting is fully supported:")),
+        Itemize(
+            Item(
+                Group(
+                    Bold(Raw("Outer item with bold")),
+                    Raw(" containing:"),
+                    Itemize(
+                        Item(Italic(Raw("Nested italic item"))),
+                        Item(
+                            Group(
+                                Raw("Nested item with "),
+                                Href(
+                                    Raw("https://nested.example.com"),
+                                    Texttt(Raw("code link")),
+                                ),
+                            )
+                        ),
+                    ),
+                )
+            ),
+            Item(
+                Group(
+                    Raw("Another outer item"),
+                    Enumerate(
+                        Item(Raw("Nested ordered item 1")),
+                        Item(Raw("Nested ordered item 2")),
+                    ),
+                )
+            ),
+        ),
+        # Subsection: Custom Environments
+        Subsection(Raw("Custom Environments")),
+        Paragraph(Raw("You can create custom LaTeX environments:")),
+        Environment(
+            "center",
+            Group(
+                Bold(Italic(Raw("Centered and formatted text"))),
+                Newline,
+                Raw("This uses a custom environment"),
+            ),
+        ),
+        # Subsection: Complex Example
+        Subsection(Raw("Putting It All Together")),
+        Paragraph(
+            Group(
+                Raw("This "),
+                Bold(Raw("comprehensive example")),
+                Raw(" shows how to combine "),
+                Italic(Raw("all the features")),
+                Raw(" together. You can visit "),
+                Href(Raw("https://github.com/pylatex"), Bold(Raw("our repository"))),
+                Raw(" for more examples."),
+            )
+        ),
+        Quote(
+            Group(
+                Paragraph(
+                    Group(
+                        Raw("The combination of "),
+                        Bold(Raw("Python")),
+                        Raw(" and "),
+                        Bold(Raw("LaTeX")),
+                        Raw(
+                            " provides a powerful way to generate documents programmatically."
+                        ),
+                    )
+                )
+            )
+        ),
+        Enumerate(
+            Item(Group(Bold(Raw("Benefit 1:")), Raw(" Type-safe document generation"))),
+            Item(
+                Group(
+                    Bold(Raw("Benefit 2:")),
+                    Raw(" Programmatic control over "),
+                    Italic(Raw("all elements")),
+                )
+            ),
+            Item(
+                Group(
+                    Bold(Raw("Benefit 3:")),
+                    Raw(" Easy integration with "),
+                    Texttt(Raw("markdown")),
+                    Raw(" parsing"),
+                )
+            ),
+        ),
+        # Final section
+        Section(Raw("Conclusion")),
+        Paragraph(
+            Group(
+                Raw("This document showcased "),
+                Bold(Raw("all major components")),
+                Raw(
+                    " of the PyLaTeX system including: text formatting, links, lists, quotes, code blocks, special characters, nested structures, and custom environments."
+                ),
+            )
+        ),
+        Paragraph(Group(Italic(Raw("Thank you for exploring PyLaTeX!")))),
+    )
+
+    # Serialize the entire document tree
+    print("=" * 80)
+    print("SERIALIZED LaTeX OUTPUT:")
+    print("=" * 80)
+    print()
+    print(document.serialize())
+    print()
+
+    # Save to file
+    output_file = "demo_output.tex"
+    with open(output_file, "w") as f:
+        # Create a complete LaTeX document
+        latex_content = f"""\\documentclass{{article}}
 \\usepackage{{hyperref}}
 \\usepackage{{fancyvrb}}
+\\usepackage{{parskip}}
 
-\\title{{Python Programming Guide}}
-\\author{{Generated from Markdown}}
+\\title{{PyLaTeX Type Showcase}}
+\\author{{Generated Programmatically}}
 \\date{{\\today}}
 
 \\begin{{document}}
 
 \\maketitle
 
-{result.serialize()}
+\\tableofcontents
+\\newpage
+
+{document.serialize()}
 
 \\end{{document}}"""
+        f.write(latex_content)
 
-    print("\n📄 Complete LaTeX Document:")
-    print(latex_document)
-
-    # Optionally save to file
-    output_file = "output.tex"
-    with open(output_file, "w") as f:
-        f.write(latex_document)
-    print(f"\n✅ LaTeX document saved to: {output_file}")
-
-
-def main() -> None:
-    """Main demo function"""
-    print("\n" + "🚀" * 40)
-    print("  PyLaTeX Markdown Parser - Demonstration")
-    print("🚀" * 40)
-
-    demos = [
-        demo_basic_formatting,
-        demo_headings,
-        demo_lists,
-        demo_code_blocks,
-        demo_links,
-        demo_quotes,
-        demo_special_characters,
-        demo_complex_document,
-        demo_latex_document,
-    ]
-
-    print("\n📚 This demo showcases the markdown to LaTeX conversion capabilities.")
-    print("   Each section demonstrates different markdown features.\n")
-
-    try:
-        for i, demo in enumerate(demos, 1):
-            demo()
-
-            # Pause between demos (except for the last one)
-            if i < len(demos):
-                input("\n⏸️  Press Enter to continue to the next demo...")
-
-    except KeyboardInterrupt:
-        print("\n\n❌ Demo interrupted by user.")
-        return
-
-    print("\n" + "=" * 80)
-    print("✨ Demo complete! Check 'output.tex' for a complete LaTeX document.")
-    print("=" * 80 + "\n")
+    print("=" * 80)
+    print(f"✅ Complete LaTeX document saved to: {output_file}")
+    print(f"   Compile with: pdflatex {output_file}")
+    print("=" * 80)
+    print()
 
 
 if __name__ == "__main__":

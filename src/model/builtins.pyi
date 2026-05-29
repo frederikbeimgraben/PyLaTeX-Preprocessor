@@ -1,8 +1,6 @@
-"""Strongly-typed LaTeX builtin macros.
+"""Type stubs for strongly-typed LaTeX builtin macros.
 
-This module provides type-safe wrappers for common LaTeX commands.
-Each macro is implemented as a dedicated class with proper type hints,
-enabling IDE autocomplete and static type checking.
+Provides explicit type hints for IDE autocomplete and static type checking.
 """
 
 from typing import override
@@ -14,55 +12,41 @@ from model.base_model import TeX
 # Utility Macros
 # ============================================================================
 
-
 class _Relax(BaseMacro):
     """The \\relax macro - does nothing, used as a no-op or separator."""
 
+    def __init__(self) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "relax"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 0
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
-
-Relax = _Relax()
-
+Relax: _Relax
 
 class _Newline(BaseMacro):
     """The \\\\ (newline/line break) macro."""
 
+    def __init__(self) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "\\"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 0
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
-
-Newline = _Newline()
-
+Newline: _Newline
 
 # ============================================================================
 # Text Formatting Macros
 # ============================================================================
-
 
 class Bold(BaseMacro):
     """The \\textbf macro - renders text in bold.
@@ -74,21 +58,16 @@ class Bold(BaseMacro):
         Bold(Raw("important text"))
     """
 
+    def __init__(self, content: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "textbf"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Italic(BaseMacro):
     """The \\textit macro - renders text in italic.
@@ -100,21 +79,16 @@ class Italic(BaseMacro):
         Italic(Raw("emphasized text"))
     """
 
+    def __init__(self, content: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "textit"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Texttt(BaseMacro):
     """The \\texttt macro - renders text in monospace (typewriter) font.
@@ -126,26 +100,20 @@ class Texttt(BaseMacro):
         Texttt(Raw("code snippet"))
     """
 
+    def __init__(self, content: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "texttt"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 # ============================================================================
 # Section Heading Macros
 # ============================================================================
-
 
 class Section(BaseMacro):
     """The \\section macro - top-level section heading.
@@ -157,21 +125,16 @@ class Section(BaseMacro):
         Section(Raw("Introduction"))
     """
 
+    def __init__(self, title: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "section"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subsection(BaseMacro):
     """The \\subsection macro - second-level section heading.
@@ -183,21 +146,16 @@ class Subsection(BaseMacro):
         Subsection(Raw("Background"))
     """
 
+    def __init__(self, title: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "subsection"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subsubsection(BaseMacro):
     """The \\subsubsection macro - third-level section heading.
@@ -209,21 +167,16 @@ class Subsubsection(BaseMacro):
         Subsubsection(Raw("Details"))
     """
 
+    def __init__(self, title: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "subsubsection"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Paragraph(BaseMacro):
     """The \\paragraph macro - fourth-level section heading.
@@ -235,21 +188,16 @@ class Paragraph(BaseMacro):
         Paragraph(Raw("Note"))
     """
 
+    def __init__(self, title: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "paragraph"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subparagraph(BaseMacro):
     """The \\subparagraph macro - fifth-level section heading.
@@ -261,26 +209,20 @@ class Subparagraph(BaseMacro):
         Subparagraph(Raw("Remark"))
     """
 
+    def __init__(self, title: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "subparagraph"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 1
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
-
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 # ============================================================================
 # Hyperlink Macro
 # ============================================================================
-
 
 class Href(BaseMacro):
     """The \\href macro - creates a hyperlink.
@@ -296,17 +238,13 @@ class Href(BaseMacro):
         Requires the hyperref package in your LaTeX document.
     """
 
+    def __init__(self, url: TeX, text: TeX) -> None: ...
     @property
     @override
-    def id(self) -> str:
-        return "href"
-
+    def id(self) -> str: ...
     @property
     @override
-    def n_positional(self) -> int:
-        return 2
-
+    def n_positional(self) -> int: ...
     @property
     @override
-    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
-        return {}
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...

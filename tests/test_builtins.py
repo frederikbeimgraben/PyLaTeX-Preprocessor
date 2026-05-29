@@ -29,7 +29,7 @@ class TestTextFormatting:
         serialized = bold.serialize()
 
         assert "\\textbf" in serialized
-        assert "bold text" in serialized
+        assert "bold~text" in serialized
         assert "{" in serialized
         assert "}" in serialized
 
@@ -40,7 +40,7 @@ class TestTextFormatting:
         serialized = italic.serialize()
 
         assert "\\textit" in serialized
-        assert "italic text" in serialized
+        assert "italic~text" in serialized
 
     def test_texttt(self):
         """Test Texttt (monospace) macro"""
@@ -49,7 +49,7 @@ class TestTextFormatting:
         serialized = texttt.serialize()
 
         assert "\\texttt" in serialized
-        assert "code text" in serialized
+        assert "code~text" in serialized
 
     def test_nested_formatting(self):
         """Test nested text formatting"""
@@ -72,7 +72,7 @@ class TestHeadings:
         serialized = section.serialize()
 
         assert "\\section" in serialized
-        assert "Section Title" in serialized
+        assert "Section~Title" in serialized
 
     def test_subsection(self):
         """Test Subsection macro"""
@@ -81,7 +81,7 @@ class TestHeadings:
         serialized = subsection.serialize()
 
         assert "\\subsection" in serialized
-        assert "Subsection Title" in serialized
+        assert "Subsection~Title" in serialized
 
     def test_subsubsection(self):
         """Test Subsubsection macro"""
@@ -90,7 +90,7 @@ class TestHeadings:
         serialized = subsubsection.serialize()
 
         assert "\\subsubsection" in serialized
-        assert "Subsubsection Title" in serialized
+        assert "Subsubsection~Title" in serialized
 
     def test_paragraph(self):
         """Test Paragraph macro"""
@@ -99,7 +99,7 @@ class TestHeadings:
         serialized = paragraph.serialize()
 
         assert "\\paragraph" in serialized
-        assert "Paragraph Title" in serialized
+        assert "Paragraph~Title" in serialized
 
     def test_subparagraph(self):
         """Test Subparagraph macro"""
@@ -108,7 +108,7 @@ class TestHeadings:
         serialized = subparagraph.serialize()
 
         assert "\\subparagraph" in serialized
-        assert "Subparagraph Title" in serialized
+        assert "Subparagraph~Title" in serialized
 
     def test_heading_with_formatting(self):
         """Test heading with formatted text"""
@@ -132,7 +132,7 @@ class TestLinks:
 
         assert "\\href" in serialized
         assert "https://example.com" in serialized
-        assert "Example Link" in serialized
+        assert "Example~Link" in serialized
 
     def test_href_with_formatting(self):
         """Test Href with formatted link text"""
@@ -143,7 +143,7 @@ class TestLinks:
 
         assert "\\href" in serialized
         assert "\\textbf" in serialized
-        assert "Bold Link" in serialized
+        assert "Bold~Link" in serialized
 
     def test_href_special_chars_in_url(self):
         """Test Href with special characters in URL"""
@@ -217,17 +217,17 @@ class TestMacroErrors:
     def test_wrong_number_of_args_bold(self):
         """Test Bold with wrong number of arguments"""
         with pytest.raises(ValueError):
-            Bold()  # Should require 1 argument
+            Bold()  # pyright: ignore[reportCallIssue]  # Should require 1 argument
 
     def test_wrong_number_of_args_href(self):
         """Test Href with wrong number of arguments"""
         with pytest.raises(ValueError):
-            Href(Raw("url"))  # Should require 2 arguments
+            Href(Raw("url"))  # pyright: ignore[reportCallIssue]  # Should require 2 arguments
 
     def test_wrong_number_of_args_section(self):
         """Test Section with wrong number of arguments"""
         with pytest.raises(ValueError):
-            Section()  # Should require 1 argument
+            Section()  # pyright: ignore[reportCallIssue]  # Should require 1 argument
 
 
 class TestComplexMacroUsage:
