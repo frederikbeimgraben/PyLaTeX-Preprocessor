@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 from typing import override
 
-from pytex import Package, TeX
+from pytex import BuiltinPackages, Package, TeX
+from pytex_komascript.model import Block
 
 #: name -> rgb triple, copied from the original ``InfoBlocks.tex``.
 COLOR_DEFS: dict[str, tuple[float, float, float]] = {
@@ -27,7 +28,7 @@ class DefineColor(TeX):
     @property
     @override
     def required_packages(self) -> set[Package | str]:
-        return {"xcolor"}
+        return {BuiltinPackages.XCOLOR.value}
 
     @property
     @override
@@ -39,9 +40,11 @@ class DefineColor(TeX):
         return f"\\definecolor{{{self.name}}}{{{self.model}}}{{{self.spec}}}"
 
 
-def colors_block() -> str:
-    """Serialized ``\\definecolor`` list for all HSRT custom colours."""
-    return "\n".join(
-        DefineColor(name, ", ".join(str(c) for c in rgb)).serialize()
-        for name, rgb in COLOR_DEFS.items()
+def colors_block() -> TeX:
+    """:class:`Block` of ``\\definecolor`` calls for all HSRT custom colours."""
+    return Block(
+        *(
+            DefineColor(name, ", ".join(str(c) for c in rgb))
+            for name, rgb in COLOR_DEFS.items()
+        )
     )

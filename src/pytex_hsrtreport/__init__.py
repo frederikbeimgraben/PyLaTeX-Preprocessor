@@ -52,6 +52,22 @@ from .markdown import Markdown, markdown_to_tex
 from .variants import VARIANT_LOGOS, Logo, Variant, resolve_logos
 from .wordcount import content_text, count_words
 
+# Re-export the most commonly used native pytex preamble primitives so
+# downstream documents can build extra blocks without reaching into
+# ``pytex.library.builtins`` directly.
+from pytex import (
+    AtBeginDocument,
+    AtEndDocument,
+    BuiltinPackages,
+    Crefname,
+    Hypersetup,
+    NewCommand,
+    NewEnvironment,
+    Package,
+    RenewCommand,
+    SetLength,
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -94,4 +110,15 @@ __all__ = [
     # Markdown
     "Markdown",
     "markdown_to_tex",
+    # Native pytex primitives (re-exported)
+    "AtBeginDocument",
+    "AtEndDocument",
+    "BuiltinPackages",
+    "Crefname",
+    "Hypersetup",
+    "NewCommand",
+    "NewEnvironment",
+    "Package",
+    "RenewCommand",
+    "SetLength",
 ]

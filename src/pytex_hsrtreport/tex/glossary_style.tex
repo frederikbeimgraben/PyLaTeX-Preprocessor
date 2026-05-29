@@ -1,0 +1,14 @@
+% HSRT glossary column types + manualfixedwidth style + custom keys.
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newglossarystyle{manualfixedwidth}{
+  \setglossarystyle{long3colheader}
+  \renewenvironment{theglossary}
+    {\begin{longtable}{@{} L{0.30\textwidth-\tabcolsep} p{0.58\textwidth-\tabcolsep} L{0.10\textwidth-\tabcolsep} @{}}}
+    {\end{longtable}}
+  \renewcommand*{\glsgroupskip}{}
+  \renewcommand{\arraystretch}{1.1}
+}
+\glsaddkey{genitive}{}{\glsentrygenitive}{\Glsentrygenitive}{\glsgen}{\Glsgen}{\GLSgen}
+\glsaddkey{dative}{}{\glsentrydative}{\Glsentrydative}{\glsdative}{\Glsdative}{\GLSdative}

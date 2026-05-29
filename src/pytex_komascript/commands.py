@@ -274,3 +274,53 @@ FrontMatter = _FrontMatter()
 MainMatter = _MainMatter()
 BackMatter = _BackMatter()
 Appendix = _Appendix()
+
+
+# ============================================================================
+# Section-style redefinitions
+# ============================================================================
+
+
+@dataclass(init=False)
+class RedeclareSectionCommand(TeX):
+    """\\RedeclareSectionCommand[opt=val,...]{name} — KOMA section override."""
+
+    name: str
+    options: str
+
+    def __init__(self, name: str, options: str) -> None:
+        self.name = name
+        self.options = options
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return ()
+
+    @override
+    def serialize(self) -> str:
+        return f"\\RedeclareSectionCommand[{self.options}]{{{self.name}}}"
+
+
+@dataclass(init=False)
+class RedeclareSectionCommands(TeX):
+    """\\RedeclareSectionCommands[opt=val,...]{name1,name2,...}."""
+
+    names: tuple[str, ...]
+    options: str
+
+    def __init__(self, names: "tuple[str, ...] | list[str]", options: str) -> None:
+        self.names = tuple(names)
+        self.options = options
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return ()
+
+    @override
+    def serialize(self) -> str:
+        return (
+            f"\\RedeclareSectionCommands[{self.options}]"
+            f"{{{','.join(self.names)}}}"
+        )

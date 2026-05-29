@@ -11,42 +11,77 @@ def collect_packages(node: TeX) -> set[Package | str]:
     return packages
 
 
-def resolve_package_dependencies(packages: set[Package | str]) -> set[str]:
-    """Resolve package dependencies and return final set of package names.
+def _to_package(item: Package | str) -> Package:
+    return item if isinstance(item, Package) else Package(name=item)
 
-    Args:
-        packages: Set of packages (Package objects or strings)
 
-    Returns:
-        Set of package name strings with dependencies resolved
+def resolve_package_dependencies(packages: set[Package | str]) -> list[Package]:
+    """Resolve package dependencies and return a load-ordered Package list.
 
-    Raises:
-        ValueError: If package conflicts are detected
+    Strings are wrapped in option-less ``Package`` instances. Items with the
+    same ``name`` deduplicate; if any duplicate carries an ``options`` string
+    that version wins so options survive collection from multiple sources.
+    The result is topologically sorted so a required package is emitted
+    before any package that depends on it, with alphabetical ordering as the
+    tie-break for independent packages.
     """
-    result: set[str] = set()
-    package_objects: dict[str, Package] = {}
+    by_name: dict[str, Package] = {}
 
-    # Separate Package objects from strings
-    for pkg in packages:
-        if isinstance(pkg, Package):
-            package_objects[pkg.name] = pkg
-            result.add(pkg.name)
-        else:
-            result.add(pkg)
+    def merge(pkg: Package) -> None:
+        existing = by_name.get(pkg.name)
+        if existing is None or (existing.options is None and pkg.options is not None):
+            by_name[pkg.name] = pkg
 
-    # Check for conflicts
-    for pkg_obj in package_objects.values():
-        for conflict in pkg_obj.conflicts:
+    for raw in packages:
+        merge(_to_package(raw))
+
+    # Pull in transitive requires.
+    queue: list[Package] = list(by_name.values())
+    while queue:
+        pkg = queue.pop()
+        for required in pkg.requires:
+            req_pkg = _to_package(required)
+            if req_pkg.name not in by_name:
+                merge(req_pkg)
+                queue.append(req_pkg)
+
+    # Conflict detection
+    for pkg in by_name.values():
+        for conflict in pkg.conflicts:
             conflict_name = conflict if isinstance(conflict, str) else conflict.name
-            if conflict_name in result:
+            if conflict_name in by_name:
                 raise ValueError(
-                    f"Package conflict: {pkg_obj.name} conflicts with {conflict_name}"
+                    f"Package conflict: {pkg.name} conflicts with {conflict_name}"
                 )
 
-    # Add required dependencies
-    for pkg_obj in package_objects.values():
-        for required in pkg_obj.requires:
-            required_name = required if isinstance(required, str) else required.name
-            result.add(required_name)
+    ordered: list[Package] = []
+    visited: set[str] = set()
+    visiting: set[str] = set()
 
-    return result
+    def visit(name: str) -> None:
+        if name in visited or name in visiting:
+            return
+        pkg = by_name.get(name)
+        if pkg is None:
+            return
+        visiting.add(name)
+        # Sort required names so independent deps stay alphabetically ordered.
+        for req in sorted(
+            r if isinstance(r, str) else r.name for r in pkg.requires
+        ):
+            visit(req)
+        visiting.discard(name)
+        visited.add(name)
+        ordered.append(pkg)
+
+    for name in sorted(by_name):
+        visit(name)
+
+    return ordered
+
+
+def serialize_usepackage(pkg: Package) -> str:
+    """Serialise ``\\usepackage[opts]{name}`` for a single Package."""
+    if pkg.options:
+        return f"\\usepackage[{pkg.options}]{{{pkg.name}}}"
+    return f"\\usepackage{{{pkg.name}}}"

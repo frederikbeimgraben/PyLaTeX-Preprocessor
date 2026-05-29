@@ -62,14 +62,17 @@ class TestDocumentStructure:
         assert out.count("\\maketitle") == 2
 
     def test_logos_emitted(self):
+        # Logos are now baked from Python as per-logo tikz nodes that
+        # \includegraphics the resolved logo PDF; \AddLogo no longer exists.
         out = _serialize(variant="INF_meti")
-        assert "\\AddLogo{INF/Kombiniert}{0.9}" in out
-        assert "\\AddLogo{HSRT}{0.9}" in out
+        assert "{\\logospath INF/Kombiniert.pdf}" in out
+        assert "{\\logospath HSRT.pdf}" in out
+        assert "1.5cm*\\real{0.9}" in out
 
     def test_footer_logos_toggle(self):
-        # The footer logo loop is wrapped in \ifdefstring{\istitlepage}; the
-        # title-page logo loop is not, so this marker is footer-only.
-        marker = "\\ifdefstring{\\istitlepage}{\\true}{}{"
+        # The footer-logo nodes are emitted by Python only when footer_logos
+        # is true; the xshift=-1.5cm anchor is unique to the footer strip.
+        marker = "xshift=-1.5cm, yshift=2pt"
         assert marker in _serialize(footer_logos=True)
         assert marker not in _serialize(footer_logos=False)
 
@@ -85,7 +88,9 @@ class TestDocumentStructure:
             "\\setkomafont{disposition}",
             "\\definecolor{hanblue}",
             "blstlisting",
-            "\\NewEnviron{InfoBox}",
+            # ColoredBox is now the only callout env; InfoBox/Warning/... are
+            # baked from Python as \begin{ColoredBox}[opts] calls.
+            "\\NewEnviron{ColoredBox}",
             "\\DraftwatermarkOptions{",
             "\\makeatletter",
         ):
@@ -129,24 +134,40 @@ class TestToggles:
 
 class TestInfoBoxes:
     def test_infobox(self):
+        # All boxes are emitted as ColoredBox with Python-baked options.
         out = InfoBox(Raw("hi")).serialize()
-        assert out.startswith("\\begin{InfoBox}")
-        assert out.endswith("\\end{InfoBox}")
+        assert out.startswith("\\begin{ColoredBox}[")
+        assert out.endswith("\\end{ColoredBox}")
+        assert "icon={\\faInfoCircle}" in out
 
     def test_infobox_options(self):
         out = InfoBox(Raw("hi"), options="background.color={red}").serialize()
-        assert "\\begin{InfoBox}[background.color={red}]" in out
+        # Defaults come first, the override is appended so setkeys wins it.
+        assert "background.color={blue},background.color={red}" in out
 
     def test_warningbox(self):
-        assert "\\begin{WarningBox}" in WarningBox(Raw("x")).serialize()
+        out = WarningBox(Raw("x")).serialize()
+        assert out.startswith("\\begin{ColoredBox}[")
+        assert "icon={\\faExclamationTriangle}" in out
+        assert "icon.color={red}" in out
 
     def test_custombox_args(self):
         out = CustomBox(Raw("x"), "\\faStar", "blue").serialize()
-        assert out.startswith("\\begin{CustomBox}{\\faStar}{blue}")
+        assert out.startswith("\\begin{ColoredBox}[")
+        assert "icon={\\faStar}" in out
+        assert "icon.color={blue}" in out
+        assert "background.color={blue}" in out
 
     def test_voting_results(self):
+        # Python picks the accent colour from the tally and bakes the three
+        # Ja/Nein/Enthaltung CustomBoxes into the body.
         out = VotingResults(Raw("Antrag"), 5, 2, 1).serialize()
-        assert out.startswith("\\begin{VotingResults}{5}{2}{1}")
+        assert out.startswith("\\begin{ColoredBox}[")
+        assert "icon={\\faVoteYea}" in out
+        assert "icon.color={britishracinggreen}" in out  # yes > no
+        assert "\\textbf{Ja:} 5" in out
+        assert "\\textbf{Nein:} 2" in out
+        assert "\\textbf{Enthaltung:} 1" in out
 
 
 class TestWordCount:

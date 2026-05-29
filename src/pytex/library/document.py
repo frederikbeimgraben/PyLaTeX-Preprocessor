@@ -10,7 +10,11 @@ from typing import override
 
 from ..model.base_model import Package, TeX
 from ..model.raw import Raw
-from .packages import collect_packages, resolve_package_dependencies
+from .packages import (
+    collect_packages,
+    resolve_package_dependencies,
+    serialize_usepackage,
+)
 
 
 @dataclass
@@ -104,10 +108,10 @@ class Document(TeX):
             resolved_packages = resolve_package_dependencies(all_packages)
 
             # Generate \usepackage commands
-            for pkg_name in sorted(resolved_packages):
+            for pkg in resolved_packages:
                 preamble_parts.append(
                     Raw(
-                        f"\\usepackage{{{pkg_name}}}\n",
+                        f"{serialize_usepackage(pkg)}\n",
                         escape_spaces=False,
                         safe=False,
                     )

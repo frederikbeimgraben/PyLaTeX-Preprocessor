@@ -2,9 +2,29 @@
 
 This module provides strongly-typed wrappers for common LaTeX commands,
 organized by category into submodules (text, sections, fontsizes, links,
-utility).
+utility, commands, packages).
 """
 
+from .commands import (
+    AtBeginDocument,
+    AtEndDocument,
+    Command,
+    CounterWithin,
+    CounterWithout,
+    Crefname,
+    DeclareRobustCommand,
+    GlobalDef,
+    Hypersetup,
+    MakeAtLetter,
+    NewCommand,
+    NewCounter,
+    NewEnvironment,
+    NewLength,
+    ProvideCommand,
+    RenewCommand,
+    SetCounter,
+    SetLength,
+)
 from .fontsizes import (
     Huge,
     HugeHuge,
@@ -15,6 +35,7 @@ from .fontsizes import (
     Tiny,
 )
 from .links import Href
+from .packages import BuiltinPackages
 from .sections import (
     Paragraph,
     Section,
@@ -63,4 +84,25 @@ __all__ = [
     "Subparagraph",
     # Links
     "Href",
+    # Generic commands
+    "Command",
+    "NewCommand",
+    "RenewCommand",
+    "ProvideCommand",
+    "DeclareRobustCommand",
+    "NewLength",
+    "SetLength",
+    "NewCounter",
+    "SetCounter",
+    "CounterWithin",
+    "CounterWithout",
+    "AtBeginDocument",
+    "AtEndDocument",
+    "MakeAtLetter",
+    "Hypersetup",
+    "Crefname",
+    "NewEnvironment",
+    "GlobalDef",
+    # Package catalogue
+    "BuiltinPackages",
 ]

@@ -1,97 +1,43 @@
-r"""Coloured callout boxes (faithful copy of ``Modules/Layout/InfoBlocks.tex``).
+"""Coloured callout boxes — all built on a single ColoredBox environment.
 
-``INFOBLOCKS_PREAMBLE`` defines the LaTeX environments; the dataclasses below are
-typed Python wrappers used to *emit* those environments in document content.
-Colours are defined separately (see :mod:`pytex_hsrtreport.colors`).
+The TeX side now only defines ``ColoredBox`` (see ``tex/infoblocks.tex``); the
+per-variant defaults (InfoBox / WarningBox / ...) are baked into Python and
+emitted as the env's option list at the call site. The ``VotingResults``
+``\\ifnum`` branching also runs in Python rather than in TeX.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import override
 
-from pytex import Group, Package, TeX
-from pytex.model.raw import coerce_tex
+from pytex import BuiltinPackages, Group, IncludeTeX, Package, TeX
+from pytex.model.raw import Raw, coerce_tex
 
-_REQUIRES: set[Package | str] = {"mdframed", "fontawesome5", "environ", "multicol"}
+_TEX_DIR = Path(__file__).parent / "tex"
 
-# The \NewEnviron definitions, verbatim from InfoBlocks.tex (colour \definecolor
-# lines removed — they live in colors.py).
-INFOBLOCKS_PREAMBLE = r"""\RequirePackage{xcolor}
-\RequirePackage{fp}
-\RequirePackage{environ}
-\RequirePackage{mdframed}
-\RequirePackage{fontawesome5}
-\RequirePackage{keyval}
-\RequirePackage{multicol}
-\newcounter{coloredBoxLevel}
-\makeatletter
-\define@key{coloredBox}{icon}{\def\coloredBoxIcon{#1}}
-\define@key{coloredBox}{icon.prefix}{\def\coloredBoxIconPrefix{#1}}
-\define@key{coloredBox}{icon.fontsize}{\def\coloredBoxIconSize{#1}}
-\define@key{coloredBox}{icon.offset.x}{\def\coloredBoxIconOffsetX{#1}}
-\define@key{coloredBox}{icon.offset.y}{\def\coloredBoxIconOffsetY{#1}}
-\define@key{coloredBox}{icon.color}{\def\coloredBoxColor{#1}}
-\define@key{coloredBox}{background.color}{\def\coloredBoxBackground{#1}}
-\makeatother
-\NewEnviron{ColoredBox}[1][
-   icon={\faInfoCircle}, icon.color={blue}, icon.prefix={},
-   icon.fontsize={28pt}, icon.offset.x={0pt}, icon.offset.y={0pt},
-   background.color={blue}
-]{
-   \setkeys{coloredBox}{#1}
-   \stepcounter{coloredBoxLevel}
-   \FPeval{\backgroundOpacityFloat}{0.05 + 0.075 * \arabic{coloredBoxLevel}}
-   \FPeval{\backgroundOpacity}{round(\backgroundOpacityFloat * 100, 0)}
-   \FPeval{\iconOpacity}{\backgroundOpacity + 20}
-   \ifnum\value{coloredBoxLevel}=1 \filbreak \fi
-   \vspace*{0.5\baselineskip}
-   \noindent
-   \begin{minipage}{\linewidth}
-      \begin{mdframed}[
-         backgroundcolor={\coloredBoxBackground!\backgroundOpacity},
-         hidealllines=true, skipabove=0.7\baselineskip, skipbelow=0.7\baselineskip,
-         splitbottomskip=2pt, splittopskip=4pt, roundcorner=5pt]
-         \begin{picture}(\linewidth, 0)(0, 0)
-            \put(\coloredBoxIconOffsetX-\coloredBoxIconSize,\coloredBoxIconOffsetY-0.7cm){
-               \fontsize{\coloredBoxIconSize}{\coloredBoxIconSize}\selectfont
-               \color{\coloredBoxColor!\iconOpacity} \coloredBoxIcon}
-         \end{picture}
-         \hspace*{0.25cm}
-         \begin{minipage}{\linewidth-0.5cm}
-            \vspace*{0.5\baselineskip}\BODY\vspace*{0.5\baselineskip}
-         \end{minipage}
-      \end{mdframed}
-   \end{minipage}
-   \addtocounter{coloredBoxLevel}{-1}
-}
-\NewEnviron{InfoBox}[1][icon={\faInfoCircle},icon.color={blue},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={0pt},background.color={blue}]{\let\iBODY\BODY\begin{ColoredBox}[#1]\iBODY\end{ColoredBox}}
-\NewEnviron{WarningBox}[1][icon={\faExclamationTriangle},icon.color={red},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={0pt},background.color={red}]{\let\wBODY\BODY\begin{ColoredBox}[#1]\wBODY\end{ColoredBox}}
-\NewEnviron{SuccessBox}[1][icon={\faCheckCircle},icon.color={green},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={2pt},background.color={green}]{\let\sBODY\BODY\begin{ColoredBox}[#1]\sBODY\end{ColoredBox}}
-\NewEnviron{ImportantBox}[1][icon={\faExclamationCircle},icon.color={orange},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={0pt},background.color={orange}]{\let\impBODY\BODY\begin{ColoredBox}[#1]\impBODY\end{ColoredBox}}
-\NewEnviron{CustomBox}[2]{\let\cBODY\BODY\begin{ColoredBox}[icon={#1},icon.color={#2},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={0pt},background.color={#2}]\cBODY\end{ColoredBox}}
-\NewEnviron{VotingResultsBox}[1]{\let\VotingResultsBODY\BODY\begin{ColoredBox}[icon={\faVoteYea},icon.color={#1},icon.prefix={},icon.fontsize={24pt},icon.offset.x={-0.2cm},icon.offset.y={0pt},background.color={#1}]\VotingResultsBODY\end{ColoredBox}}
-\NewEnviron{VotingResults}[3]{%
-   \let\voteBODY\BODY
-   \ifnum#1>#2 \def\voteColor{britishracinggreen}\else\ifnum#1<#2 \def\voteColor{red}\else\def\voteColor{eggplant}\fi\fi
-   \begin{VotingResultsBox}{\voteColor}
-      \voteBODY
-      \par\medskip\noindent
-      \begin{minipage}[t]{0.3\linewidth}\begin{CustomBox}{\faThumbsUp}{britishracinggreen}\textbf{Ja:} #1\end{CustomBox}\end{minipage}\hfill
-      \begin{minipage}[t]{0.3\linewidth}\begin{CustomBox}{\faThumbsDown}{red}\textbf{Nein:} #2\end{CustomBox}\end{minipage}\hfill
-      \begin{minipage}[t]{0.3\linewidth}\begin{CustomBox}{\faQuestion}{eggplant}\textbf{Enthaltung:} #3\end{CustomBox}\end{minipage}
-   \end{VotingResultsBox}
-}
-\NewEnviron{DiscussionBox}[1][icon={\faComments},icon.color={hanblue},icon.prefix={},icon.fontsize={24pt},icon.offset.x={0pt},icon.offset.y={0pt},background.color={hanblue}]{\let\dBODY\BODY\begin{ColoredBox}[#1]\dBODY\end{ColoredBox}}
-"""
+_REQUIRES: frozenset[Package | str] = frozenset(
+    {
+        BuiltinPackages.MDFRAMED.value,
+        BuiltinPackages.FONTAWESOME5.value,
+        BuiltinPackages.ENVIRON.value,
+        BuiltinPackages.MULTICOL.value,
+        BuiltinPackages.FP.value,
+    }
+)
+
+
+def infoblocks_preamble() -> TeX:
+    """The ColoredBox environment definition (``tex/infoblocks.tex``)."""
+    return IncludeTeX(_TEX_DIR / "infoblocks.tex")
 
 
 @dataclass(init=False)
 class _Box(TeX):
-    """``\\begin{Name}[opts]{args} body \\end{Name}`` callout wrapper."""
+    """``\\begin{Name}[opts] body \\end{Name}`` callout wrapper."""
 
     name: str
     body: TeX
     options: str | None
-    args: tuple[str, ...]
 
     def __init__(
         self,
@@ -99,12 +45,10 @@ class _Box(TeX):
         body: TeX | str,
         *,
         options: str | None = None,
-        args: tuple[str, ...] = (),
     ) -> None:
         self.name = name
         self.body = coerce_tex(body)
         self.options = options
-        self.args = args
 
     @property
     @override
@@ -119,36 +63,142 @@ class _Box(TeX):
     @override
     def serialize(self) -> str:
         opt = f"[{self.options}]" if self.options is not None else ""
-        args = "".join(f"{{{a}}}" for a in self.args)
         return (
-            f"\\begin{{{self.name}}}{opt}{args}\n"
+            f"\\begin{{{self.name}}}{opt}\n"
             f"{self.body.serialize()}\n"
             f"\\end{{{self.name}}}"
         )
 
 
-def _simple_box(name: str):
-    def make(*body: TeX | str, options: str | None = None) -> _Box:
-        return _Box(name, Group(*body) if len(body) != 1 else body[0], options=options)
+def _opts(
+    icon: str,
+    color: str,
+    *,
+    fontsize: str = "24pt",
+    offset_x: str = "0pt",
+    offset_y: str = "0pt",
+    background: str | None = None,
+) -> str:
+    bg = background if background is not None else color
+    return (
+        f"icon={{{icon}}},"
+        f"icon.color={{{color}}},"
+        f"icon.prefix={{}},"
+        f"icon.fontsize={{{fontsize}}},"
+        f"icon.offset.x={{{offset_x}}},"
+        f"icon.offset.y={{{offset_y}}},"
+        f"background.color={{{bg}}}"
+    )
 
-    return make
+
+def _merge_opts(default: str, user: str | None) -> str:
+    if not user:
+        return default
+    return f"{default},{user}"
 
 
-ColoredBox = _simple_box("ColoredBox")
-InfoBox = _simple_box("InfoBox")
-WarningBox = _simple_box("WarningBox")
-SuccessBox = _simple_box("SuccessBox")
-ImportantBox = _simple_box("ImportantBox")
-DiscussionBox = _simple_box("DiscussionBox")
+def _body(parts: "tuple[TeX | str, ...]") -> TeX:
+    if len(parts) == 1:
+        return coerce_tex(parts[0])
+    return Group(*parts)
+
+
+def ColoredBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Raw ColoredBox call. ``options`` are appended to the env defaults."""
+    return _Box("ColoredBox", _body(body), options=options)
+
+
+def InfoBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Blue info callout (``\\faInfoCircle``)."""
+    return _Box(
+        "ColoredBox",
+        _body(body),
+        options=_merge_opts(_opts("\\faInfoCircle", "blue"), options),
+    )
+
+
+def WarningBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Red warning callout (``\\faExclamationTriangle``)."""
+    return _Box(
+        "ColoredBox",
+        _body(body),
+        options=_merge_opts(_opts("\\faExclamationTriangle", "red"), options),
+    )
+
+
+def SuccessBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Green success callout (``\\faCheckCircle``)."""
+    return _Box(
+        "ColoredBox",
+        _body(body),
+        options=_merge_opts(_opts("\\faCheckCircle", "green", offset_y="2pt"), options),
+    )
+
+
+def ImportantBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Orange important callout (``\\faExclamationCircle``)."""
+    return _Box(
+        "ColoredBox",
+        _body(body),
+        options=_merge_opts(_opts("\\faExclamationCircle", "orange"), options),
+    )
+
+
+def DiscussionBox(*body: TeX | str, options: str | None = None) -> _Box:
+    """Han-blue discussion callout (``\\faComments``)."""
+    return _Box(
+        "ColoredBox",
+        _body(body),
+        options=_merge_opts(_opts("\\faComments", "hanblue"), options),
+    )
 
 
 def CustomBox(body: TeX | str, icon: str, color: str) -> _Box:
-    """``\\begin{CustomBox}{icon}{color} ... \\end{CustomBox}``."""
-    return _Box("CustomBox", body, args=(icon, color))
+    """ColoredBox with caller-chosen icon and accent colour."""
+    return _Box("ColoredBox", body, options=_opts(icon, color))
 
 
-def VotingResults(
-    body: TeX | str, yes: int, no: int, abstain: int
-) -> _Box:
-    """``\\begin{VotingResults}{yes}{no}{abstain} ... \\end{VotingResults}``."""
-    return _Box("VotingResults", body, args=(str(yes), str(no), str(abstain)))
+def VotingResults(body: TeX | str, yes: int, no: int, abstain: int) -> _Box:
+    """ColoredBox with a vote-tally trailer (Ja/Nein/Enthaltung).
+
+    The accent colour reflects the outcome — green if motion passes, red if it
+    fails, eggplant on a tie — chosen in Python instead of via ``\\ifnum``.
+    """
+    if yes > no:
+        color = "britishracinggreen"
+    elif yes < no:
+        color = "red"
+    else:
+        color = "eggplant"
+
+    tally_raw = (
+        "\\par\\medskip\\noindent\n"
+        "\\begin{minipage}[t]{0.3\\linewidth}"
+        f"{CustomBox(Raw(f'\\textbf{{Ja:}} {yes}', escape_spaces=False), '\\faThumbsUp', 'britishracinggreen').serialize()}"
+        "\\end{minipage}\\hfill\n"
+        "\\begin{minipage}[t]{0.3\\linewidth}"
+        f"{CustomBox(Raw(f'\\textbf{{Nein:}} {no}', escape_spaces=False), '\\faThumbsDown', 'red').serialize()}"
+        "\\end{minipage}\\hfill\n"
+        "\\begin{minipage}[t]{0.3\\linewidth}"
+        f"{CustomBox(Raw(f'\\textbf{{Enthaltung:}} {abstain}', escape_spaces=False), '\\faQuestion', 'eggplant').serialize()}"
+        "\\end{minipage}"
+    )
+    full_body = Group(coerce_tex(body), Raw(tally_raw, escape_spaces=False))
+    return _Box(
+        "ColoredBox",
+        full_body,
+        options=_opts("\\faVoteYea", color, offset_x="-0.2cm"),
+    )
+
+
+__all__ = [
+    "infoblocks_preamble",
+    "ColoredBox",
+    "InfoBox",
+    "WarningBox",
+    "SuccessBox",
+    "ImportantBox",
+    "DiscussionBox",
+    "CustomBox",
+    "VotingResults",
+]

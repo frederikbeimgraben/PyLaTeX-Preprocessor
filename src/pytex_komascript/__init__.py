@@ -44,6 +44,8 @@ from .commands import (
     Pagestyle,
     Publishers,
     RecalcTypeArea,
+    RedeclareSectionCommand,
+    RedeclareSectionCommands,
     SetKomaFont,
     Subject,
     TitleHead,
@@ -87,4 +89,7 @@ __all__ = [
     "MainMatter",
     "BackMatter",
     "Appendix",
+    # Sections
+    "RedeclareSectionCommand",
+    "RedeclareSectionCommands",
 ]

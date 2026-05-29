@@ -1,51 +1,69 @@
-r"""Bibliography setup (faithful copy of ``Config/Bibliography.tex`` and
-``Pages/Bibliography.tex``), with backend/style chosen from Python.
+"""Bibliography setup — biblatex package + cite-command definitions.
+
+``biblatex`` itself is added to the package list as a :class:`Package` whose
+``options`` carry the backend/sorting/style/citestyle from the Python caller;
+the DeclareCiteCommand declarations and a few setlength tweaks live in
+``tex/bibliography.tex``.
 """
 
+from pathlib import Path
 from typing import Literal
+
+from pytex import (
+    BuiltinPackages,
+    Command,
+    IncludeTeX,
+    NewCommand,
+    Package,
+    TeX,
+)
+
+_TEX_DIR = Path(__file__).parent / "tex"
 
 type Backend = Literal["bibtex", "biber"]
 
 
-def bibliography_config(
+def biblatex_package(
     backend: Backend = "bibtex",
     style: str = "ieee",
     citestyle: str = "numeric",
     sorting: str = "nyt",
-) -> str:
-    """biblatex load + HSRT citation formatting."""
-    return (
-        rf"\RequirePackage[backend={backend},sorting={sorting},style={style},citestyle={citestyle}]{{biblatex}}"
-        "\n"
-        r"""\RequirePackage{csquotes}
-\ExecuteBibliographyOptions{hyperref=true,backref=false,url=true,doi=true,isbn=false}
-\DeclareFieldFormat{citehyperref}{\bibhyperref{#1}}
-\DeclareCiteCommand{\cite}{\usebibmacro{prenote}}{\bibhyperref{\usebibmacro{citeindex}\usebibmacro{cite}}}{\multicitedelim}{\usebibmacro{postnote}}
-\DeclareCiteCommand{\parencite}[\mkbibparens]{\usebibmacro{prenote}}{\bibhyperref{\usebibmacro{citeindex}\usebibmacro{cite}}}{\multicitedelim}{\usebibmacro{postnote}}
-\DeclareCiteCommand{\textcite}{\usebibmacro{prenote}}{\bibhyperref{\usebibmacro{citeindex}\printnames{labelname}\setunit{\nameyeardelim}\printfield{year}}}{\multicitedelim}{\usebibmacro{postnote}}
-\newcommand{\fcite}[1]{\hyperlink{cite.#1}{\citeauthor{#1}, \citeyear{#1}}}
-\DeclareCiteCommand{\footcite}[\mkbibfootnote]{\usebibmacro{prenote}}{\bibhyperref{\usebibmacro{citeindex}\usebibmacro{cite}}}{\multicitedelim}{\usebibmacro{postnote}}
-\renewcommand{\nameyeardelim}{\addcomma\space}
-\renewcommand{\multicitedelim}{\addsemicolon\space}
-\DeclareNameAlias{sortname}{family-given}
-\DeclareNameAlias{default}{given-family}
-\DeclareFieldFormat{url}{\url{#1}}
-\DeclareFieldFormat{doi}{\ifhyperref{\href{https://doi.org/#1}{\nolinkurl{doi:#1}}}{\nolinkurl{doi:#1}}}
-\setlength{\bibitemsep}{0.5\baselineskip}
-\setlength{\bibhang}{2em}
-"""
+) -> Package:
+    """Return the biblatex Package with the requested options."""
+    opts = f"backend={backend},sorting={sorting},style={style},citestyle={citestyle}"
+    return Package(name="biblatex", options=opts)
+
+
+def bibliography_block() -> TeX:
+    """The HSRT-customised biblatex declarations (``tex/bibliography.tex``)."""
+    return IncludeTeX(_TEX_DIR / "bibliography.tex")
+
+
+def add_bib_resource(path: str) -> TeX:
+    """``\\addbibresource{path}``."""
+    return Command("addbibresource", path)
+
+
+def makebib_command() -> TeX:
+    """``\\newcommand{\\makebib}{...}`` — used at end of document."""
+    return NewCommand(
+        "makebib",
+        "\\clearpage\n"
+        + "\\chapter*{Literaturverzeichnis}\n"
+        + "\\label{chap:bibliography}\n"
+        + "\\printbibliography[heading=none,title={}]",
     )
 
 
-def add_bib_resource(path: str) -> str:
-    """``\\addbibresource{path}``."""
-    return f"\\addbibresource{{{path}}}"
+def bibliography_packages() -> set[Package | str]:
+    return {BuiltinPackages.CSQUOTES.value}
 
 
-# \makebib — printed at end of document.
-MAKEBIB = r"""\newcommand{\makebib}{
-  \clearpage
-  \chapter*{Literaturverzeichnis}
-  \label{chap:bibliography}
-  \printbibliography[heading=none,title={}]
-}"""
+__all__ = [
+    "Backend",
+    "biblatex_package",
+    "bibliography_block",
+    "add_bib_resource",
+    "makebib_command",
+    "bibliography_packages",
+]

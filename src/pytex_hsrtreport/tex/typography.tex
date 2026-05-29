@@ -1,0 +1,33 @@
+% Typography penalties and environment hooks. Loaded after the package list.
+\hyphenpenalty=500
+\exhyphenpenalty=500
+\tolerance=1000
+\emergencystretch=3em
+\spaceskip=0.3em plus 0.2em minus 0.1em
+\xspaceskip=0.6em plus 0.3em minus 0.15em
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\makeatletter
+\@beginparpenalty=10000
+\@endparpenalty=10000
+\makeatother
+\raggedbottom
+\flushbottom
+\interlinepenalty=150
+\predisplaypenalty=10000
+\postdisplaypenalty=10000
+\floatingpenalty=20000
+\parfillskip=0pt plus 1fil
+\newenvironment{protecteditemize}{%
+  \begin{minipage}{\linewidth}\begin{itemize}}{%
+  \end{itemize}\end{minipage}}
+\newenvironment{protectedenumerate}{%
+  \begin{minipage}{\linewidth}\begin{enumerate}}{%
+  \end{enumerate}\end{minipage}}
+\AtBeginEnvironment{itemize}{\nopagebreak[4]\interlinepenalty=5000}
+\AtEndEnvironment{itemize}{\nopagebreak[3]}
+\AtBeginEnvironment{enumerate}{\nopagebreak[4]\interlinepenalty=5000}
+\AtEndEnvironment{enumerate}{\nopagebreak[3]}
+\newenvironment{listenabsatz}{\begin{itemize}[nosep,leftmargin=*]}{\end{itemize}}
+\newenvironment{listenabsatz*}{\begin{enumerate}[nosep,leftmargin=*]}{\end{enumerate}}

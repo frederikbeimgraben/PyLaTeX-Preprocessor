@@ -5,18 +5,23 @@ from pytex_hsrtreport import markdown_to_tex
 
 class TestCallouts:
     def test_info_callout(self):
+        # All callouts emit the underlying ColoredBox env with the InfoBox
+        # icon/colour baked into the options from Python.
         out = markdown_to_tex("> [!INFO]\n> Be informed.").serialize()
-        assert "\\begin{InfoBox}" in out
+        assert "\\begin{ColoredBox}" in out
+        assert "icon={\\faInfoCircle}" in out
         assert "Be" in out
         assert "[!INFO]" not in out
 
     def test_warning_callout(self):
         out = markdown_to_tex("> [!WARNING]\n> Careful here.").serialize()
-        assert "\\begin{WarningBox}" in out
+        assert "\\begin{ColoredBox}" in out
+        assert "icon={\\faExclamationTriangle}" in out
 
     def test_tip_is_success_box(self):
         out = markdown_to_tex("> [!TIP]\n> Nice trick.").serialize()
-        assert "\\begin{SuccessBox}" in out
+        assert "\\begin{ColoredBox}" in out
+        assert "icon={\\faCheckCircle}" in out
 
     def test_plain_quote_not_a_callout(self):
         out = markdown_to_tex("> just a quote").serialize()
