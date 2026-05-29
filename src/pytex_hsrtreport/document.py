@@ -95,18 +95,19 @@ def _at_end_document(
 ) -> str:
     parts = [
         r"\AtEndDocument{",
-        r"  \clearpage\appendix\backmatter",
+        r"  \clearpage\appendix",
         r"  \KOMAoptions{open=any}",  # Allow chapters to start on any page
+        r"  \backmatter",
         r"  \cfoot*{}\ohead*{}",
         r"  \noindent\blenderfont",
     ]
     if has_glossary or has_acronyms:
         parts.append(r"  \glsaddallunused")
     if has_glossary:
-        parts.append(r"  \renewcommand*{\entryname}{Wort}\clearpage\printglossary")
+        parts.append(r"  \renewcommand*{\entryname}{Wort}\printglossary")
     if has_acronyms:
         parts.append(
-            r"  \renewcommand*{\entryname}{Abkürzung}\clearpage\printglossary[type=\acronymtype,title=Abkürzungen]"
+            r"  \renewcommand*{\entryname}{Abkürzung}\printglossary[type=\acronymtype,title=Abkürzungen]"
         )
     if has_bibliography:
         parts.append(r"  \makebib")
