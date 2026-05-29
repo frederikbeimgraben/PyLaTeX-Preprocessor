@@ -170,3 +170,7 @@ cython_debug/
 *.acn
 *.glo
 *.ist
+*.acr
+*.alg
+*.glg
+*.gls
