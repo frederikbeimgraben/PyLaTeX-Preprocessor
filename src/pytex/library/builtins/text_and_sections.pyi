@@ -1,9 +1,6 @@
-"""Type stubs for strongly-typed LaTeX builtin macros.
+"""Type stubs for strongly-typed LaTeX builtin macros."""
 
-Provides explicit type hints for IDE autocomplete and static type checking.
-"""
-
-from typing import override
+from typing import Protocol, override
 
 from pytex.model.base_macro import BaseMacro
 from pytex.model.base_model import TeX
@@ -13,8 +10,6 @@ from pytex.model.base_model import TeX
 # ============================================================================
 
 class _Relax(BaseMacro):
-    """The \\relax macro - does nothing, used as a no-op or separator."""
-
     def __init__(self) -> None: ...
     @property
     @override
@@ -29,8 +24,6 @@ class _Relax(BaseMacro):
 Relax: _Relax
 
 class _Newline(BaseMacro):
-    """The \\\\ (newline/line break) macro."""
-
     def __init__(self) -> None: ...
     @property
     @override
@@ -49,15 +42,7 @@ Newline: _Newline
 # ============================================================================
 
 class Bold(BaseMacro):
-    """The \\textbf macro - renders text in bold.
-
-    Args:
-        content: The text content to render in bold.
-
-    Example:
-        Bold(Raw("important text"))
-    """
-
+    """\\textbf — bold text. Example: Bold(Raw("important text"))"""
     def __init__(self, content: TeX) -> None: ...
     @property
     @override
@@ -70,15 +55,7 @@ class Bold(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Italic(BaseMacro):
-    """The \\textit macro - renders text in italic.
-
-    Args:
-        content: The text content to render in italic.
-
-    Example:
-        Italic(Raw("emphasized text"))
-    """
-
+    """\\textit — italic text. Example: Italic(Raw("emphasized text"))"""
     def __init__(self, content: TeX) -> None: ...
     @property
     @override
@@ -91,15 +68,72 @@ class Italic(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Texttt(BaseMacro):
-    """The \\texttt macro - renders text in monospace (typewriter) font.
+    """\\texttt — monospace text. Example: Texttt(Raw("code"))"""
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def id(self) -> str: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
-    Args:
-        content: The text content to render in monospace.
+class Underline(BaseMacro):
+    """\\underline — underlined text."""
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def id(self) -> str: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
-    Example:
-        Texttt(Raw("code snippet"))
-    """
+class Emph(BaseMacro):
+    """\\emph — semantic emphasis."""
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def id(self) -> str: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
+class SmallCaps(BaseMacro):
+    """\\textsc — small capitals."""
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def id(self) -> str: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
+
+class Superscript(BaseMacro):
+    """\\textsuperscript — superscript text."""
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def id(self) -> str: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
+
+class Subscript(BaseMacro):
+    """\\textsubscript — subscript text."""
     def __init__(self, content: TeX) -> None: ...
     @property
     @override
@@ -116,15 +150,7 @@ class Texttt(BaseMacro):
 # ============================================================================
 
 class Section(BaseMacro):
-    """The \\section macro - top-level section heading.
-
-    Args:
-        title: The section title.
-
-    Example:
-        Section(Raw("Introduction"))
-    """
-
+    """\\section — top-level heading. Example: Section(Raw("Introduction"))"""
     def __init__(self, title: TeX) -> None: ...
     @property
     @override
@@ -137,15 +163,7 @@ class Section(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subsection(BaseMacro):
-    """The \\subsection macro - second-level section heading.
-
-    Args:
-        title: The subsection title.
-
-    Example:
-        Subsection(Raw("Background"))
-    """
-
+    """\\subsection — second-level heading."""
     def __init__(self, title: TeX) -> None: ...
     @property
     @override
@@ -158,15 +176,7 @@ class Subsection(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subsubsection(BaseMacro):
-    """The \\subsubsection macro - third-level section heading.
-
-    Args:
-        title: The subsubsection title.
-
-    Example:
-        Subsubsection(Raw("Details"))
-    """
-
+    """\\subsubsection — third-level heading."""
     def __init__(self, title: TeX) -> None: ...
     @property
     @override
@@ -179,15 +189,7 @@ class Subsubsection(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Paragraph(BaseMacro):
-    """The \\paragraph macro - fourth-level section heading.
-
-    Args:
-        title: The paragraph title.
-
-    Example:
-        Paragraph(Raw("Note"))
-    """
-
+    """\\paragraph — fourth-level heading."""
     def __init__(self, title: TeX) -> None: ...
     @property
     @override
@@ -200,15 +202,7 @@ class Paragraph(BaseMacro):
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
 
 class Subparagraph(BaseMacro):
-    """The \\subparagraph macro - fifth-level section heading.
-
-    Args:
-        title: The subparagraph title.
-
-    Example:
-        Subparagraph(Raw("Remark"))
-    """
-
+    """\\subparagraph — fifth-level heading."""
     def __init__(self, title: TeX) -> None: ...
     @property
     @override
@@ -225,19 +219,7 @@ class Subparagraph(BaseMacro):
 # ============================================================================
 
 class Href(BaseMacro):
-    """The \\href macro - creates a hyperlink.
-
-    Args:
-        url: The URL target of the hyperlink.
-        text: The visible link text.
-
-    Example:
-        Href(Raw("https://example.com"), Raw("Example Site"))
-
-    Note:
-        Requires the hyperref package in your LaTeX document.
-    """
-
+    """\\href — hyperlink. Requires hyperref. Example: Href(Raw("url"), Raw("text"))"""
     def __init__(self, url: TeX, text: TeX) -> None: ...
     @property
     @override
@@ -248,3 +230,60 @@ class Href(BaseMacro):
     @property
     @override
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
+
+# ============================================================================
+# Font Size Macros
+# ============================================================================
+
+class _FontSize(BaseMacro, Protocol):
+    def __init__(self, content: TeX) -> None: ...
+    @property
+    @override
+    def n_positional(self) -> int: ...
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]: ...
+    @override
+    def serialize_indented(self, indent: int) -> str: ...
+
+class Tiny(_FontSize):
+    """Font size: {\\tiny content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class Small(_FontSize):
+    """Font size: {\\small content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class Large(_FontSize):
+    """Font size: {\\large content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class LargeLarge(_FontSize):
+    """Font size: {\\Large content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class LargeLargeLarge(_FontSize):
+    """Font size: {\\LARGE content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class Huge(_FontSize):
+    """Font size: {\\huge content}"""
+    @property
+    @override
+    def id(self) -> str: ...
+
+class HugeHuge(_FontSize):
+    """Font size: {\\Huge content}"""
+    @property
+    @override
+    def id(self) -> str: ...

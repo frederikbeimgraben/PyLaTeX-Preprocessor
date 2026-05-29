@@ -1,13 +1,11 @@
+from dataclasses import dataclass
 from typing import override
-
-from pydantic import ConfigDict
-from pydantic.dataclasses import dataclass
 
 from ...model.base_model import TeX
 from ...model.group import Group
 
 
-@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
+@dataclass
 class Environment(TeX):
     """LaTeX environment wrapper (\\begin{name}...\\end{name})"""
 
@@ -59,7 +57,7 @@ class Environment(TeX):
         )
 
 
-@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
+@dataclass
 class Item(TeX):
     """LaTeX \\item for lists"""
 

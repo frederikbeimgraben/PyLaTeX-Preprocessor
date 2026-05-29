@@ -1,21 +1,62 @@
 from .library.builtins import (
     Bold,
+    Emph,
     Href,
+    Huge,
+    HugeHuge,
     Italic,
+    Large,
+    LargeLarge,
+    LargeLargeLarge,
     Newline,
     Paragraph,
     Relax,
     Section,
+    Small,
+    SmallCaps,
     Subparagraph,
+    Subscript,
     Subsection,
     Subsubsection,
+    Superscript,
     Texttt,
+    Tiny,
+    Underline,
 )
 from .library.document import Document
 from .library.document_builtins import MakeTitle, NewPage, TableOfContents
 from .library.environments import Enumerate, Environment, Item, Itemize, Quote, Verbatim
+from .library.figures import (
+    Figure,
+    HLine,
+    IncludeGraphics,
+    Row,
+    Table,
+    Tabular,
+    tabular,
+)
 from .library.inclusion import Include, IncludeTeX, RawTeX
 from .library.markdown import Markdown
+from .library.math import (
+    Align,
+    AlignStar,
+    DisplayMath,
+    Equation,
+    EquationStar,
+    Gather,
+    InlineMath,
+)
+from .library.references import (
+    Cite,
+    ColorBox,
+    FBox,
+    Footnote,
+    Label,
+    PageRef,
+    Ref,
+    TextColor,
+    cite,
+)
 from .model.base_model import Package, TeX
 from .model.group import Group
 from .model.raw import Raw
@@ -38,6 +79,19 @@ __all__ = [
     "Bold",
     "Italic",
     "Texttt",
+    "Underline",
+    "Emph",
+    "SmallCaps",
+    "Superscript",
+    "Subscript",
+    # Font sizes
+    "Tiny",
+    "Small",
+    "Large",
+    "LargeLarge",
+    "LargeLargeLarge",
+    "Huge",
+    "HugeHuge",
     # Sections
     "Section",
     "Subsection",
@@ -55,6 +109,33 @@ __all__ = [
     "Enumerate",
     "Quote",
     "Verbatim",
+    # Math
+    "InlineMath",
+    "DisplayMath",
+    "Equation",
+    "EquationStar",
+    "Align",
+    "AlignStar",
+    "Gather",
+    # Figures & tables
+    "IncludeGraphics",
+    "Figure",
+    "Table",
+    "Tabular",
+    "tabular",
+    "Row",
+    "HLine",
+    # References, citations, footnotes
+    "Label",
+    "Ref",
+    "PageRef",
+    "Cite",
+    "cite",
+    "Footnote",
+    # Colors & boxes
+    "TextColor",
+    "ColorBox",
+    "FBox",
     # File inclusion
     "Include",
     "IncludeTeX",

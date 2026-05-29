@@ -5,7 +5,7 @@ Each macro is implemented as a dedicated class with proper type hints,
 enabling IDE autocomplete and static type checking.
 """
 
-from typing import override
+from typing import Protocol, override
 
 from ...model.base_macro import BaseMacro
 from ...model.base_model import TeX
@@ -275,6 +275,180 @@ class Subparagraph(BaseMacro):
     @override
     def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
         return {}
+
+
+# ============================================================================
+# Additional Text Formatting Macros
+# ============================================================================
+
+
+class Underline(BaseMacro):
+    """The \\underline macro - underlines text."""
+
+    @property
+    @override
+    def id(self) -> str:
+        return "underline"
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+
+class Emph(BaseMacro):
+    """The \\emph macro - semantic emphasis."""
+
+    @property
+    @override
+    def id(self) -> str:
+        return "emph"
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+
+class SmallCaps(BaseMacro):
+    """The \\textsc macro - small capitals."""
+
+    @property
+    @override
+    def id(self) -> str:
+        return "textsc"
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+
+class Superscript(BaseMacro):
+    """The \\textsuperscript macro."""
+
+    @property
+    @override
+    def id(self) -> str:
+        return "textsuperscript"
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+
+class Subscript(BaseMacro):
+    """The \\textsubscript macro."""
+
+    @property
+    @override
+    def id(self) -> str:
+        return "textsubscript"
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+
+# ============================================================================
+# Font Size Macros  (declaration style: {\cmd content})
+# ============================================================================
+
+
+class _FontSize(BaseMacro, Protocol):
+    """Base for font size declarations: {\\cmd content}."""
+
+    @property
+    @override
+    def n_positional(self) -> int:
+        return 1
+
+    @property
+    @override
+    def keyword_args(self) -> dict[str, tuple[type[TeX], TeX]]:
+        return {}
+
+    @override
+    def serialize_indented(self, indent: int) -> str:
+        from ...model.serialization import serialize_with_indent
+
+        return f"{{\\{self.id} {serialize_with_indent(self.args[0], 0)}}}"
+
+
+class Tiny(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "tiny"
+
+
+class Small(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "small"
+
+
+class Large(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "large"
+
+
+class LargeLarge(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "Large"
+
+
+class LargeLargeLarge(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "LARGE"
+
+
+class Huge(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "huge"
+
+
+class HugeHuge(_FontSize):
+    @property
+    @override
+    def id(self) -> str:
+        return "Huge"
 
 
 # ============================================================================
