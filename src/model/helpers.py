@@ -1,0 +1,3 @@
+OPENING_BRACE = "{"
+CLOSING_BRACE = "}"
+BACKSLASH = "\\"

@@ -2,4 +2,6 @@
   "executionEnvironments": [{ "root": "src" }],
   "extraPaths": ["src"],
   "exclude": ["tests"],
+  "reportMissingSuperCall": false,
+  "reportUnusedCallResult": false,
 }

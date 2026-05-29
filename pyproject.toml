@@ -11,7 +11,7 @@ authors = [
 description = "Project to have less LaTeX when writing LaTeX"
 # readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = ["pydantic", "marko"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
