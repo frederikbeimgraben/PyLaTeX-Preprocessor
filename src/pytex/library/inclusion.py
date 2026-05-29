@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
-from model.base_model import TeX
+from ..model.base_model import TeX
 
 
 @dataclass
@@ -173,7 +173,7 @@ class Include(TeX):
 
         # Import everything that's available in .pytex files
         # This makes all symbols available without prefix
-        from library.builtins import (
+        from .builtins import (
             Bold,
             Href,
             Italic,
@@ -186,9 +186,9 @@ class Include(TeX):
             Subsubsection,
             Texttt,
         )
-        from library.document import Document
-        from library.document_builtins import MakeTitle, NewPage, TableOfContents
-        from library.environments import (
+        from .document import Document
+        from .document_builtins import MakeTitle, NewPage, TableOfContents
+        from .environments import (
             Enumerate,
             Environment,
             Item,
@@ -196,10 +196,10 @@ class Include(TeX):
             Quote,
             Verbatim,
         )
-        from library.inclusion import Include, IncludeTeX, RawTeX
-        from model.base_model import Package, TeX
-        from model.group import Group
-        from model.raw import Raw
+        from .inclusion import Include, IncludeTeX, RawTeX
+        from ..model.base_model import Package, TeX
+        from ..model.group import Group
+        from ..model.raw import Raw
 
         namespace.update(
             {
@@ -287,7 +287,7 @@ class Include(TeX):
         Returns:
             Serialized content from the .pytex file
         """
-        from model.serialization import serialize_with_indent
+        from ..model.serialization import serialize_with_indent
 
         if self._cached_content is None:
             self._cached_content = self.load()

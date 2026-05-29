@@ -4,7 +4,7 @@ This module provides strongly-typed wrappers for common LaTeX commands,
 organized by category.
 """
 
-from library.builtins.text_and_sections import (
+from .text_and_sections import (
     Bold,
     Href,
     Italic,

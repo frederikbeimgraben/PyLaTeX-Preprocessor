@@ -6,8 +6,8 @@ such as \\maketitle, \\tableofcontents, and \\newpage.
 
 from typing import override
 
-from model.base_macro import BaseMacro
-from model.base_model import TeX
+from ..model.base_macro import BaseMacro
+from ..model.base_model import TeX
 
 
 class _MakeTitle(BaseMacro):

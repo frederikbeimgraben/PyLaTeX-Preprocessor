@@ -8,7 +8,7 @@ from marko import block, inline
 if TYPE_CHECKING:
     pass
 
-from library.builtins.text_and_sections import (
+from ..builtins.text_and_sections import (
     Bold,
     Href,
     Italic,
@@ -20,10 +20,10 @@ from library.builtins.text_and_sections import (
     Subsubsection,
     Texttt,
 )
-from library.environments.standard import Enumerate, Item, Itemize, Quote, Verbatim
-from model.base_model import TeX
-from model.group import Group
-from model.raw import Raw
+from ..environments.standard import Enumerate, Item, Itemize, Quote, Verbatim
+from ...model.base_model import TeX
+from ...model.group import Group
+from ...model.raw import Raw
 
 
 def parse_md(element: marko.element.Element) -> TeX:

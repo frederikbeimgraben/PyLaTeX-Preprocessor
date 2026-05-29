@@ -4,7 +4,7 @@ Provides helpers for creating common LaTeX environments like itemize,
 enumerate, quote, and verbatim.
 """
 
-from library.environments.standard import (
+from .standard import (
     Enumerate,
     Environment,
     Item,

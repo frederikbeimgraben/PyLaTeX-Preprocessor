@@ -1,10 +1,4 @@
-"""High-level LaTeX document building library.
-
-This module provides convenient abstractions for building complete LaTeX documents,
-including document structure, package management, and file inclusion.
-"""
-
-from library.builtins import (
+from .library.builtins import (
     Bold,
     Href,
     Italic,
@@ -17,13 +11,24 @@ from library.builtins import (
     Subsubsection,
     Texttt,
 )
-from library.document import Document
-from library.document_builtins import MakeTitle, NewPage, TableOfContents
-from library.environments import Enumerate, Environment, Item, Itemize, Quote, Verbatim
-from library.inclusion import Include, IncludeTeX, RawTeX
-from library.markdown import Markdown
+from .library.document import Document
+from .library.document_builtins import MakeTitle, NewPage, TableOfContents
+from .library.environments import Enumerate, Environment, Item, Itemize, Quote, Verbatim
+from .library.inclusion import Include, IncludeTeX, RawTeX
+from .library.markdown import Markdown
+from .model.base_model import Package, TeX
+from .model.group import Group
+from .model.raw import Raw
+
+__version__ = "0.1.0"
 
 __all__ = [
+    "__version__",
+    # Core types
+    "TeX",
+    "Package",
+    "Raw",
+    "Group",
     # Document structure
     "Document",
     "MakeTitle",

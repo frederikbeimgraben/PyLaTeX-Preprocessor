@@ -1,27 +1,22 @@
-# Example .pytex file demonstrating the new features
-# This file defines a complete LaTeX document using Python syntax
-
 from datetime import datetime
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from src import (
-        Bold,
-        Document,
-        Group,
-        Italic,
-        Item,
-        Itemize,
-        NewPage,
-        Raw,
-        RawTeX,
-        Section,
-        Subsection,
-        Texttt,
-        Verbatim,
-    )
+from pytex import (
+    Bold,
+    Document,
+    Group,
+    Italic,
+    Item,
+    Itemize,
+    NewPage,
+    Raw,
+    RawTeX,
+    Section,
+    Subsection,
+    Texttt,
+    Verbatim,
+)
 
-document = Document(
+__pytex__ = Document(
     document_class="article",
     title="PyTeX Example Document",
     author="PyLaTeX Framework",
@@ -49,8 +44,10 @@ document = Document(
             Item(Group(Raw("Third item with "), Bold(Raw("bold text")))),
         ),
         Subsection(Raw("Code Examples")),
-        Verbatim("""def hello():
+        Verbatim("""
+def hello():
     print("Hello, World!")
+
 hello()"""),
         Section(Raw("Raw LaTeX Support")),
         Raw("You can also include raw LaTeX:"),

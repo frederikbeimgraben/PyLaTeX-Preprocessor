@@ -17,7 +17,7 @@ dependencies = ["pydantic", "marko"]
 dev = ["pytest"]
 
 [project.scripts]
-build-pytex = "scripts.build_pytex:main"
+build-pytex = "pytex.scripts.build_pytex:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

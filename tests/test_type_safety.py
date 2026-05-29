@@ -6,12 +6,14 @@ proper compile-time and runtime type checking.
 
 import pytest
 
-from library.builtins import (
+from pytex import (
     Bold,
+    Group,
     Href,
     Italic,
     Newline,
     Paragraph,
+    Raw,
     Relax,
     Section,
     Subparagraph,
@@ -19,7 +21,6 @@ from library.builtins import (
     Subsubsection,
     Texttt,
 )
-from model.raw import Raw
 
 
 class TestTypeSignatures:
@@ -262,8 +263,6 @@ class TestComplexTypeInteractions:
 
     def test_mixed_macro_types_in_sequence(self):
         """Test that different macro types can coexist properly."""
-        from model.group import Group
-
         # Create a group with various macro types
         group = Group(
             Section(Raw("Title")),

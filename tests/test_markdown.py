@@ -2,9 +2,8 @@
 
 import marko
 
-from library.environments import Environment, Item
-from library.markdown import parse_md
-from model.raw import Raw
+from pytex import Environment, Item, Raw
+from pytex.library.markdown import parse_md
 
 
 class TestInlineElements:

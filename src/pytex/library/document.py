@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import override
 
-from model.base_model import Package, TeX
-from model.raw import Raw
+from ..model.base_model import Package, TeX
+from ..model.raw import Raw
 
 
 def _collect_packages(
@@ -194,7 +194,7 @@ class Document(TeX):
 
     def _generate_document_content(self) -> list[TeX]:
         """Generate document body content."""
-        from library.document_builtins import MakeTitle, TableOfContents
+        from .document_builtins import MakeTitle, TableOfContents
 
         body_parts: list[TeX] = []
 

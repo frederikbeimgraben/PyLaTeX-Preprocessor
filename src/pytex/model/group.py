@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import override
 
-from library.builtins import Relax
-from model.base_model import TeX
-from model.helpers import CLOSING_BRACE, OPENING_BRACE
+from ..library.builtins import Relax
+from .base_model import TeX
+from .helpers import CLOSING_BRACE, OPENING_BRACE
 
 
 @dataclass
@@ -39,7 +39,7 @@ class Group(TeX):
         Returns:
             Serialized LaTeX string
         """
-        from model.serialization import serialize_with_indent
+        from .serialization import serialize_with_indent
 
         # Groups don't add their own indentation, they just pass it through
         return (

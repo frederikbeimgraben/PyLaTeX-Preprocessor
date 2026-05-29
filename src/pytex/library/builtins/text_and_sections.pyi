@@ -5,8 +5,8 @@ Provides explicit type hints for IDE autocomplete and static type checking.
 
 from typing import override
 
-from model.base_macro import BaseMacro
-from model.base_model import TeX
+from pytex.model.base_macro import BaseMacro
+from pytex.model.base_model import TeX
 
 # ============================================================================
 # Utility Macros

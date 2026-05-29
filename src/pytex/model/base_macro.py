@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Protocol, override
 
-from model.base_model import TeX
-from model.helpers import BACKSLASH, CLOSING_BRACE, OPENING_BRACE
+from .base_model import TeX
+from .helpers import BACKSLASH, CLOSING_BRACE, OPENING_BRACE
 
 
 class BaseMacro(TeX, Protocol):
@@ -82,7 +82,7 @@ class BaseMacro(TeX, Protocol):
         Returns:
             Serialized LaTeX string
         """
-        from model.serialization import serialize_with_indent
+        from .serialization import serialize_with_indent
 
         kwargs = ",".join(
             f"{key}={serialize_with_indent(value, 0)}"

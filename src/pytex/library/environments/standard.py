@@ -3,8 +3,8 @@ from typing import override
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from model.base_model import TeX
-from model.group import Group
+from ...model.base_model import TeX
+from ...model.group import Group
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -40,7 +40,7 @@ class Environment(TeX):
         Returns:
             Serialized LaTeX string with proper indentation
         """
-        from model.serialization import serialize_with_indent
+        from ...model.serialization import serialize_with_indent
 
         indent_str = "  " * indent
         body_str = serialize_with_indent(self.body, indent + 1)
@@ -91,7 +91,7 @@ class Item(TeX):
         Returns:
             Serialized LaTeX string
         """
-        from model.serialization import serialize_with_indent
+        from ...model.serialization import serialize_with_indent
 
         indent_str = "  " * indent
         content_str = serialize_with_indent(self.content, 0)
@@ -115,6 +115,6 @@ def Quote(content: TeX) -> Environment:
 
 def Verbatim(text: str) -> Environment:
     """Create a verbatim environment for code blocks"""
-    from model.raw import Raw
+    from ...model.raw import Raw
 
     return Environment("verbatim", Raw(text, safe=False, escape_spaces=False))

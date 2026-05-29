@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import override
 
-from model.base_macro import SimpleMacro
-from model.base_model import TeX
-from model.helpers import CLOSING_BRACE, OPENING_BRACE
+from .base_macro import SimpleMacro
+from .base_model import TeX
+from .helpers import CLOSING_BRACE, OPENING_BRACE
 
 
 @dataclass

@@ -21,118 +21,27 @@ from pathlib import Path
 
 
 def load_pytex(pytex_path: Path):
-    """Load and evaluate a .pytex file.
-
-    Args:
-        pytex_path: Path to the .pytex file
-
-    Returns:
-        The TeX object defined in the file
-
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        ValueError: If no TeX object found in file
-    """
     if not pytex_path.exists():
         raise FileNotFoundError(f"File not found: {pytex_path}")
 
-    # Import model classes into namespace
-    namespace: dict[str, object] = {}
+    namespace: dict[str, object] = {"__builtins__": __builtins__}
 
-    # Import everything that's available in .pytex files
-    from library.builtins import (
-        Bold,
-        Href,
-        Italic,
-        Newline,
-        Paragraph,
-        Relax,
-        Section,
-        Subparagraph,
-        Subsection,
-        Subsubsection,
-        Texttt,
-    )
-    from library.document import Document
-    from library.document_builtins import MakeTitle, NewPage, TableOfContents
-    from library.environments import (
-        Enumerate,
-        Environment,
-        Item,
-        Itemize,
-        Quote,
-        Verbatim,
-    )
-    from library.inclusion import Include, IncludeTeX, RawTeX
-    from model.base_model import Package, TeX
-    from model.group import Group
-    from model.raw import Raw
-
-    namespace.update(
-        {
-            "TeX": TeX,
-            "Package": Package,
-            "Raw": Raw,
-            "Group": Group,
-            "Document": Document,
-            "MakeTitle": MakeTitle,
-            "TableOfContents": TableOfContents,
-            "NewPage": NewPage,
-            "Bold": Bold,
-            "Italic": Italic,
-            "Texttt": Texttt,
-            "Section": Section,
-            "Subsection": Subsection,
-            "Subsubsection": Subsubsection,
-            "Paragraph": Paragraph,
-            "Subparagraph": Subparagraph,
-            "Href": Href,
-            "Newline": Newline,
-            "Relax": Relax,
-            "Environment": Environment,
-            "Item": Item,
-            "Itemize": Itemize,
-            "Enumerate": Enumerate,
-            "Quote": Quote,
-            "Verbatim": Verbatim,
-            "Include": Include,
-            "IncludeTeX": IncludeTeX,
-            "RawTeX": RawTeX,
-            # Allow standard library imports
-            "__builtins__": __builtins__,
-        }
-    )
-
-    # Read and execute the file
     with open(pytex_path) as f:
         code = f.read()
 
     exec(code, namespace)
 
-    # Find the TeX object
-    result: TeX | None = None
-    for name in ["document", "content", "root"]:
-        if name in namespace:
-            obj = namespace[name]
-            if isinstance(obj, TeX):
-                result = obj
-                break
+    from ..model.base_model import TeX
 
-    if result is None:
-        # Find any TeX object
-        for value in namespace.values():
-            if isinstance(value, TeX):
-                result = value
-                break
+    for name in ["__pytex__", "document", "content", "root"]:
+        obj = namespace.get(name)
+        if isinstance(obj, TeX):
+            return obj
 
-    if result is None:
-        msg = (
-            f"No TeX object found in {pytex_path}. "
-            "Define a TeX object named 'document', 'content', or 'root'."
-        )
-        raise ValueError(msg)
-
-    return result
+    raise ValueError(
+        f"No TeX object found in {pytex_path}. "
+        + "Define `__pytex__ = Document(...)` in the file."
+    )
 
 
 def build_pytex(
@@ -158,7 +67,7 @@ def build_pytex(
 
     # Serialize (with or without indentation)
     if indent:
-        from model.serialization import serialize_with_indent
+        from ..model.serialization import serialize_with_indent
 
         tex_content = serialize_with_indent(tex_obj, indent=0)
     else:

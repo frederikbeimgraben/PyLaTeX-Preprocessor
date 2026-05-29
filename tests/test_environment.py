@@ -1,16 +1,17 @@
 """Tests for LaTeX environment classes"""
 
-from library.builtins import Bold
-from library.environments import (
+from pytex import (
+    Bold,
     Enumerate,
     Environment,
+    Group,
+    Italic,
     Item,
     Itemize,
     Quote,
+    Raw,
     Verbatim,
 )
-from model.group import Group
-from model.raw import Raw
 
 
 class TestEnvironmentClass:
@@ -196,8 +197,6 @@ class TestQuoteFunction:
 
     def test_quote_with_formatting(self):
         """Test quote with formatted content"""
-        from library.builtins import Italic
-
         content = Italic(Raw("emphasized quote"))
         quote = Quote(content)
         serialized = quote.serialize()

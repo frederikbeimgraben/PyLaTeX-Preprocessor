@@ -2,12 +2,14 @@
 
 import pytest
 
-from library.builtins import (
+from pytex import (
     Bold,
+    Group,
     Href,
     Italic,
     Newline,
     Paragraph,
+    Raw,
     Relax,
     Section,
     Subparagraph,
@@ -15,8 +17,6 @@ from library.builtins import (
     Subsubsection,
     Texttt,
 )
-from model.group import Group
-from model.raw import Raw
 
 
 class TestTextFormatting:

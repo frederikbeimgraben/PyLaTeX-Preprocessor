@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import override
 
-from model.base_model import TeX
+from .base_model import TeX
 
 
 @dataclass

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol, override
 
-from model.base_model import TeX
+from .base_model import TeX
 
 
 class SupportsStr(Protocol):
@@ -12,8 +12,8 @@ class SupportsStr(Protocol):
 @dataclass
 class Raw(TeX):
     content: SupportsStr
-    safe: bool = True
-    escape_spaces: bool = True
+    safe: bool = False
+    escape_spaces: bool = False
 
     @property
     @override
