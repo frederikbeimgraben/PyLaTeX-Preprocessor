@@ -64,7 +64,10 @@ def _ListHook(name: str, *, ip: int) -> TeX:
     return Block(
         AtBeginEnvironment(
             name,
-            Block(Command("nopagebreak", options="4"), RegisterAssign("interlinepenalty", ip)),
+            Block(
+                Command("nopagebreak", options="4"),
+                RegisterAssign("interlinepenalty", ip),
+            ),
         ),
         AtEndEnvironment(name, Command("nopagebreak", options="3")),
     )
@@ -110,6 +113,16 @@ def TypographyBlock() -> TeX:
                 "aboveskip": "0.5em plus 0.2em",
                 "keepspaces": True,
                 "breaklines": True,
+                "basicstyle": r"\ttfamily\small",
+                "numbers": "left",
+                "numberstyle": r"\tiny\color{gray}",
+                "numbersep": "10pt",
+                "showstringspaces": "false",
+                "tabsize": 4,
+                "frame": "single",
+                "commentstyle": r"\color{green!60!black}",
+                "keywordstyle": r"\color{blue}",
+                "stringstyle": r"\color{orange!80!black}",
             }
         ),
         _TypographyNative(),

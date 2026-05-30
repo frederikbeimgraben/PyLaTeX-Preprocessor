@@ -91,7 +91,7 @@ class BuiltinPackages(Enum):
     # amsmath is in scope, which happens transitively through many packages).
     CLEVEREF = Package(
         name="cleveref",
-        requires=frozenset({"hyperref", "amsmath"}),
+        after=frozenset({"hyperref", "amsmath"}),
     )
 
     # --- Source code listings ---

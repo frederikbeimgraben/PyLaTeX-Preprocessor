@@ -1,11 +1,9 @@
-"""Header / footer fields — built natively, no @-letter Raw."""
+"""Layout / header / footer config for the HSRT report."""
 
 from pytex import (
-    AtEndDocument,
     Command,
-    IfUndefined,
     Ifnum,
-    ImmediateWrite,
+    IfUndefined,
     MakeAtLetter,
     SetLength,
     TeX,
@@ -19,19 +17,15 @@ def _WriteLastpageAux() -> TeX:
     """``\\AtEndDocument{\\immediate\\write\\@auxout{\\gdef\\@lastpage{\\thepage}}}``.
 
     Wrapped in :class:`MakeAtLetter` so the ``@`` letters tokenise.
+    Use raw LaTeX to avoid expansion issues with ImmediateWrite.
     """
+    from pytex import Raw
+
     return MakeAtLetter(
-        AtEndDocument(
-            ImmediateWrite(
-                "@auxout",
-                Block(
-                    Command("string", Command("gdef")),
-                    Command("string", Command("@lastpage")),
-                    coerce_tex("{"),
-                    Command("thepage"),
-                    coerce_tex("}"),
-                ),
-            )
+        Raw(
+            r"\AtEndDocument{\immediate\write\@auxout{\string\gdef\string\@lastpage{\thepage}}}",
+            escape_spaces=False,
+            safe=False,
         )
     )
 

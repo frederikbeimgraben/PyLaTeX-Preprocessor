@@ -2,9 +2,9 @@
 
 The TeX-side ``ColoredBox`` environment is gone — :class:`ColoredBox` is a
 :class:`pytex.TeX` node whose subtree is composed of :class:`Minipage`,
-:class:`MDFramed`, :class:`Picture` / :class:`Put` and a sequence of
-:class:`Command` nodes. The icon/background opacity is computed in Python
-from the nesting depth, which we determine by walking the TeX tree at
+:class:`MDFramed`, ``\\makebox`` / ``\\raisebox`` for icon positioning and a
+sequence of :class:`Command` nodes. The icon/background opacity is computed in
+Python from the nesting depth, which we determine by walking the TeX tree at
 construction time.
 
 ``InfoBox`` / ``WarningBox`` / ``SuccessBox`` / ``ImportantBox`` /
@@ -22,8 +22,6 @@ from pytex import (
     MDFramed,
     Minipage,
     Package,
-    Picture,
-    Put,
     TeX,
 )
 from pytex.model.raw import Raw, coerce_tex
@@ -127,28 +125,43 @@ class ColoredBox(TeX):
 
     def _tree(self) -> TeX:
         bg_op, icon_op = _opacity_pair(self._level)
-        icon_put = Put(
-            x=f"{self.icon_offset_x}-{self.icon_size}",
-            y=f"{self.icon_offset_y}-0.7cm",
-            body=self._icon_body(icon_op),
+
+        # Icon as a small left-aligned box
+        icon_box = Minipage(
+            self.icon_size,
+            Block(
+                Command("centering"),
+                Command("fontsize", self.icon_size, self.icon_size),
+                Command("selectfont"),
+                Command("color", f"{self.icon_color}!{icon_op}"),
+                Command(self.icon),
+            ),
+            position="t",  # top-aligned
         )
-        inner = Minipage(
-            "\\linewidth-0.5cm",
-            Command("vspace*", "0.5\\baselineskip"),
+
+        # Content minipage, reduced width to account for icon + spacing
+        content_minipage = Minipage(
+            r"\dimexpr\linewidth-{}-1cm\relax".format(self.icon_size),
             self.body,
-            Command("vspace*", "0.5\\baselineskip"),
+            position="t",  # top-aligned
         )
+
+        # Arrange icon and content side by side
+        framed_content = Block(
+            Command("hspace*", "0.3cm"),
+            icon_box,
+            Command("hspace*", "0.2cm"),
+            content_minipage,
+        )
+
         framed = MDFramed(
-            Picture(icon_put, width="\\linewidth", height="0", offset=("0", "0")),
-            Command("hspace*", "0.25cm"),
-            inner,
+            framed_content,
             options=self._mdframed_options(bg_op),
         )
-        wrapper = Minipage("\\linewidth", framed)
+
         return Block(
-            Command("vspace*", "0.5\\baselineskip"),
             Command("noindent"),
-            wrapper,
+            framed,
         )
 
     @override
@@ -261,9 +274,7 @@ def _tally(label: str, count: int, icon: str, hue: HSRTColor | str) -> TeX:
         Command("textbf", f"{label}:"),
         Raw(f" {count}", escape_spaces=False),
     )
-    return Minipage(
-        "0.3\\linewidth", CustomBox(body, icon, hue), position="t"
-    )
+    return Minipage("0.3\\linewidth", CustomBox(body, icon, hue), position="t")
 
 
 def VotingResults(

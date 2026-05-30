@@ -316,7 +316,9 @@ class Hypersetup(TeX):
     @property
     @override
     def required_packages(self) -> set[Package | str]:
-        return {"hyperref"}
+        from .packages import BuiltinPackages
+
+        return {BuiltinPackages.HYPERREF.value}
 
     @property
     @override
@@ -340,7 +342,9 @@ class Crefname(TeX):
     @property
     @override
     def required_packages(self) -> set[Package | str]:
-        return {"cleveref"}
+        from .packages import BuiltinPackages
+
+        return {BuiltinPackages.CLEVEREF.value}
 
     @property
     @override

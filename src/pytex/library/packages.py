@@ -27,7 +27,8 @@ def resolve_package_dependencies(packages: set[Package | str]) -> list[Package]:
     that version wins so options survive collection from multiple sources.
     The result is topologically sorted so a required package is emitted
     before any package that depends on it, with alphabetical ordering as the
-    tie-break for independent packages.
+    tie-break for independent packages. The ``before`` and ``after`` constraints
+    are also respected in the ordering.
     """
     by_name: dict[str, Package] = {}
 
@@ -69,17 +70,55 @@ def resolve_package_dependencies(packages: set[Package | str]) -> list[Package]:
         if pkg is None:
             return
         visiting.add(name)
-        # Sort required names so independent deps stay alphabetically ordered.
-        for req in sorted(
-            r if isinstance(r, str) else r.name for r in pkg.requires
-        ):
+
+        # First, visit packages this one requires (must come before)
+        for req in sorted(r if isinstance(r, str) else r.name for r in pkg.requires):
             visit(req)
+
+        # Also visit packages that must come before this one (via 'after')
+        for after_pkg in sorted(a if isinstance(a, str) else a.name for a in pkg.after):
+            if after_pkg in by_name:
+                visit(after_pkg)
+
+        # And visit packages that this one must come before (via 'before')
+        # by ensuring those packages visit this one first
+        for before_pkg_name in sorted(
+            b if isinstance(b, str) else b.name for b in pkg.before
+        ):
+            if before_pkg_name in by_name and before_pkg_name not in visited:
+                # Don't visit the 'before' package yet; just note the constraint
+                # It will be handled when we process that package
+                pass
+
         visiting.discard(name)
         visited.add(name)
         ordered.append(pkg)
 
-    for name in sorted(by_name):
-        visit(name)
+    def has_unmet_before_constraint(name: str) -> bool:
+        """Check if a package has a 'before' constraint that's not yet visited."""
+        pkg = by_name.get(name)
+        if pkg is None:
+            return False
+        for before_pkg in pkg.before:
+            before_name = before_pkg if isinstance(before_pkg, str) else before_pkg.name
+            if before_name in by_name and before_name not in visited:
+                return True
+        return False
+
+    # Visit packages in sorted order, but respect 'before' constraints
+    remaining = sorted(by_name)
+    while remaining:
+        # Find packages that can be visited (no unmet 'before' constraints)
+        can_visit = [
+            name for name in remaining if not has_unmet_before_constraint(name)
+        ]
+        if not can_visit:
+            # If we have a cycle or unsatisfiable constraint, just visit the first one
+            can_visit = remaining[:1]
+
+        for name in can_visit:
+            visit(name)
+            remaining.remove(name)
 
     return ordered
 

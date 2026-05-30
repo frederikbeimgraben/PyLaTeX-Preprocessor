@@ -12,6 +12,7 @@ from pytex import (
     NewColumnType,
     NewEnvironment,
     NewGlossaryStyle,
+    Raw,
     RenewCommand,
     SetGlossaryStyle,
     TeX,
@@ -35,7 +36,11 @@ def _ColumnTypes() -> TeX:
                 f">{{\\{align}{common}}}p{{#1}}",
                 n_args=1,
             )
-            for letter, align in (("L", "raggedright"), ("C", "centering"), ("R", "raggedleft"))
+            for letter, align in (
+                ("L", "raggedright"),
+                ("C", "centering"),
+                ("R", "raggedleft"),
+            )
         )
     )
 
@@ -47,7 +52,9 @@ def _ManualFixedWidthStyle() -> TeX:
             SetGlossaryStyle("long3colheader"),
             NewEnvironment(
                 "theglossary",
-                BeginEnvironment("longtable", _GLOSSARY_TABLE_COLS),
+                BeginEnvironment(
+                    "longtable", Raw(_GLOSSARY_TABLE_COLS, escape_spaces=False)
+                ),
                 EndEnvironment("longtable"),
                 renew=True,
             ),

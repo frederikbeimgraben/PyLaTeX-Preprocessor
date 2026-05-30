@@ -53,10 +53,7 @@ def _HeartLabel() -> TeX:
 def _HeartNode() -> Node:
     return Node(
         Href("https://github.com/frederikbeimgraben/HSRT-Report", _HeartLabel()),
-        options=(
-            "anchor=south east, inner sep=0pt, "
-            "xshift=-0.1cm, yshift=0.1cm"
-        ),
+        options=("anchor=south east, inner sep=0pt, xshift=-0.1cm, yshift=0.1cm"),
         name="heart",
         at=Coordinate.page("south east"),
     )
@@ -114,10 +111,11 @@ def _AbstractSection(abstract: TeX, keywords: TeX) -> TeX:
 def _DataTable(data_lines: "tuple[tuple[str, TeX], ...]") -> TeX:
     """Title-page metadata table built inline — no toks register, no
     ``\\AddTitlePageDataLine`` macros. Each ``(label, value)`` row becomes
-    ``\\textbf{label} & value \\\\`` plus a ``\\vspace{5pt}`` spacer.
+    ``\\textbf{label} & value \\\\[5pt]``.
 
     The cell separators (`` & ``, `` \\\\ ``) need literal spaces; that's
     raw TeX punctuation, so :class:`Raw` is the right leaf escape here.
+    Use ``\\\\[5pt]`` for row spacing instead of separate ``\\vspace``.
     """
     return TabularEnv(
         "@{} p{30mm} p{\\textwidth-30mm-2\\tabcolsep}",
@@ -127,8 +125,7 @@ def _DataTable(data_lines: "tuple[tuple[str, TeX], ...]") -> TeX:
                     Bold(label),
                     Raw(" & ", escape_spaces=False),
                     value,
-                    Raw(" \\\\ ", escape_spaces=False),
-                    Command("vspace", "5pt"),
+                    Raw(" \\\\[5pt]\n", escape_spaces=False),
                 )
                 for label, value in data_lines
             )
@@ -208,22 +205,28 @@ def TitlePageDefs(
     abstract_tex = _CoerceText(abstract, "Dies ist ein Beispiel für ein Abstract.")
     keywords_tex = _CoerceText(keywords, "Seminararbeit, Beispiel")
     coerced_rows: tuple[tuple[str, TeX], ...] = tuple(
-        (label, coerce_tex(content)) for label, content in (data_lines or ())
+        (
+            label,
+            Raw(content, escape_spaces=False) if isinstance(content, str) else content,
+        )
+        for label, content in (data_lines or ())
     )
     return Block(
         *((Command("title", _CoerceText(title)),) if title is not None else ()),
         *((Command("author", _CoerceText(author)),) if author is not None else ()),
         _CreatedOnDef(created_on),
-        RenewCommand(
-            "maketitle",
-            _MaketitleBody(
-                resolved,
-                global_scale=global_scale,
-                main_scale=main_scale,
-                abstract=abstract_tex,
-                keywords=keywords_tex,
-                data_lines=coerced_rows,
-            ),
+        MakeAtLetter(
+            RenewCommand(
+                "maketitle",
+                _MaketitleBody(
+                    resolved,
+                    global_scale=global_scale,
+                    main_scale=main_scale,
+                    abstract=abstract_tex,
+                    keywords=keywords_tex,
+                    data_lines=coerced_rows,
+                ),
+            )
         ),
     )
 

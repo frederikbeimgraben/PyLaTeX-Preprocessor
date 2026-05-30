@@ -40,8 +40,8 @@ from .preamble import (
     GlossarySettingsBlock,
     HyperrefBlock,
     ImportsBlock,
-    PageSetupBlock,
     PagebreaksBlock,
+    PageSetupBlock,
     SectionsBlock,
     TocConfigBlock,
     TypographyBlock,
@@ -85,8 +85,7 @@ def _OptionalUserPreamble(preamble: TeX | str | None) -> tuple[TeX, ...]:
     if preamble is None:
         return ()
     return (
-        preamble if isinstance(preamble, TeX)
-        else Raw(preamble, escape_spaces=False),
+        preamble if isinstance(preamble, TeX) else Raw(preamble, escape_spaces=False),
     )
 
 
@@ -128,8 +127,11 @@ def HSRTReport(
     data_lines = _DataLines(title_page_data, body, wordcount=wordcount)
 
     logos_setup, resolved = LogosBlock(
-        variant, logos, footer_logos,
-        global_scale=logos_scale, main_scale=main_logo_scale,
+        variant,
+        logos,
+        footer_logos,
+        global_scale=logos_scale,
+        main_scale=main_logo_scale,
     )
 
     watermark_text = (
@@ -160,7 +162,11 @@ def HSRTReport(
                 global_scale=logos_scale,
                 main_scale=main_logo_scale,
             ),
-            *((NewCommand("modulename", module_name),) if module_name is not None else ()),
+            *(
+                (NewCommand("modulename", module_name),)
+                if module_name is not None
+                else ()
+            ),
             MakebibCommand(),
             HyperrefBlock(),
             *((BibliographyBlock(),) if has_bibliography else ()),
@@ -185,12 +191,14 @@ def HSRTReport(
                 has_bibliography=has_bibliography,
             ),
         ),
-        packages=packages,
+        packages=packages | {"bophook"},
         manage_packages=True,
         font_size=font_size,
         paper_size=_PaperOption(paper_size),
         div=div,
         two_side=two_side,
-        extra_class_options=_ExtraClassOptions(one_column=one_column, two_side=two_side),
+        extra_class_options=_ExtraClassOptions(
+            one_column=one_column, two_side=two_side
+        ),
         koma_fonts=koma_fonts,
     )

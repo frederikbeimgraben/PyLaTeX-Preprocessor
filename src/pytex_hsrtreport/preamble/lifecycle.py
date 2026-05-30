@@ -5,6 +5,7 @@ from pytex import (
     AtEndDocument,
     Command,
     Def,
+    Raw,
     RenewCommand,
     TeX,
 )
@@ -44,7 +45,11 @@ def _Glossary() -> TeX:
 def _Acronyms() -> TeX:
     return Block(
         RenewCommand("entryname", "Abkürzung"),
-        Command("printglossary", options="type=\\acronymtype,title=Abkürzungen"),
+        Raw(
+            "\\printglossary[type=\\acronymtype,title=Abkürzungen]",
+            escape_spaces=False,
+            safe=False,
+        ),
     )
 
 
@@ -65,11 +70,7 @@ def AtEndDocumentBlock(
             Command("ohead*", ""),
             Command("noindent"),
             Command("blenderfont"),
-            *(
-                (Command("glsaddallunused"),)
-                if has_glossary or has_acronyms
-                else ()
-            ),
+            *((Command("glsaddallunused"),) if has_glossary or has_acronyms else ()),
             *((_Glossary(),) if has_glossary else ()),
             *((_Acronyms(),) if has_acronyms else ()),
             *((Command("makebib"),) if has_bibliography else ()),

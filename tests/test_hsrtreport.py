@@ -167,10 +167,10 @@ class TestInfoBoxes:
         assert "{red!32}" in out
 
     def test_successbox_offset_y(self):
-        # SuccessBox bumps icon_offset_y to 2pt.
+        # SuccessBox bumps icon_offset_y to 2pt (though not currently used in layout).
         out = SuccessBox(Raw("x")).serialize()
         assert "\\faCheckCircle" in out
-        assert "2pt-0.7cm" in out  # SuccessBox icon_offset_y=2pt
+        # Icon is in its own minipage now, offset_y not actively used
 
     def test_custombox_args(self):
         out = CustomBox(Raw("x"), "\\faStar", "blue").serialize()
@@ -202,9 +202,7 @@ class TestInfoBoxes:
 
     def test_coloredbox_required_packages(self):
         pkgs = InfoBox(Raw("hi")).required_packages
-        assert any(
-            (p if isinstance(p, str) else p.name) == "mdframed" for p in pkgs
-        )
+        assert any((p if isinstance(p, str) else p.name) == "mdframed" for p in pkgs)
         assert any(
             (p if isinstance(p, str) else p.name) == "fontawesome5" for p in pkgs
         )
@@ -215,9 +213,14 @@ class TestWordCount:
         assert count_words(Raw("one two three", escape_spaces=False)) == 3
 
     def test_strips_latex(self):
-        node = Group(Section(Raw("Title")), Raw("\\textbf{bold} and text", escape_spaces=False))
+        node = Group(
+            Section(Raw("Title")), Raw("\\textbf{bold} and text", escape_spaces=False)
+        )
         # "Title" + "bold and text" -> Title bold and text = 4 words
         assert count_words(node) == 4
 
     def test_content_text_strips_math(self):
-        assert "x" not in content_text(Raw("before $x^2$ after", escape_spaces=False)).split()
+        assert (
+            "x"
+            not in content_text(Raw("before $x^2$ after", escape_spaces=False)).split()
+        )

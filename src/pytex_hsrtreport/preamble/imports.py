@@ -30,6 +30,7 @@ PACKAGES_WITH_OPTIONS: set[Package] = {
 
 #: Bare packages with no options that nothing else pulls in.
 _MUST_LOAD: tuple[Package, ...] = (
+    BuiltinPackages.AMSMATH.value,  # Must be before cleveref
     BuiltinPackages.LMODERN.value,
     BuiltinPackages.CALC.value,
     BuiltinPackages.SETSPACE.value,

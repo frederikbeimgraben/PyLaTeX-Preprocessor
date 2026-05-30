@@ -17,6 +17,8 @@ class Package:
     options: str | None = None
     conflicts: frozenset["Package | str"] = field(default_factory=frozenset)
     requires: frozenset["Package | str"] = field(default_factory=frozenset)
+    before: frozenset["Package | str"] = field(default_factory=frozenset)
+    after: frozenset["Package | str"] = field(default_factory=frozenset)
 
     @override
     def __hash__(self) -> int:
@@ -36,6 +38,8 @@ class Package:
             options=options,
             conflicts=self.conflicts,
             requires=self.requires,
+            before=self.before,
+            after=self.after,
         )
 
 

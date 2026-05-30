@@ -53,6 +53,7 @@ __pytex__ = HSRTReport(
     variant="INF_meti",
     toc=True,
     wordcount=True,
+    footer_logos=True,
     glossary=Glossary(
         GlossaryEntry(
             "Textkoerper",

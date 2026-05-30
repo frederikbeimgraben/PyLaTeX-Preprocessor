@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import override
 
 from pytex import (
-    BeginAccSupp,
     BuiltinPackages,
     Command,
     NewCounter,
@@ -21,16 +20,21 @@ from pytex import (
     TeX,
     Whiledo,
 )
-from pytex.model.raw import coerce_tex
+from pytex.model.raw import Raw
 from pytex_komascript.model import Block
 
 
 def _TileBody(text: str) -> TeX:
     """One run of 16 tiles laid out by pgffor's ``\\foreach``."""
-    return Block(
-        Command("foreach", coerce_tex("\\col in {0,...,15}")),
-        Command("color", "black!5"),
-        BeginAccSupp(coerce_tex(f"{text}~~"), actual_text=""),
+    return Raw(
+        (
+            f"\\foreach \\col in {{0,...,15}} {{%\n"
+            f"\\color{{black!5}}%\n"
+            f"\\BeginAccSupp{{ActualText=}}{text}~~\\EndAccSupp{{}}%\n"
+            f"}}"
+        ),
+        escape_spaces=False,
+        safe=False,
     )
 
 
