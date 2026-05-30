@@ -9,10 +9,9 @@ fontspec ``\\IfFontExistsTF`` test.
 """
 
 from dataclasses import dataclass
-from typing import override
+from typing import ClassVar, override
 
 from ...model.base_model import Package, TeX
-from ...model.raw import coerce_tex
 
 
 def _coerce_body(value: TeX | str) -> TeX:
@@ -182,7 +181,7 @@ _ETOOLBOX: frozenset[Package | str] = frozenset({"etoolbox"})
 class _PatchCmd(TeX):
     """Shared ``\\pretocmd`` / ``\\apptocmd`` body."""
 
-    CMD: str = ""
+    CMD: ClassVar[str] = ""
     target: str
     patch: TeX
     success: TeX
@@ -223,20 +222,20 @@ class _PatchCmd(TeX):
 class Pretocmd(_PatchCmd):
     """``\\pretocmd{\\target}{patch}{success}{failure}`` (etoolbox)."""
 
-    CMD = "pretocmd"
+    CMD: ClassVar[str] = "pretocmd"
 
 
 class Apptocmd(_PatchCmd):
     """``\\apptocmd{\\target}{patch}{success}{failure}`` (etoolbox)."""
 
-    CMD = "apptocmd"
+    CMD: ClassVar[str] = "apptocmd"
 
 
 @dataclass(init=False)
 class _EnvHook(TeX):
     """Shared ``\\AtBeginEnvironment`` / ``\\AtEndEnvironment``."""
 
-    CMD: str = ""
+    CMD: ClassVar[str] = ""
     env: str
     body: TeX
 
@@ -262,13 +261,13 @@ class _EnvHook(TeX):
 class AtBeginEnvironment(_EnvHook):
     """``\\AtBeginEnvironment{name}{body}`` (etoolbox)."""
 
-    CMD = "AtBeginEnvironment"
+    CMD: ClassVar[str] = "AtBeginEnvironment"
 
 
 class AtEndEnvironment(_EnvHook):
     """``\\AtEndEnvironment{name}{body}`` (etoolbox)."""
 
-    CMD = "AtEndEnvironment"
+    CMD: ClassVar[str] = "AtEndEnvironment"
 
 
 @dataclass(init=False)

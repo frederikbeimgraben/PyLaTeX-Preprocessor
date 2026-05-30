@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from typing import override
 
 from ..model.base_model import Package, TeX
-from ..model.raw import coerce_tex
 
 _GLOSSARIES: frozenset[Package | str] = frozenset({"glossaries"})
 _ARRAY: frozenset[Package | str] = frozenset({"array"})

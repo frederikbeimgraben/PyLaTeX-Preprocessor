@@ -1,103 +1,91 @@
-"""Glossary style + entry-name overrides — all native."""
+"""Glossary style + entry-name overrides — all native.
+
+The original ``\\newcommand{\\acr}{\\acrshort}`` alias is gone — Python
+callers use :func:`pytex.acr` directly, so the TeX-side macro is dead code.
+"""
 
 from pytex import (
+    BeginEnvironment,
     Command,
+    EndEnvironment,
     GlsAddKey,
-    Let,
-    LongTable,
     NewColumnType,
-    NewCommand,
     NewEnvironment,
     NewGlossaryStyle,
-    Newline,
     RenewCommand,
     SetGlossaryStyle,
     TeX,
 )
-from pytex.model.raw import coerce_tex
 from pytex_komascript.model import Block
 
+_GLOSSARY_TABLE_COLS = (
+    "@{} L{0.30\\textwidth-\\tabcolsep} "
+    "p{0.58\\textwidth-\\tabcolsep} "
+    "L{0.10\\textwidth-\\tabcolsep} @{}"
+)
 
-def _column_types() -> TeX:
+
+def _ColumnTypes() -> TeX:
     """``L``, ``C``, ``R`` paragraph columns from the original style file."""
     common = "\\let\\newline\\\\\\arraybackslash\\hspace{0pt}"
     return Block(
-        NewColumnType(
-            "L",
-            f">{{\\raggedright{common}}}p{{#1}}",
-            n_args=1,
-        ),
-        NewColumnType(
-            "C",
-            f">{{\\centering{common}}}p{{#1}}",
-            n_args=1,
-        ),
-        NewColumnType(
-            "R",
-            f">{{\\raggedleft{common}}}p{{#1}}",
-            n_args=1,
+        *(
+            NewColumnType(
+                letter,
+                f">{{\\{align}{common}}}p{{#1}}",
+                n_args=1,
+            )
+            for letter, align in (("L", "raggedright"), ("C", "centering"), ("R", "raggedleft"))
+        )
+    )
+
+
+def _ManualFixedWidthStyle() -> TeX:
+    return NewGlossaryStyle(
+        "manualfixedwidth",
+        Block(
+            SetGlossaryStyle("long3colheader"),
+            NewEnvironment(
+                "theglossary",
+                BeginEnvironment("longtable", _GLOSSARY_TABLE_COLS),
+                EndEnvironment("longtable"),
+                renew=True,
+            ),
+            RenewCommand("glsgroupskip", ""),
+            RenewCommand("arraystretch", "1.1"),
         ),
     )
 
 
-def _manualfixedwidth_style() -> TeX:
-    body = Block(
-        SetGlossaryStyle("long3colheader"),
-        NewEnvironment(
-            "theglossary",
-            "\\begin{longtable}{@{} L{0.30\\textwidth-\\tabcolsep} "
-            "p{0.58\\textwidth-\\tabcolsep} "
-            "L{0.10\\textwidth-\\tabcolsep} @{}}",
-            "\\end{longtable}",
-            renew=True,
-        ),
-        RenewCommand("glsgroupskip", ""),
-        RenewCommand("arraystretch", "1.1"),
-    )
-    return NewGlossaryStyle("manualfixedwidth", body)
-
-
-def _gls_extra_keys() -> TeX:
+def _GlsExtraKeys() -> TeX:
     return Block(
-        GlsAddKey(
-            "genitive",
-            "",
-            entry="glsentrygenitive",
-            entry_upper="Glsentrygenitive",
-            cs="glsgen",
-            cs_upper="Glsgen",
-            cs_all="GLSgen",
-        ),
-        GlsAddKey(
-            "dative",
-            "",
-            entry="glsentrydative",
-            entry_upper="Glsentrydative",
-            cs="glsdative",
-            cs_upper="Glsdative",
-            cs_all="GLSdative",
-        ),
+        *(
+            GlsAddKey(
+                key,
+                "",
+                entry=f"glsentry{stem}",
+                entry_upper=f"Glsentry{stem}",
+                cs=f"gls{stem}",
+                cs_upper=f"Gls{stem}",
+                cs_all=f"GLS{stem}",
+            )
+            for key, stem in (("genitive", "genitive"), ("dative", "dative"))
+        )
     )
 
 
-def _glossary_style_native() -> TeX:
-    """Native replacement for the old ``glossary_style.tex``."""
+def _GlossaryStyleNative() -> TeX:
     return Block(
-        _column_types(),
-        _manualfixedwidth_style(),
-        _gls_extra_keys(),
+        _ColumnTypes(),
+        _ManualFixedWidthStyle(),
+        _GlsExtraKeys(),
     )
 
 
-# Touch unused imports the linter would otherwise prune — Newline / LongTable
-# / Let / Command remain handy when extending the glossary table layout.
-_ = (Newline, LongTable, Let, Command, coerce_tex)
-
-
-def glossary_settings_block() -> TeX:
+def GlossarySettingsBlock() -> TeX:
     return Block(
         Command("makeglossaries"),
-        _glossary_style_native(),
+        _GlossaryStyleNative(),
         SetGlossaryStyle("manualfixedwidth"),
         RenewCommand("entryname", "Wort/Abkürzung"),
         RenewCommand("descriptionname", "Bedeutung"),
@@ -105,8 +93,7 @@ def glossary_settings_block() -> TeX:
         Command("glsenablehyper"),
         RenewCommand("glsclearpage", ""),
         RenewCommand("acronymname", "Abkürzungsverzeichnis"),
-        NewCommand("acr", "\\acrshort"),
     )
 
 
-__all__ = ["glossary_settings_block"]
+__all__ = ["GlossarySettingsBlock"]

@@ -31,27 +31,26 @@ def _height_cm(base_cm: float, *factors: float) -> str:
     return f"{value:g}cm"
 
 
-def _logo_node(
-    index: int,
-    name: str,
-    scale: float,
-    global_scale: float,
-) -> Node:
+def _LogoNode(index: int, name: str, scale: float, global_scale: float) -> Node:
     """One tikz ``\\node`` for a logo in the at-begin-page footer strip."""
-    height = _height_cm(1.5, scale, global_scale, FOOTER_SHRINK)
     return Node(
-        IncludeGraphics(str(logo_pdf(name)), height=height),
+        IncludeGraphics(
+            str(logo_pdf(name)),
+            height=_height_cm(1.5, scale, global_scale, FOOTER_SHRINK),
+        ),
         options="anchor=east, inner sep=0pt, xshift=-1.5cm, yshift=2pt",
         name=f"logo{index}",
         at=Coordinate.named(f"logo{index - 1}", "west"),
     )
 
 
-def _dummy_foot_node(global_scale: float, main_scale: float) -> Node:
+def _DummyFootNode(global_scale: float, main_scale: float) -> Node:
     """Invisible south-east anchor node (logo0) holding DUMMY_FOOT.png."""
-    height = _height_cm(2.0, main_scale, global_scale, DUMMY_FOOT_SHRINK)
     return Node(
-        IncludeGraphics(str(DummyFootPath), height=height),
+        IncludeGraphics(
+            str(DummyFootPath),
+            height=_height_cm(2.0, main_scale, global_scale, DUMMY_FOOT_SHRINK),
+        ),
         options=(
             "anchor=south east, inner sep=0pt, "
             "xshift=-\\rightmargin, yshift=1.5em, opacity=0.0"
@@ -61,8 +60,7 @@ def _dummy_foot_node(global_scale: float, main_scale: float) -> Node:
     )
 
 
-def _skyline_node() -> Node:
-    """Skyline image anchored at the bottom-left of the page."""
+def _SkylineNode() -> Node:
     return Node(
         IncludeGraphics(str(SkylinePath), width="1.5\\paperwidth"),
         options="anchor=south west, inner sep=0pt, yshift=0em",
@@ -70,7 +68,7 @@ def _skyline_node() -> Node:
     )
 
 
-def at_begin_page_block(
+def AtBeginPageBlock(
     resolved: list[tuple[str, float]],
     footer_logos: bool,
     *,
@@ -78,18 +76,22 @@ def at_begin_page_block(
     main_scale: float = DEFAULT_MAIN_SCALE,
 ) -> TeX:
     """``\\AtBeginPage{ <tikzpicture> }`` — skyline + optional footer logos."""
-    nodes: list[Node] = [_dummy_foot_node(global_scale, main_scale)]
-    if footer_logos:
-        nodes.extend(
-            _logo_node(i, name, scale, global_scale)
-            for i, (name, scale) in enumerate(resolved, start=1)
-        )
-    nodes.append(_skyline_node())
-    pic = TikzPicture(*nodes, options="overlay, remember picture")
-    return Command("AtBeginPage", pic)
+    return Command(
+        "AtBeginPage",
+        TikzPicture(
+            _DummyFootNode(global_scale, main_scale),
+            *(
+                _LogoNode(i, name, scale, global_scale)
+                for i, (name, scale) in enumerate(resolved, start=1)
+                if footer_logos
+            ),
+            _SkylineNode(),
+            options="overlay, remember picture",
+        ),
+    )
 
 
-def logos_block(
+def LogosBlock(
     variant: str,
     logos: "set[str] | list[str] | tuple[str, ...] | dict[str, float] | None",
     footer_logos: bool,
@@ -103,13 +105,12 @@ def logos_block(
     same logo set for the title-page header strip.
     """
     resolved = resolve_logos(variant, logos)
-    block = at_begin_page_block(
+    return (
+        AtBeginPageBlock(
+            resolved, footer_logos, global_scale=global_scale, main_scale=main_scale
+        ),
         resolved,
-        footer_logos,
-        global_scale=global_scale,
-        main_scale=main_scale,
     )
-    return block, resolved
 
 
 def titlepage_logo_height(scale: float, global_scale: float) -> str:
@@ -122,17 +123,15 @@ def titlepage_main_height(main_scale: float, global_scale: float) -> str:
     return _height_cm(2.0, main_scale, global_scale)
 
 
-# Re-exported so titlepage can compose pre-built logo nodes too.
 def titlepage_logo_node(
-    index: int,
-    name: str,
-    scale: float,
-    global_scale: float,
+    index: int, name: str, scale: float, global_scale: float
 ) -> Node:
     """One ``\\node`` for the title-page header logo strip."""
-    height = titlepage_logo_height(scale, global_scale)
     return Node(
-        IncludeGraphics(str(logo_pdf(name)), height=height),
+        IncludeGraphics(
+            str(logo_pdf(name)),
+            height=titlepage_logo_height(scale, global_scale),
+        ),
         options="anchor=west, inner sep=0pt, xshift=0.5cm",
         name=f"logo{index}",
         at=Coordinate.named(f"logo{index - 1}", "east"),
@@ -144,8 +143,8 @@ __all__ = [
     "DEFAULT_MAIN_SCALE",
     "FOOTER_SHRINK",
     "DUMMY_FOOT_SHRINK",
-    "at_begin_page_block",
-    "logos_block",
+    "AtBeginPageBlock",
+    "LogosBlock",
     "titlepage_logo_height",
     "titlepage_main_height",
     "titlepage_logo_node",

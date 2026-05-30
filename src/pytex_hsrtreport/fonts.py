@@ -4,8 +4,8 @@ The original ``Config/Fonts.tex`` walked through a long ``\\IfFileExists`` /
 ``\\IfFontExistsTF`` ladder. Here all those file checks happen in Python at
 build time: we look for the bundled ``Blender`` and ``DIN`` ttf files and emit
 exactly the ``\\newfontfamily`` / ``\\setsansfont`` / ``\\setmainfont`` calls
-that apply, with absolute paths baked in. Runtime fallbacks (``IfFontExistsTF``)
-are emitted as native nodes from :mod:`pytex.library.builtins.lowlevel`.
+that apply, with absolute paths baked in. Runtime fallbacks are emitted as
+native :class:`IfFontExistsTF` nodes.
 """
 
 from pytex import (
@@ -26,7 +26,7 @@ _DIN_PATH = FontsPath / "DIN"
 _DIN_REGULAR = _DIN_PATH / "DIN-Regular.ttf"
 
 
-def _font_options(
+def _FontOptions(
     directory: str, regular: str, bold: str, italic: str, bolditalic: str
 ) -> str:
     return (
@@ -36,14 +36,14 @@ def _font_options(
     )
 
 
-_BLENDER_OPTS = _font_options(
+_BLENDER_OPTS = _FontOptions(
     directory=str(_BLENDER_PATH),
     regular="Medium",
     bold="Bold",
     italic="MediumItalic",
     bolditalic="BoldItalic",
 )
-_DIN_OPTS = _font_options(
+_DIN_OPTS = _FontOptions(
     directory=str(_DIN_PATH),
     regular="Regular",
     bold="Bold",
@@ -52,47 +52,18 @@ _DIN_OPTS = _font_options(
 )
 
 
-def fonts_block() -> TeX:
-    """Build the fontspec preamble. File presence is checked in Python.
-
-    Always emits ``\\renewcommand*{\\rmdefault}{lmr}`` etc. so the lmodern
-    fallback is wired regardless. When the Blender or DIN ttf files are
-    bundled with the package we emit the corresponding ``\\newfontfamily`` and
-    ``\\setsansfont`` / ``\\setmainfont`` calls with absolute paths.
-    """
-    parts: list[TeX] = [
-        RenewCommand("rmdefault", "lmr"),
-        RenewCommand("sfdefault", "lmss"),
-    ]
-
-    if _BLENDER_REGULAR.exists():
-        parts.append(NewFontFamily("BlenderFont", "Blender", _BLENDER_OPTS))
-        parts.append(RenewCommand("blenderfont", "\\BlenderFont"))
-        parts.append(SetSansFont("Blender", _BLENDER_OPTS))
-    else:
-        parts.append(
-            _font_fallback("BlenderFont", "blenderfont", "Blender", "TeX Gyre Heros", sans=True)
-        )
-
-    if _DIN_REGULAR.exists():
-        parts.append(NewFontFamily("DINFont", "DIN", _DIN_OPTS))
-        parts.append(RenewCommand("dinfont", "\\DINFont"))
-        parts.append(SetMainFont("DIN", _DIN_OPTS))
-    else:
-        parts.append(
-            _font_fallback("DINFont", "dinfont", "DIN", "TeX Gyre Termes", sans=False)
-        )
-
-    return Block(*parts)
-
-
-def _font_branch(
-    macro: str,
-    switch: str,
-    family: str,
-    *,
-    sans: bool,
+def _BundledFontBlock(
+    macro: str, switch: str, family: str, opts: str, *, sans: bool
 ) -> TeX:
+    setter: TeX = SetSansFont(family, opts) if sans else SetMainFont(family, opts)
+    return Block(
+        NewFontFamily(macro, family, opts),
+        RenewCommand(switch, f"\\{macro}"),
+        setter,
+    )
+
+
+def _FontBranch(macro: str, switch: str, family: str, *, sans: bool) -> TeX:
     """One side of the ``\\IfFontExistsTF`` body for a fontspec family."""
     setter: TeX = SetSansFont(family) if sans else SetMainFont(family)
     return Block(
@@ -102,29 +73,52 @@ def _font_branch(
     )
 
 
-def _font_fallback(
-    macro: str,
-    switch: str,
-    preferred: str,
-    gyre: str,
-    *,
-    sans: bool,
+def _FontFallback(
+    macro: str, switch: str, preferred: str, gyre: str, *, sans: bool
 ) -> TeX:
-    """Runtime fallback ladder used when the bundled TTF is missing.
-
-    Emits an ``\\IfFontExistsTF`` guard: prefer the named system font, else
-    drop to a TeX Gyre alternative.
-    """
+    """Runtime ladder when the bundled TTF is missing: prefer named system
+    font, fall back to a TeX Gyre alternative."""
     return IfFontExistsTF(
         preferred,
-        _font_branch(macro, switch, preferred, sans=sans),
-        _font_branch(macro, switch, gyre, sans=sans),
+        _FontBranch(macro, switch, preferred, sans=sans),
+        _FontBranch(macro, switch, gyre, sans=sans),
     )
 
 
-__all__ = [
-    "NewFontFamily",
-    "SetMainFont",
-    "SetSansFont",
-    "fonts_block",
-]
+def _BlenderFont() -> TeX:
+    if _BLENDER_REGULAR.exists():
+        return _BundledFontBlock(
+            "BlenderFont", "blenderfont", "Blender", _BLENDER_OPTS, sans=True
+        )
+    return _FontFallback(
+        "BlenderFont", "blenderfont", "Blender", "TeX Gyre Heros", sans=True
+    )
+
+
+def _DinFont() -> TeX:
+    if _DIN_REGULAR.exists():
+        return _BundledFontBlock(
+            "DINFont", "dinfont", "DIN", _DIN_OPTS, sans=False
+        )
+    return _FontFallback(
+        "DINFont", "dinfont", "DIN", "TeX Gyre Termes", sans=False
+    )
+
+
+def FontsBlock() -> TeX:
+    """fontspec preamble with file presence checked in Python.
+
+    Always renews ``\\rmdefault`` / ``\\sfdefault`` to lmodern so the
+    fallback is wired regardless. Bundled TTFs get ``\\newfontfamily`` with
+    absolute paths; otherwise a runtime :class:`IfFontExistsTF` ladder picks
+    a system font or a TeX Gyre alternative.
+    """
+    return Block(
+        RenewCommand("rmdefault", "lmr"),
+        RenewCommand("sfdefault", "lmss"),
+        _BlenderFont(),
+        _DinFont(),
+    )
+
+
+__all__ = ["FontsBlock"]

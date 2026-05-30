@@ -5,29 +5,29 @@ logical section of the original ``HSRTReport.cls`` preamble. ``document.py``
 composes them in order.
 """
 
-from .cleveref import CREFNAMES, cleveref_block
-from .glossary import glossary_settings_block
-from .hyperref import hyperref_block
-from .imports import IMPORTS_PACKAGES, imports_block
-from .lifecycle import at_begin_document_block, at_end_document_block
-from .page_setup import page_setup_block
-from .pagebreaks import pagebreaks_block
-from .sections import sections_block
-from .toc import toc_config_block
-from .typography import typography_block
+from .cleveref import CREFNAMES, CleverefBlock
+from .glossary import GlossarySettingsBlock
+from .hyperref import HyperrefBlock
+from .imports import PACKAGES_WITH_OPTIONS, ImportsBlock
+from .lifecycle import AtBeginDocumentBlock, AtEndDocumentBlock
+from .page_setup import PageSetupBlock
+from .pagebreaks import PagebreaksBlock
+from .sections import SectionsBlock
+from .toc import TocConfigBlock
+from .typography import TypographyBlock
 
 __all__ = [
-    "IMPORTS_PACKAGES",
-    "imports_block",
-    "hyperref_block",
-    "sections_block",
-    "typography_block",
-    "pagebreaks_block",
-    "toc_config_block",
+    "PACKAGES_WITH_OPTIONS",
+    "ImportsBlock",
+    "HyperrefBlock",
+    "SectionsBlock",
+    "TypographyBlock",
+    "PagebreaksBlock",
+    "TocConfigBlock",
     "CREFNAMES",
-    "cleveref_block",
-    "glossary_settings_block",
-    "page_setup_block",
-    "at_begin_document_block",
-    "at_end_document_block",
+    "CleverefBlock",
+    "GlossarySettingsBlock",
+    "PageSetupBlock",
+    "AtBeginDocumentBlock",
+    "AtEndDocumentBlock",
 ]

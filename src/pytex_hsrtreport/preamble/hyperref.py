@@ -2,7 +2,7 @@
 
 from pytex import Hypersetup, TeX
 
-_HYPERSETUP_OPTIONS: list[str] = [
+_HYPERSETUP_OPTIONS: tuple[str, ...] = (
     "pdfpagemode={UseOutlines}",
     "bookmarksopen=true",
     "bookmarksopenlevel=0",
@@ -14,11 +14,11 @@ _HYPERSETUP_OPTIONS: list[str] = [
     "pdfstartview={FitV}",
     "unicode",
     "breaklinks=true",
-]
+)
 
 
-def hyperref_block() -> TeX:
+def HyperrefBlock() -> TeX:
     return Hypersetup(",".join(_HYPERSETUP_OPTIONS))
 
 
-__all__ = ["hyperref_block"]
+__all__ = ["HyperrefBlock"]

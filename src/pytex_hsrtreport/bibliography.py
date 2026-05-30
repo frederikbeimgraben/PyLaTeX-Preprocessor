@@ -3,8 +3,7 @@
 ``biblatex`` is added to the package list as a :class:`Package` whose
 ``options`` carry the backend/sorting/style/citestyle from the Python caller.
 The HSRT-specific DeclareCiteCommand / DeclareFieldFormat / DeclareNameAlias
-incantations live in :func:`bibliography_block` as native pytex nodes —
-no ``.tex`` asset.
+incantations are all native pytex nodes; no ``.tex`` asset.
 """
 
 from typing import Literal
@@ -29,7 +28,7 @@ from pytex_komascript.model import Block
 type Backend = Literal["bibtex", "biber"]
 
 
-def biblatex_package(
+def BiblatexPackage(
     backend: Backend = "bibtex",
     style: str = "ieee",
     citestyle: str = "numeric",
@@ -40,7 +39,7 @@ def biblatex_package(
     return Package(name="biblatex", options=opts)
 
 
-def _cite_commands() -> TeX:
+def _CiteCommands() -> TeX:
     """The HSRT cite-command family with hyperref wrapping."""
     loop = "\\bibhyperref{\\usebibmacro{citeindex}\\usebibmacro{cite}}"
     textcite_loop = (
@@ -86,14 +85,14 @@ def _cite_commands() -> TeX:
     )
 
 
-def bibliography_block() -> TeX:
+def BibliographyBlock() -> TeX:
     """HSRT-customised biblatex declarations, native."""
     return Block(
         ExecuteBibliographyOptions(
             "hyperref=true,backref=false,url=true,doi=true,isbn=false"
         ),
         DeclareFieldFormat("citehyperref", "\\bibhyperref{#1}"),
-        _cite_commands(),
+        _CiteCommands(),
         RenewCommand("nameyeardelim", "\\addcomma\\space"),
         RenewCommand("multicitedelim", "\\addsemicolon\\space"),
         DeclareNameAlias("sortname", "family-given"),
@@ -101,45 +100,48 @@ def bibliography_block() -> TeX:
         DeclareFieldFormat("url", "\\url{#1}"),
         DeclareFieldFormat(
             "doi",
-            "\\ifhyperref{\\href{https://doi.org/#1}{\\nolinkurl{doi:#1}}}"
-            + "{\\nolinkurl{doi:#1}}",
+            (
+                "\\ifhyperref{\\href{https://doi.org/#1}{\\nolinkurl{doi:#1}}}"
+                + "{\\nolinkurl{doi:#1}}"
+            ),
         ),
         SetLength("bibitemsep", "0.5\\baselineskip"),
         SetLength("bibhang", "2em"),
     )
 
 
-def add_bib_resource(path: str) -> TeX:
+def AddBibResourceCmd(path: str) -> TeX:
     """``\\addbibresource{path}``."""
     return AddBibResource(path)
 
 
-def _makebib_body() -> TeX:
-    # Using Command rather than PrintBibliography so the makebib macro
-    # definition doesn't pull biblatex into the package list of documents
-    # without a bibliography.
-    return Block(
-        Command("clearpage"),
-        Command("chapter*", "Literaturverzeichnis"),
-        Label("chap:bibliography"),
-        Command("printbibliography", options="heading=none,title={}"),
+def MakebibCommand() -> TeX:
+    """``\\newcommand{\\makebib}{...}`` — used at end of document.
+
+    Uses ``Command("printbibliography", ...)`` rather than
+    :class:`pytex.PrintBibliography` so the macro definition does not pull
+    biblatex into the package list of documents that never bind a bib.
+    """
+    return NewCommand(
+        "makebib",
+        Block(
+            Command("clearpage"),
+            Command("chapter*", "Literaturverzeichnis"),
+            Label("chap:bibliography"),
+            Command("printbibliography", options="heading=none,title={}"),
+        ),
     )
 
 
-def makebib_command() -> TeX:
-    """``\\newcommand{\\makebib}{...}`` — used at end of document."""
-    return NewCommand("makebib", _makebib_body())
-
-
-def bibliography_packages() -> set[Package | str]:
+def BibliographyPackages() -> set[Package | str]:
     return {BuiltinPackages.CSQUOTES.value}
 
 
 __all__ = [
     "Backend",
-    "biblatex_package",
-    "bibliography_block",
-    "add_bib_resource",
-    "makebib_command",
-    "bibliography_packages",
+    "BiblatexPackage",
+    "BibliographyBlock",
+    "AddBibResourceCmd",
+    "MakebibCommand",
+    "BibliographyPackages",
 ]

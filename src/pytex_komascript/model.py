@@ -8,6 +8,29 @@ from pytex.model.raw import coerce_tex
 
 
 @dataclass(init=False)
+class Concat(TeX):
+    """Children serialised back-to-back with no separator.
+
+    Use when sibling nodes must butt up against each other (an inline run
+    of macro + literal text + macro, for instance).
+    """
+
+    _children: tuple[TeX, ...]
+
+    def __init__(self, *parts: TeX | str) -> None:
+        self._children = tuple(coerce_tex(p) for p in parts)
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return self._children
+
+    @override
+    def serialize(self) -> str:
+        return "".join(child.serialize() for child in self._children)
+
+
+@dataclass(init=False)
 class Block(TeX):
     """Newline-separated sequence of TeX nodes with no surrounding braces.
 

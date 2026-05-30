@@ -15,7 +15,7 @@ from pytex_komascript import ClearPairOfPageStyles, Pagestyle, SetKomaFont
 from pytex_komascript.model import Block
 
 
-def _write_lastpage_aux() -> TeX:
+def _WriteLastpageAux() -> TeX:
     """``\\AtEndDocument{\\immediate\\write\\@auxout{\\gdef\\@lastpage{\\thepage}}}``.
 
     Wrapped in :class:`MakeAtLetter` so the ``@`` letters tokenise.
@@ -36,13 +36,13 @@ def _write_lastpage_aux() -> TeX:
     )
 
 
-def _chapter_only(body: TeX) -> TeX:
+def _ChapterOnly(body: TeX) -> TeX:
     """``\\ifnum\\value{chapter}>0\\relax body\\fi`` wrapper."""
     return Ifnum("\\value{chapter}>0", body)
 
 
-def _ohead_star_body() -> TeX:
-    return _chapter_only(
+def _OheadStarBody() -> TeX:
+    return _ChapterOnly(
         Block(
             Command("Roman", Command("thechapter")),
             coerce_tex("~–~"),
@@ -51,8 +51,8 @@ def _ohead_star_body() -> TeX:
     )
 
 
-def _cfoot_body() -> TeX:
-    return _chapter_only(
+def _CfootBody() -> TeX:
+    return _ChapterOnly(
         Block(
             coerce_tex("Seite~"),
             Command("thepage"),
@@ -67,8 +67,8 @@ def _cfoot_body() -> TeX:
     )
 
 
-def _ohead_body() -> TeX:
-    return _chapter_only(
+def _OheadBody() -> TeX:
+    return _ChapterOnly(
         Block(
             Command("thechapter"),
             coerce_tex("~–~"),
@@ -77,27 +77,26 @@ def _ohead_body() -> TeX:
     )
 
 
-def _header_footer_block() -> TeX:
-    """KOMA header / footer commands (replaces the old ``page_setup.tex``)."""
+def _HeaderFooterBlock() -> TeX:
     return Block(
-        _write_lastpage_aux(),
-        Command("ohead*", _ohead_star_body()),
+        _WriteLastpageAux(),
+        Command("ohead*", _OheadStarBody()),
         MakeAtLetter(Command("ifoot", Command("@author"))),
-        Command("cfoot", _cfoot_body()),
-        Command("ohead", _ohead_body()),
+        Command("cfoot", _CfootBody()),
+        Command("ohead", _OheadBody()),
         MakeAtLetter(Command("ihead", Command("@title"))),
     )
 
 
-def page_setup_block() -> TeX:
+def PageSetupBlock() -> TeX:
     return Block(
         ClearPairOfPageStyles(),
         SetKomaFont("pageheadfoot", "\\color{gray}\\blenderfont"),
         SetKomaFont("pagenumber", "\\color{gray}\\blenderfont"),
         SetLength("footskip", "35pt"),
-        _header_footer_block(),
+        _HeaderFooterBlock(),
         Pagestyle("scrheadings"),
     )
 
 
-__all__ = ["page_setup_block"]
+__all__ = ["PageSetupBlock"]

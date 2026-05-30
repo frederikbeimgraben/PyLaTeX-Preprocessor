@@ -8,9 +8,19 @@ from dataclasses import dataclass
 from typing import override
 
 from ...model.base_model import Package, TeX
-from ...model.raw import coerce_tex
-from ..builtins.commands import _coerce_body  # noqa: PLC2701 - reuse helper
+from ...model.raw import Raw
 from ..environments.standard import Environment
+
+
+def _coerce_body(value: TeX | str) -> TeX:
+    """Coerce a body to TeX without space-escaping internal spaces.
+
+    Environment / box bodies are TeX source — internal spaces must survive
+    as actual whitespace, not as ``~`` ties.
+    """
+    if isinstance(value, TeX):
+        return value
+    return Raw(value, escape_spaces=False)
 
 
 def _body(parts: "tuple[TeX | str, ...]") -> TeX:
@@ -18,8 +28,7 @@ def _body(parts: "tuple[TeX | str, ...]") -> TeX:
 
     if len(parts) == 1:
         return _coerce_body(parts[0])
-    coerced = tuple(_coerce_body(p) for p in parts)
-    return Group(*coerced)
+    return Group(*(_coerce_body(p) for p in parts))
 
 
 @dataclass(init=False)

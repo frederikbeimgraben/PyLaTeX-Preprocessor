@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from typing import override
 
 from pytex import (
-    Bold,
     BuiltinPackages,
     Command,
     MDFramed,
@@ -27,8 +26,8 @@ from pytex import (
     Put,
     TeX,
 )
-from pytex.model.raw import coerce_tex
-from pytex_komascript.model import Block
+from pytex.model.raw import Raw, coerce_tex
+from pytex_komascript.model import Block, Concat
 
 from .colors import HSRTColor
 
@@ -251,13 +250,20 @@ def CustomBox(
 
 
 def _tally(label: str, count: int, icon: str, hue: HSRTColor | str) -> TeX:
-    """One Ja/Nein/Enthaltung sub-box wrapped in a 0.3-linewidth minipage."""
-    inner = CustomBox(
-        Block(Bold(f"{label}:"), coerce_tex(f" {count}")),
-        icon,
-        hue,
+    """One Ja/Nein/Enthaltung sub-box wrapped in a 0.3-linewidth minipage.
+
+    The label-and-count run is built with :class:`Concat` so the rendered
+    body is ``\\textbf{label:} count`` without intervening whitespace; the
+    ``Raw`` for the trailing count is a leaf-text escape hatch since plain
+    numbers are not naturally a pytex node.
+    """
+    body = Concat(
+        Command("textbf", f"{label}:"),
+        Raw(f" {count}", escape_spaces=False),
     )
-    return Minipage("0.3\\linewidth", inner, position="t")
+    return Minipage(
+        "0.3\\linewidth", CustomBox(body, icon, hue), position="t"
+    )
 
 
 def VotingResults(

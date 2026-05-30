@@ -143,7 +143,10 @@ class TestToggles:
             wordcount=True,
         )
         out = doc.serialize()
-        assert "\\AddTitlePageDataLine{Wortanzahl}{5}" in out
+        # Data lines are now inlined into the maketitle body — no
+        # \AddTitlePageDataLine macro is emitted.
+        assert "\\textbf{Wortanzahl}" in out
+        assert "& 5 \\\\" in out
 
 
 class TestInfoBoxes:

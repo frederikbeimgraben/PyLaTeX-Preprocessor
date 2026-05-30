@@ -1,12 +1,17 @@
 """Page-break penalties, length declarations and environment hooks.
 
-Replaces the old ``pagebreaks.tex`` with native nodes.
+Replaces the old ``pagebreaks.tex`` with native nodes. ``keeptogether``,
+``protectparagraph`` and ``conditionalpagebreak`` remain TeX-level
+``\\newcommand``s because they are part of the public author API the
+template exposes to document writers.
 """
 
 from pytex import (
     AtBeginEnvironment,
     AtEndEnvironment,
+    BeginEnvironment,
     Command,
+    EndEnvironment,
     Let,
     NewCommand,
     NewEnvironment,
@@ -16,69 +21,71 @@ from pytex import (
     SetLength,
     TeX,
 )
+from pytex.model.raw import coerce_tex
 from pytex_komascript.model import Block
 
 
-def _needspace(amount: str) -> TeX:
+def _Needspace(amount: str) -> TeX:
     return Command("needspace", amount)
 
 
-def _nopagebreak(level: int) -> TeX:
+def _Nopagebreak(level: int) -> TeX:
     return Command("nopagebreak", options=str(level))
 
 
-def _section_pretocmd() -> TeX:
+def _SectionPretocmd() -> TeX:
     return Block(
         Pretocmd(
             "section",
-            Block(_needspace("\\sectionminspace"), Command("FloatBarrier")),
+            Block(_Needspace("\\sectionminspace"), Command("FloatBarrier")),
         ),
-        Pretocmd("subsection", _needspace("\\subsectionminspace")),
-        Pretocmd("subsubsection", _needspace("\\subsubsectionminspace")),
+        Pretocmd("subsection", _Needspace("\\subsectionminspace")),
+        Pretocmd("subsubsection", _Needspace("\\subsubsectionminspace")),
     )
 
 
-def _lstlisting_wrap() -> TeX:
+def _LstlistingWrap() -> TeX:
     """``\\renewenvironment{lstlisting}[1][]{...}{...}`` keeping originals."""
-    begin = Block(
-        _needspace("5\\baselineskip"),
-        _nopagebreak(4),
-        Command("originallstlisting", options="#1"),
-    )
-    end = Block(Command("endoriginallstlisting"), _nopagebreak(3))
     return Block(
         Let("originallstlisting", "lstlisting"),
         Let("endoriginallstlisting", "endlstlisting"),
-        NewEnvironment("lstlisting", begin, end, n_args=1, default="", renew=True),
+        NewEnvironment(
+            "lstlisting",
+            Block(
+                _Needspace("5\\baselineskip"),
+                _Nopagebreak(4),
+                Command("originallstlisting", options="#1"),
+            ),
+            Block(Command("endoriginallstlisting"), _Nopagebreak(3)),
+            n_args=1,
+            default="",
+            renew=True,
+        ),
     )
 
 
-def _env_hooks(name: str, *, begin_extra: TeX | None = None) -> TeX:
-    begin: TeX = _nopagebreak(4) if begin_extra is None else Block(_nopagebreak(4), begin_extra)
+def _EnvHooks(name: str, *, begin_extra: TeX | None = None) -> TeX:
     return Block(
-        AtBeginEnvironment(name, begin),
-        AtEndEnvironment(name, _nopagebreak(3)),
+        AtBeginEnvironment(
+            name,
+            _Nopagebreak(4) if begin_extra is None else Block(_Nopagebreak(4), begin_extra),
+        ),
+        AtEndEnvironment(name, _Nopagebreak(3)),
     )
 
 
-def _environment_hooks_block() -> TeX:
+def _EnvironmentHooksBlock() -> TeX:
     return Block(
-        _env_hooks(
-            "description", begin_extra=RegisterAssign("interlinepenalty", 5000)
-        ),
-        _env_hooks("figure"),
-        _env_hooks("table"),
-        _env_hooks(
-            "verbatim", begin_extra=RegisterAssign("interlinepenalty", 10000)
-        ),
-        _env_hooks("equation"),
-        _env_hooks(
-            "align", begin_extra=RegisterAssign("interlinepenalty", 10000)
-        ),
+        _EnvHooks("description", begin_extra=RegisterAssign("interlinepenalty", 5000)),
+        _EnvHooks("figure"),
+        _EnvHooks("table"),
+        _EnvHooks("verbatim", begin_extra=RegisterAssign("interlinepenalty", 10000)),
+        _EnvHooks("equation"),
+        _EnvHooks("align", begin_extra=RegisterAssign("interlinepenalty", 10000)),
     )
 
 
-def _penalties_block() -> TeX:
+def _PenaltiesBlock() -> TeX:
     return Block(
         RegisterAssign("binoppenalty", 10000),
         RegisterAssign("relpenalty", 10000),
@@ -86,34 +93,52 @@ def _penalties_block() -> TeX:
     )
 
 
-def pagebreaks_block() -> TeX:
+def _MinSpaceLengths() -> TeX:
     return Block(
-        NewLength("sectionminspace"),
-        NewLength("subsectionminspace"),
-        NewLength("subsubsectionminspace"),
+        *(NewLength(name) for name in ("sectionminspace", "subsectionminspace", "subsubsectionminspace")),
         SetLength("sectionminspace", "12\\baselineskip"),
         SetLength("subsectionminspace", "10\\baselineskip"),
         SetLength("subsubsectionminspace", "8\\baselineskip"),
+    )
+
+
+def _AuthorMacros() -> TeX:
+    """Macros exposed to template authors (kept as ``\\newcommand``s)."""
+    return Block(
         NewCommand(
             "keeptogether",
-            "\\begin{minipage}{\\linewidth}#1\\end{minipage}",
+            Block(
+                BeginEnvironment("minipage", "\\linewidth"),
+                coerce_tex("#1"),
+                EndEnvironment("minipage"),
+            ),
             n_args=1,
         ),
         NewCommand(
             "protectparagraph",
-            "\\nopagebreak[4]\\interlinepenalty=10000",
+            Block(
+                Command("nopagebreak", options="4"),
+                RegisterAssign("interlinepenalty", 10000),
+            ),
         ),
         NewCommand(
             "conditionalpagebreak",
-            "\\needspace{#1}",
+            Command("needspace", "#1"),
             n_args=1,
             default="10\\baselineskip",
         ),
-        _penalties_block(),
-        _section_pretocmd(),
-        _lstlisting_wrap(),
-        _environment_hooks_block(),
     )
 
 
-__all__ = ["pagebreaks_block"]
+def PagebreaksBlock() -> TeX:
+    return Block(
+        _MinSpaceLengths(),
+        _AuthorMacros(),
+        _PenaltiesBlock(),
+        _SectionPretocmd(),
+        _LstlistingWrap(),
+        _EnvironmentHooksBlock(),
+    )
+
+
+__all__ = ["PagebreaksBlock"]

@@ -2,7 +2,7 @@
 
 * :data:`COLOR_DEFS` — rgb spec for every custom colour.
 * :class:`DefineColor` — emits ``\\definecolor{name}{model}{spec}``.
-* :func:`colors_block` — Block of all DefineColors (preamble registration).
+* :func:`ColorsBlock` — Block of all DefineColors (preamble registration).
 * :class:`HSRTColor` — string enum of all known colour names. Used as the
   identifier in TeX-side ``\\color``/``\\textcolor`` calls.
 * ``ColorBritishRacingGreen(child)``, ``ColorEggplant(child)``, ... — one
@@ -64,7 +64,7 @@ class DefineColor(TeX):
         return f"\\definecolor{{{self.name}}}{{{self.model}}}{{{self.spec}}}"
 
 
-def colors_block() -> TeX:
+def ColorsBlock() -> TeX:
     """:class:`Block` of ``\\definecolor`` calls for all custom colours."""
     return Block(
         *(
@@ -107,7 +107,7 @@ __all__ = [
     "COLOR_DEFS",
     "HSRTColor",
     "DefineColor",
-    "colors_block",
+    "ColorsBlock",
     "Color",
     "ColorBritishRacingGreen",
     "ColorEggplant",

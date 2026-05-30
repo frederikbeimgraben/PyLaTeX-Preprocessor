@@ -3,7 +3,9 @@
 from pytex import (
     AtBeginEnvironment,
     AtEndEnvironment,
+    BeginEnvironment,
     Command,
+    EndEnvironment,
     MakeAtLetter,
     NewEnvironment,
     RegisterAssign,
@@ -16,8 +18,7 @@ from pytex.library.listings import LstSet
 from pytex_komascript.model import Block
 
 
-def _penalties_and_spacing() -> TeX:
-    """All bare register assignments from the old ``typography.tex``."""
+def _PenaltiesAndSpacing() -> TeX:
     return Block(
         RegisterAssign("hyphenpenalty", 500),
         RegisterAssign("exhyphenpenalty", 500),
@@ -44,68 +45,60 @@ def _penalties_and_spacing() -> TeX:
     )
 
 
-def _protected_lists() -> TeX:
-    return Block(
-        NewEnvironment(
-            "protecteditemize",
-            "\\begin{minipage}{\\linewidth}\\begin{itemize}",
-            "\\end{itemize}\\end{minipage}",
-        ),
-        NewEnvironment(
-            "protectedenumerate",
-            "\\begin{minipage}{\\linewidth}\\begin{enumerate}",
-            "\\end{enumerate}\\end{minipage}",
-        ),
+def _ProtectedList(env_name: str, list_env: str) -> TeX:
+    return NewEnvironment(
+        env_name,
+        Block(BeginEnvironment("minipage", "\\linewidth"), BeginEnvironment(list_env)),
+        Block(EndEnvironment(list_env), EndEnvironment("minipage")),
     )
 
 
-def _list_hooks() -> TeX:
+def _ProtectedLists() -> TeX:
+    return Block(
+        _ProtectedList("protecteditemize", "itemize"),
+        _ProtectedList("protectedenumerate", "enumerate"),
+    )
+
+
+def _ListHook(name: str, *, ip: int) -> TeX:
     return Block(
         AtBeginEnvironment(
-            "itemize",
-            Block(
-                Command("nopagebreak", options="4"),
-                RegisterAssign("interlinepenalty", 5000),
-            ),
+            name,
+            Block(Command("nopagebreak", options="4"), RegisterAssign("interlinepenalty", ip)),
         ),
-        AtEndEnvironment("itemize", Command("nopagebreak", options="3")),
-        AtBeginEnvironment(
-            "enumerate",
-            Block(
-                Command("nopagebreak", options="4"),
-                RegisterAssign("interlinepenalty", 5000),
-            ),
-        ),
-        AtEndEnvironment("enumerate", Command("nopagebreak", options="3")),
+        AtEndEnvironment(name, Command("nopagebreak", options="3")),
     )
 
 
-def _listenabsatz() -> TeX:
+def _ListHooks() -> TeX:
+    return Block(*(_ListHook(n, ip=5000) for n in ("itemize", "enumerate")))
+
+
+def _NosepList(env_name: str, list_env: str) -> TeX:
+    return NewEnvironment(
+        env_name,
+        BeginEnvironment(list_env, options="nosep,leftmargin=*"),
+        EndEnvironment(list_env),
+    )
+
+
+def _ListenAbsatz() -> TeX:
     return Block(
-        NewEnvironment(
-            "listenabsatz",
-            "\\begin{itemize}[nosep,leftmargin=*]",
-            "\\end{itemize}",
-        ),
-        NewEnvironment(
-            "listenabsatz*",
-            "\\begin{enumerate}[nosep,leftmargin=*]",
-            "\\end{enumerate}",
-        ),
+        _NosepList("listenabsatz", "itemize"),
+        _NosepList("listenabsatz*", "enumerate"),
     )
 
 
-def _typography_native() -> TeX:
-    """Native replacement for the old ``typography.tex``."""
+def _TypographyNative() -> TeX:
     return Block(
-        _penalties_and_spacing(),
-        _protected_lists(),
-        _list_hooks(),
-        _listenabsatz(),
+        _PenaltiesAndSpacing(),
+        _ProtectedLists(),
+        _ListHooks(),
+        _ListenAbsatz(),
     )
 
 
-def typography_block() -> TeX:
+def TypographyBlock() -> TeX:
     return Block(
         RenewCommand("baselinestretch", "1.5"),
         SetLength("parskip", "0.5em plus 0.2em minus 0.1em"),
@@ -119,7 +112,7 @@ def typography_block() -> TeX:
                 "breaklines": True,
             }
         ),
-        _typography_native(),
+        _TypographyNative(),
         RenewCommand("floatpagefraction", "0.8"),
         RenewCommand("topfraction", "0.9"),
         RenewCommand("bottomfraction", "0.9"),
@@ -130,4 +123,4 @@ def typography_block() -> TeX:
     )
 
 
-__all__ = ["typography_block"]
+__all__ = ["TypographyBlock"]

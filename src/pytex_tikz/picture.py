@@ -25,18 +25,30 @@ from .path import Path
 type TikzContent = Node | CoordinateNode | Path | "Scope" | "TikzSet" | "PgfMathSetMacro" | "ForEach"
 
 
-def _coerce_tikz_block(parts: "tuple[TikzContent, ...]") -> TeX:
-    """Pack tikz content into a Block; reject non-tikz nodes."""
+_ALLOWED_TIKZ: tuple[type, ...] = (
+    Node, CoordinateNode, Path, ForEach,
+)
+# Forward types resolved at call time so the runtime guard handles
+# recursive references (Scope, TikzSet, PgfMathSetMacro).
+
+
+def _coerce_tikz_block(parts: "tuple[object, ...]") -> TeX:
+    """Pack tikz content into a Block; reject non-tikz nodes.
+
+    Static typing forbids non-tikz objects via :data:`TikzContent`, but the
+    runtime guard catches stray ``TeX`` / ``str`` / ``Raw`` arguments that
+    slipped past an ``Any``-typed call site.
+    """
+    allowed = (*_ALLOWED_TIKZ, Scope, TikzSet, PgfMathSetMacro)
     for p in parts:
-        if not isinstance(
-            p, (Node, CoordinateNode, Path, Scope, TikzSet, PgfMathSetMacro, ForEach)
-        ):
+        if not isinstance(p, allowed):
             raise TypeError(
                 f"tikzpicture body cannot contain {type(p).__name__}; "
-                "only Node, CoordinateNode, Path, Scope, TikzSet, "
-                "PgfMathSetMacro and ForEach are allowed."
+                + "only Node, CoordinateNode, Path, Scope, TikzSet, "
+                + "PgfMathSetMacro and ForEach are allowed."
             )
-    return parts[0] if len(parts) == 1 else Block(*parts)
+    typed = tuple(p for p in parts if isinstance(p, TeX))
+    return typed[0] if len(typed) == 1 else Block(*typed)
 
 
 @dataclass(init=False)

@@ -1,5 +1,5 @@
-# pyright:  reportAny=false
-from typing import TYPE_CHECKING
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, cast
 
 import marko
 import marko.element
@@ -8,6 +8,9 @@ from marko import block, inline
 if TYPE_CHECKING:
     pass
 
+from ...model.base_model import TeX
+from ...model.group import Group
+from ...model.raw import Raw
 from ..builtins import (
     Bold,
     Href,
@@ -21,9 +24,6 @@ from ..builtins import (
     Texttt,
 )
 from ..environments.standard import Enumerate, Item, Itemize, Quote, Verbatim
-from ...model.base_model import TeX
-from ...model.group import Group
-from ...model.raw import Raw
 
 
 def parse_md(element: marko.element.Element) -> TeX:
@@ -156,7 +156,9 @@ def parse_md(element: marko.element.Element) -> TeX:
 
     # Fallback for unknown elements
     if hasattr(element, "children"):
-        children = getattr(element, "children")
+        children = cast(
+            str | Iterable[marko.element.Element], getattr(element, "children")
+        )
         if isinstance(children, str):
             return Raw(children, safe=False)
         elif hasattr(children, "__iter__"):

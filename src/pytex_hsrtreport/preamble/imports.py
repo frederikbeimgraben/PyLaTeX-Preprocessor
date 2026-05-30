@@ -1,70 +1,55 @@
-"""Required LaTeX packages + fallback font commands."""
+"""Packages with non-default options and the fallback font commands.
 
-from pytex import BuiltinPackages, Package, ProvideCommand, TeX
+Packages without options are auto-collected from the TeX tree via
+``Document.required_packages``. The set below is intentionally small —
+either the package needs explicit options, or no node in the tree implies
+it but it is still mandatory (in which case it lives behind a
+:class:`pytex.RequirePackages` anchor).
+"""
+
+from pytex import (
+    BuiltinPackages,
+    Package,
+    ProvideCommand,
+    RequirePackages,
+    TeX,
+)
 from pytex_komascript.model import Block
 
-#: Packages that the original ``Imports.tex`` pulled in.
-IMPORTS_PACKAGES: set[Package | str] = {
+#: Packages that require explicit options or are mandatory but not implied
+#: by any other tree node. Auto-collection picks up everything else.
+PACKAGES_WITH_OPTIONS: set[Package] = {
     Package(name="babel", options="ngerman"),
     Package(name="fontenc", options="T1"),
     Package(name="geometry", options="a4paper,top=2cm,bottom=2cm,left=2cm,right=2cm"),
-    BuiltinPackages.CALC.value,
-    BuiltinPackages.XFP.value,
-    BuiltinPackages.KEYVAL.value,
-    BuiltinPackages.IFTHEN.value,
-    BuiltinPackages.ETOOLBOX.value,
-    BuiltinPackages.EXPL3.value,
-    BuiltinPackages.L3KEYS2E.value,
-    BuiltinPackages.PDFTEXCMDS.value,
-    BuiltinPackages.GRAPHICX.value,
-    BuiltinPackages.XCOLOR.value,
-    BuiltinPackages.ENVIRON.value,
-    BuiltinPackages.BOPHOOK.value,
-    BuiltinPackages.ARRAYJOBX.value,
-    BuiltinPackages.LIPSUM.value,
-    BuiltinPackages.TABULARX.value,
-    BuiltinPackages.LONGTABLE.value,
-    BuiltinPackages.MULTIROW.value,
-    BuiltinPackages.ARYDSHLN.value,
-    BuiltinPackages.ARRAY.value,
-    BuiltinPackages.ENUMITEM.value,
-    BuiltinPackages.CAPTION.value,
     Package(name="subcaption", options="subrefformat=parens"),
-    BuiltinPackages.FLOATROW.value,
-    BuiltinPackages.PIFONT.value,
-    BuiltinPackages.FONTAWESOME5.value,
-    BuiltinPackages.TIKZ.value,
-    BuiltinPackages.PGF.value,
-    BuiltinPackages.PGFFOR.value,
-    BuiltinPackages.CHNGCNTR.value,
-    BuiltinPackages.SETSPACE.value,
-    BuiltinPackages.ACCSUPP.value,
     Package(name="mdframed", options="framemethod=TikZ"),
-    BuiltinPackages.MULTICOL.value,
-    BuiltinPackages.HYPERREF.value,
-    BuiltinPackages.LISTINGS.value,
-    BuiltinPackages.NEEDSPACE.value,
-    BuiltinPackages.AFTERPAGE.value,
-    BuiltinPackages.PLACEINS.value,
     Package(name="scrlayer-scrpage", options="singlespacing=true"),
     Package(name="glossaries", options="acronym, savenumberlist=true"),
-    BuiltinPackages.RAGGED2E.value,
-    BuiltinPackages.LMODERN.value,
-    BuiltinPackages.CLEVEREF.value,
-    BuiltinPackages.CSQUOTES.value,
-    BuiltinPackages.DRAFTWATERMARK.value,
-    BuiltinPackages.FP.value,
-    BuiltinPackages.TIKZPAGENODES.value,
-    BuiltinPackages.HYPHENAT.value,
 }
 
+#: Bare packages with no options that nothing else pulls in.
+_MUST_LOAD: tuple[Package, ...] = (
+    BuiltinPackages.LMODERN.value,
+    BuiltinPackages.CALC.value,
+    BuiltinPackages.SETSPACE.value,
+    BuiltinPackages.NEEDSPACE.value,
+    BuiltinPackages.PLACEINS.value,
+    BuiltinPackages.CAPTION.value,
+    BuiltinPackages.ENUMITEM.value,
+    BuiltinPackages.TIKZPAGENODES.value,
+    BuiltinPackages.PGFFOR.value,
+    BuiltinPackages.GRAPHICX.value,
+)
 
-def imports_block() -> TeX:
-    """Fallback font commands. Packages live in :data:`IMPORTS_PACKAGES`."""
+
+def ImportsBlock() -> TeX:
+    """Anchor mandatory packages + fallback font commands."""
     return Block(
+        RequirePackages(*_MUST_LOAD),
         ProvideCommand("blenderfont", "\\sffamily"),
         ProvideCommand("dinfont", "\\rmfamily"),
     )
 
 
-__all__ = ["IMPORTS_PACKAGES", "imports_block"]
+__all__ = ["PACKAGES_WITH_OPTIONS", "ImportsBlock"]

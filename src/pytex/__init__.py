@@ -69,6 +69,8 @@ from .library.builtins import (
 from .library.document import Document
 from .library.document_builtins import MakeTitle, NewPage, TableOfContents
 from .library.environments import (
+    BeginEnvironment,
+    EndEnvironment,
     Enumerate,
     Environment,
     Flushleft,
@@ -115,6 +117,7 @@ from .library.glossary_style import (
     SetGlossaryStyle,
 )
 from .library.inclusion import Include, IncludeTeX
+from .library.packages import RequirePackages
 from .library.listings import (
     Bash,
     C,
@@ -245,6 +248,8 @@ __all__ = [
     "Relax",
     # Environments
     "Environment",
+    "BeginEnvironment",
+    "EndEnvironment",
     "Item",
     "Itemize",
     "Enumerate",
@@ -289,6 +294,7 @@ __all__ = [
     # File inclusion
     "Include",
     "IncludeTeX",
+    "RequirePackages",
     # Glossaries
     "Glossary",
     "GlossaryEntry",

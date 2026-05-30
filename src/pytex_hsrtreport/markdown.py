@@ -1,4 +1,3 @@
-# pyright: reportAny=false
 """Markdown -> TeX with HSRT callouts.
 
 A variant of :func:`pytex.Markdown` that maps GitHub-style admonitions in
@@ -39,13 +38,16 @@ _CALLOUT_BOXES = {
 
 
 def _first_rawtext(element: object) -> "inline.RawText | None":
-    children = getattr(element, "children", None)
+    children: object = getattr(element, "children", None)
     if isinstance(children, str) or children is None:
         return None
-    for child in children:
-        if isinstance(child, inline.RawText):
-            return child
-        found = _first_rawtext(child)
+    if not isinstance(children, (list, tuple)):
+        return None
+    for child in children:  # pyright: ignore[reportUnknownVariableType]
+        child_obj: object = child
+        if isinstance(child_obj, inline.RawText):
+            return child_obj
+        found = _first_rawtext(child_obj)
         if found is not None:
             return found
     return None

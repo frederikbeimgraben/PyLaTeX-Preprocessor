@@ -1,9 +1,59 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import override
 
 from ...model.base_model import TeX
 from ...model.group import Group
 from ...model.raw import coerce_tex
+
+
+@dataclass(init=False)
+class BeginEnvironment(TeX):
+    """``\\begin{name}[opts]{arg1}{arg2}...`` — bare environment opener.
+
+    Use inside ``\\newenvironment`` begin/end bodies where you cannot use
+    a full :class:`Environment` (the begin and end live in different
+    branches of the definition).
+    """
+
+    name: str
+    args: tuple[TeX, ...]
+    options: str | None
+
+    def __init__(
+        self, name: str, *args: TeX | str, options: str | None = None
+    ) -> None:
+        self.name = name
+        self.args = tuple(coerce_tex(a) for a in args)
+        self.options = options
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return self.args
+
+    @override
+    def serialize(self) -> str:
+        opt = f"[{self.options}]" if self.options is not None else ""
+        body = "".join(f"{{{a.serialize()}}}" for a in self.args)
+        return f"\\begin{{{self.name}}}{opt}{body}"
+
+
+@dataclass
+class EndEnvironment(TeX):
+    """``\\end{name}`` — bare environment closer (companion to
+    :class:`BeginEnvironment`)."""
+
+    name: str
+    _children: tuple[TeX, ...] = field(default_factory=tuple)
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return ()
+
+    @override
+    def serialize(self) -> str:
+        return f"\\end{{{self.name}}}"
 
 
 @dataclass(init=False)

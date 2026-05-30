@@ -1,5 +1,9 @@
 """Package collection and dependency/conflict resolution for documents."""
 
+from collections.abc import Iterable
+from dataclasses import dataclass, field
+from typing import override
+
 from ..model.base_model import Package, TeX
 
 
@@ -85,3 +89,37 @@ def serialize_usepackage(pkg: Package) -> str:
     if pkg.options:
         return f"\\usepackage[{pkg.options}]{{{pkg.name}}}"
     return f"\\usepackage{{{pkg.name}}}"
+
+
+@dataclass(init=False)
+class RequirePackages(TeX):
+    """Anchor node: registers packages without emitting any TeX of its own.
+
+    Use to pull in packages whose presence is implied by hand-written TeX
+    inside a :class:`pytex.NewCommand` body or similar, where no other node
+    in the tree declares the dependency. Auto-collection then surfaces them
+    in the ``\\usepackage`` block at the top of the document.
+    """
+
+    _packages: frozenset[Package | str] = field(default_factory=frozenset)
+
+    def __init__(self, *packages: Package | str) -> None:
+        self._packages = frozenset(packages)
+
+    @property
+    @override
+    def required_packages(self) -> set[Package | str]:
+        return set(self._packages)
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return ()
+
+    @override
+    def serialize(self) -> str:
+        return ""
+
+
+# Imported for re-export in module __all__ rebuild
+_ = Iterable
