@@ -68,6 +68,7 @@ from .path import (
 from .picture import (
     PgfMathSetMacro,
     Scope,
+    TikzContent,
     TikzPicture,
     TikzSet,
     UseTikzLibrary,
@@ -111,6 +112,8 @@ __all__ = [
     "TikzSet",
     "UseTikzLibrary",
     "PgfMathSetMacro",
+    # Content type alias
+    "TikzContent",
     # Foreach unroll
     "ForEach",
     "unroll",

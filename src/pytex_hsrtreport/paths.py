@@ -16,8 +16,6 @@ from pytex import TeX
 
 #: Package-installed ``Assets`` directory.
 ASSETS_DIR: Path = Path(__file__).parent / "Assets"
-#: Package-installed ``tex`` directory holding inline TeX assets.
-TEX_DIR: Path = Path(__file__).parent / "tex"
 
 
 @dataclass(frozen=True)
@@ -38,6 +36,7 @@ class AssetPath(TeX):
     def serialize(self) -> str:
         return str(self.path)
 
+    @override
     def __str__(self) -> str:
         return str(self.path)
 
@@ -72,7 +71,6 @@ def logo_pdf(name: str) -> AssetPath:
 
 __all__ = [
     "ASSETS_DIR",
-    "TEX_DIR",
     "AssetPath",
     "ClassPath",
     "FontsPath",

@@ -81,7 +81,6 @@ from .paths import (
     ImagesPath,
     LogosPath,
     SkylinePath,
-    TEX_DIR,
     logo_pdf,
 )
 from .variants import VARIANT_LOGOS, Logo, Variant, resolve_logos
@@ -119,7 +118,6 @@ __all__ = [
     "ColorShockingpink",
     # Asset paths
     "ASSETS_DIR",
-    "TEX_DIR",
     "AssetPath",
     "ClassPath",
     "FontsPath",

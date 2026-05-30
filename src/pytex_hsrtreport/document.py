@@ -4,9 +4,8 @@ Reproduces the behaviour of the original ``HSRTReport.cls`` without defining a
 LaTeX document class: a plain ``scrbook`` :class:`KomaDocument` is emitted
 with a Python-built preamble. All per-document branching the original class
 made with ``\\strcompare`` / class options happens in Python; every preamble
-fragment is a :mod:`pytex` / :mod:`pytex_tikz` native node, with a small
-handful of ``.tex`` snippets included via :class:`pytex.IncludeTeX` only when
-pure-Python expression would be hostile (expl3, @-letter, FP eval, ...).
+fragment is a :mod:`pytex` / :mod:`pytex_tikz` native node — no ``.tex``
+assets are bundled with the package.
 """
 
 from collections.abc import Mapping

@@ -2,7 +2,7 @@
 
 This module provides strongly-typed wrappers for common LaTeX commands,
 organized by category into submodules (text, sections, fontsizes, links,
-utility, commands, packages).
+utility, commands, lowlevel, packages).
 """
 
 from .commands import (
@@ -35,6 +35,24 @@ from .fontsizes import (
     Tiny,
 )
 from .links import Href
+from .lowlevel import (
+    Apptocmd,
+    AssignToks,
+    AtBeginEnvironment,
+    AtEndEnvironment,
+    BeginAccSupp,
+    Def,
+    Ifdefstring,
+    IfFontExistsTF,
+    Ifnum,
+    IfUndefined,
+    ImmediateWrite,
+    Let,
+    NewToks,
+    Pretocmd,
+    RegisterAssign,
+    Whiledo,
+)
 from .packages import BuiltinPackages
 from .sections import (
     Paragraph,
@@ -103,6 +121,23 @@ __all__ = [
     "Crefname",
     "NewEnvironment",
     "GlobalDef",
+    # Low-level primitives
+    "Def",
+    "Let",
+    "NewToks",
+    "AssignToks",
+    "ImmediateWrite",
+    "RegisterAssign",
+    "Pretocmd",
+    "Apptocmd",
+    "AtBeginEnvironment",
+    "AtEndEnvironment",
+    "Whiledo",
+    "IfFontExistsTF",
+    "IfUndefined",
+    "Ifnum",
+    "Ifdefstring",
+    "BeginAccSupp",
     # Package catalogue
     "BuiltinPackages",
 ]

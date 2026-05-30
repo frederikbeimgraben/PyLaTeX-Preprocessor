@@ -257,7 +257,7 @@ class AtBeginDocument(TeX):
     body: TeX
 
     def __init__(self, body: TeX | str) -> None:
-        self.body = coerce_tex(body)
+        self.body = _coerce_body(body)
 
     @property
     @override
@@ -276,7 +276,7 @@ class AtEndDocument(TeX):
     body: TeX
 
     def __init__(self, body: TeX | str) -> None:
-        self.body = coerce_tex(body)
+        self.body = _coerce_body(body)
 
     @property
     @override
@@ -295,7 +295,7 @@ class MakeAtLetter(TeX):
     body: TeX
 
     def __init__(self, body: TeX | str) -> None:
-        self.body = coerce_tex(body)
+        self.body = _coerce_body(body)
 
     @property
     @override

@@ -4,14 +4,18 @@ The original ``Config/Fonts.tex`` walked through a long ``\\IfFileExists`` /
 ``\\IfFontExistsTF`` ladder. Here all those file checks happen in Python at
 build time: we look for the bundled ``Blender`` and ``DIN`` ttf files and emit
 exactly the ``\\newfontfamily`` / ``\\setsansfont`` / ``\\setmainfont`` calls
-that apply, with absolute paths baked in. No ``.tex`` file required.
+that apply, with absolute paths baked in. Runtime fallbacks (``IfFontExistsTF``)
+are emitted as native nodes from :mod:`pytex.library.builtins.lowlevel`.
 """
 
-from dataclasses import dataclass
-from typing import override
-
-from pytex import BuiltinPackages, Package, RenewCommand, TeX
-from pytex.model.raw import Raw
+from pytex import (
+    IfFontExistsTF,
+    NewFontFamily,
+    RenewCommand,
+    SetMainFont,
+    SetSansFont,
+    TeX,
+)
 from pytex_komascript.model import Block
 
 from .paths import FontsPath
@@ -22,77 +26,9 @@ _DIN_PATH = FontsPath / "DIN"
 _DIN_REGULAR = _DIN_PATH / "DIN-Regular.ttf"
 
 
-@dataclass
-class NewFontFamily(TeX):
-    """``\\newfontfamily\\name[opts]{family}`` from ``fontspec``."""
-
-    name: str
-    family: str
-    options: str | None = None
-
-    @property
-    @override
-    def required_packages(self) -> set[Package | str]:
-        return {BuiltinPackages.FONTSPEC.value}
-
-    @property
-    @override
-    def children(self) -> tuple[TeX, ...]:
-        return ()
-
-    @override
-    def serialize(self) -> str:
-        opt = f"[{self.options}]" if self.options is not None else ""
-        return f"\\newfontfamily\\{self.name}{opt}{{{self.family}}}"
-
-
-@dataclass
-class SetMainFont(TeX):
-    """``\\setmainfont[opts]{family}`` from ``fontspec``."""
-
-    family: str
-    options: str | None = None
-
-    @property
-    @override
-    def required_packages(self) -> set[Package | str]:
-        return {BuiltinPackages.FONTSPEC.value}
-
-    @property
-    @override
-    def children(self) -> tuple[TeX, ...]:
-        return ()
-
-    @override
-    def serialize(self) -> str:
-        opt = f"[{self.options}]" if self.options is not None else ""
-        return f"\\setmainfont{opt}{{{self.family}}}"
-
-
-@dataclass
-class SetSansFont(TeX):
-    """``\\setsansfont[opts]{family}`` from ``fontspec``."""
-
-    family: str
-    options: str | None = None
-
-    @property
-    @override
-    def required_packages(self) -> set[Package | str]:
-        return {BuiltinPackages.FONTSPEC.value}
-
-    @property
-    @override
-    def children(self) -> tuple[TeX, ...]:
-        return ()
-
-    @override
-    def serialize(self) -> str:
-        opt = f"[{self.options}]" if self.options is not None else ""
-        return f"\\setsansfont{opt}{{{self.family}}}"
-
-
-def _font_options(directory: str, regular: str, bold: str, italic: str, bolditalic: str) -> str:
+def _font_options(
+    directory: str, regular: str, bold: str, italic: str, bolditalic: str
+) -> str:
     return (
         f"Path={directory}/, Extension=.ttf,"
         f"UprightFont=*-{regular}, BoldFont=*-{bold},"
@@ -135,15 +71,7 @@ def fonts_block() -> TeX:
         parts.append(SetSansFont("Blender", _BLENDER_OPTS))
     else:
         parts.append(
-            Raw(
-                "\\IfFontExistsTF{Blender}"
-                "{\\newfontfamily\\BlenderFont{Blender}"
-                "\\renewcommand{\\blenderfont}{\\BlenderFont}\\setsansfont{Blender}}"
-                "{\\newfontfamily\\BlenderFont{TeX Gyre Heros}"
-                "\\renewcommand{\\blenderfont}{\\BlenderFont}"
-                "\\setsansfont{TeX Gyre Heros}}",
-                escape_spaces=False,
-            )
+            _font_fallback("BlenderFont", "blenderfont", "Blender", "TeX Gyre Heros", sans=True)
         )
 
     if _DIN_REGULAR.exists():
@@ -152,18 +80,46 @@ def fonts_block() -> TeX:
         parts.append(SetMainFont("DIN", _DIN_OPTS))
     else:
         parts.append(
-            Raw(
-                "\\IfFontExistsTF{DIN}"
-                "{\\newfontfamily\\DINFont{DIN}"
-                "\\renewcommand{\\dinfont}{\\DINFont}\\setmainfont{DIN}}"
-                "{\\newfontfamily\\DINFont{TeX Gyre Termes}"
-                "\\renewcommand{\\dinfont}{\\DINFont}"
-                "\\setmainfont{TeX Gyre Termes}}",
-                escape_spaces=False,
-            )
+            _font_fallback("DINFont", "dinfont", "DIN", "TeX Gyre Termes", sans=False)
         )
 
     return Block(*parts)
+
+
+def _font_branch(
+    macro: str,
+    switch: str,
+    family: str,
+    *,
+    sans: bool,
+) -> TeX:
+    """One side of the ``\\IfFontExistsTF`` body for a fontspec family."""
+    setter: TeX = SetSansFont(family) if sans else SetMainFont(family)
+    return Block(
+        NewFontFamily(macro, family),
+        RenewCommand(switch, f"\\{macro}"),
+        setter,
+    )
+
+
+def _font_fallback(
+    macro: str,
+    switch: str,
+    preferred: str,
+    gyre: str,
+    *,
+    sans: bool,
+) -> TeX:
+    """Runtime fallback ladder used when the bundled TTF is missing.
+
+    Emits an ``\\IfFontExistsTF`` guard: prefer the named system font, else
+    drop to a TeX Gyre alternative.
+    """
+    return IfFontExistsTF(
+        preferred,
+        _font_branch(macro, switch, preferred, sans=sans),
+        _font_branch(macro, switch, gyre, sans=sans),
+    )
 
 
 __all__ = [

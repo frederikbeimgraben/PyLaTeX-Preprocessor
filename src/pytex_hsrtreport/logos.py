@@ -78,7 +78,7 @@ def at_begin_page_block(
     main_scale: float = DEFAULT_MAIN_SCALE,
 ) -> TeX:
     """``\\AtBeginPage{ <tikzpicture> }`` — skyline + optional footer logos."""
-    nodes: list[TeX] = [_dummy_foot_node(global_scale, main_scale)]
+    nodes: list[Node] = [_dummy_foot_node(global_scale, main_scale)]
     if footer_logos:
         nodes.extend(
             _logo_node(i, name, scale, global_scale)

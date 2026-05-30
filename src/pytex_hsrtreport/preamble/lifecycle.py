@@ -4,10 +4,10 @@ from pytex import (
     AtBeginDocument,
     AtEndDocument,
     Command,
+    Def,
     RenewCommand,
     TeX,
 )
-from pytex.model.raw import Raw
 from pytex_komascript import (
     Appendix,
     BackMatter,
@@ -23,13 +23,10 @@ def at_begin_document_block(toc: bool) -> TeX:
     parts: list[TeX] = [
         FrontMatter,
         Command("maketitle"),
-        # The original .cls trick: parameter-text absorbs \setstretch and the
-        # body is {1.0}. Preserved verbatim — no native primitive matches.
-        Raw(
-            "\\newpage\\def\\istitlepage=\\false\\setstretch{1.0}",
-            escape_spaces=False,
-            safe=False,
-        ),
+        Command("newpage"),
+        # Original .cls trick: \def\istitlepage=\false\setstretch{1.0} — the
+        # delimited param text swallows the \setstretch invocation.
+        Def("istitlepage", "1.0", param_text="=\\false\\setstretch"),
     ]
     if toc:
         parts.append(Command("tableofcontents"))
@@ -46,8 +43,10 @@ def at_end_document_block(
         Appendix,
         KomaOptions("open=any"),
         BackMatter,
-        Raw("\\cfoot*{}\\ohead*{}", escape_spaces=False, safe=False),
-        Raw("\\noindent\\blenderfont", escape_spaces=False, safe=False),
+        Command("cfoot*", ""),
+        Command("ohead*", ""),
+        Command("noindent"),
+        Command("blenderfont"),
     ]
     if has_glossary or has_acronyms:
         parts.append(Command("glsaddallunused"))

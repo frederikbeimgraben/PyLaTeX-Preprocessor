@@ -2,25 +2,30 @@
 
 No hand-formatted multi-line strings: the ``\\maketitle`` body is a
 :class:`Block` of native TeX nodes (``\\section*``, ``\\vspace``, environments,
-``TikzPicture``, ``Node`` …). The data-table token machinery still goes through
-small ``\\DeclareRobustCommand`` definitions but they too are emitted as
-:class:`DeclareRobustCommand` / :class:`NewCommand` nodes inside a
-:class:`MakeAtLetter` wrapper.
+:class:`TikzPicture`, :class:`Node` …). The data-table token machinery uses
+native :class:`NewToks` / :class:`Def` / :class:`AssignToks` /
+:class:`DeclareRobustCommand` nodes inside a :class:`MakeAtLetter` wrapper.
 """
 
 from pytex import (
+    AssignToks,
+    Bold,
     Command,
     DeclareRobustCommand,
+    Def,
     Group,
     Href,
     MakeAtLetter,
     NewCommand,
+    NewToks,
     ProvideCommand,
     RenewCommand,
+    TabularEnv,
     TeX,
 )
-from pytex.library import Environment, IncludeGraphics
-from pytex.model.raw import Raw, coerce_tex
+from pytex.library import IncludeGraphics
+from pytex.library.environments import Environment
+from pytex.model.raw import coerce_tex
 from pytex_komascript.model import Block
 from pytex_tikz import Coordinate, Node, TikzPicture
 
@@ -33,15 +38,23 @@ from .logos import (
 from .paths import DummyFootPath
 
 
+def _heart_label() -> TeX:
+    """The ``Made with ♥ in LaTeX`` link label, built from native nodes."""
+    return Block(
+        Command("tiny"),
+        Command("color", "gray"),
+        Command("blenderfont"),
+        coerce_tex("Made with "),
+        Group(Command("ensuremath", Command("heartsuit"))),
+        coerce_tex(" in "),
+        Command("LaTeX"),
+    )
+
+
 def _heart_node() -> Node:
     """The ``Made with ♥ in LaTeX`` link node in the south-east corner."""
-    label = Raw(
-        "\\tiny\\color{gray}\\blenderfont Made with "
-        "{\\ensuremath\\heartsuit} in \\LaTeX",
-        escape_spaces=False,
-    )
     return Node(
-        Href("https://github.com/frederikbeimgraben/HSRT-Report", label),
+        Href("https://github.com/frederikbeimgraben/HSRT-Report", _heart_label()),
         options=(
             "anchor=south east, inner sep=0pt, "
             "xshift=-0.1cm, yshift=0.1cm"
@@ -65,33 +78,40 @@ def _dummy_anchor_node(main_height: str) -> Node:
 
 
 def _title_rule() -> TeX:
-    """The huge title line and its decorative bottom rule, baked as one Group.
-
-    The contents are nearly all primitive TeX (font size, color, weight) so
-    they live in a single :class:`Raw` rather than a chain of micro-nodes.
-    """
-    return Group(
-        Raw(
-            "\\noindent\\color{black}\\textbf{\\blenderfont\\Huge"
-            "\\hspace*{-2.5pt}\\@title}",
-            escape_spaces=False,
-        ),
-        Raw(
-            "\\color{black}\\vspace*{-0.5em}\\rule{\\textwidth}{0.5mm}",
-            escape_spaces=False,
+    """The huge title line and its decorative bottom rule, built natively."""
+    title_line = Block(
+        Command("noindent"),
+        Command("color", "black"),
+        Bold(
+            Block(
+                Command("blenderfont"),
+                Command("Huge"),
+                Command("hspace*", "-2.5pt"),
+                Command("@title"),
+            )
         ),
     )
+    rule_line = Block(
+        Command("color", "black"),
+        Command("vspace*", "-0.5em"),
+        Command("rule", "\\textwidth", "0.5mm"),
+    )
+    return Group(title_line, rule_line)
 
 
 def _abstract_section() -> TeX:
+    keywords_group = Group(
+        Command("vspace*", "1em"),
+        Command("newline"),
+        Bold("Keywords"),
+        Command("newline"),
+        Command("titlepagekeywords"),
+    )
     return Block(
-        Raw("\\section*{Abstract}\\vspace{-1em}\\titlepageabstract", escape_spaces=False),
-        Group(
-            Raw(
-                "\\vspace*{1em}\\newline\\textbf{Keywords}\\newline\\titlepagekeywords",
-                escape_spaces=False,
-            ),
-        ),
+        Command("section*", "Abstract"),
+        Command("vspace", "-1em"),
+        Command("titlepageabstract"),
+        keywords_group,
     )
 
 
@@ -102,19 +122,19 @@ def _maketitle_body(
     main_scale: float,
 ) -> TeX:
     """Compose the renewcommand body: tikz overlay + title + abstract + table."""
-    logo_nodes: list[TeX] = [_heart_node(), _dummy_anchor_node(
-        titlepage_main_height(main_scale, global_scale)
-    )]
+    logo_nodes: list[Node] = [
+        _heart_node(),
+        _dummy_anchor_node(titlepage_main_height(main_scale, global_scale)),
+    ]
     logo_nodes.extend(
         titlepage_logo_node(i, name, scale, global_scale)
         for i, (name, scale) in enumerate(resolved, start=1)
     )
 
     return Block(
-        # \def\istitlepage=\true is the original .cls trick used by
-        # \ifdefstring{\istitlepage}{\true}{...}{...} checks elsewhere; the
-        # weird parameter-text form is unavoidable as a native primitive.
-        Raw("\\def\\istitlepage=\\true", escape_spaces=False),
+        # Original .cls trick: \def\istitlepage=\true with empty body so a
+        # later \ifdefstring{\istitlepage}{\true}{...}{...} never matches.
+        Def("istitlepage", "", param_text="=\\true"),
         Command("pagenumbering", "arabic"),
         ProvideCommand(
             "titlepageabstract",
@@ -134,7 +154,8 @@ def _maketitle_body(
                 Command("setstretch", "1.0"),
                 _abstract_section(),
                 Command("vfill"),
-                Raw("\\noindent\\setstretch{1.0}", escape_spaces=False),
+                Command("noindent"),
+                Command("setstretch", "1.0"),
                 Command("GetTitlePageDataTable"),
             ),
         ),
@@ -143,28 +164,40 @@ def _maketitle_body(
 
 def _data_table_machinery() -> TeX:
     """Token-register data-table primitives. Wrapped in MakeAtLetter."""
+    add_space_body = AssignToks(
+        "titlePageData",
+        Command("vspace", "#1"),
+        expand_after=True,
+    )
+    add_line_body = AssignToks(
+        "titlePageData",
+        Block(
+            Command("\\"),
+            coerce_tex(" "),
+            Bold("#1"),
+            Command("tand"),
+            coerce_tex(" #2"),
+        ),
+        expand_after=True,
+    )
+    get_table_body = TabularEnv(
+        "@{} p{30mm} p{\\textwidth-30mm-2\\tabcolsep}",
+        Block(Command("the"), Command("titlePageData")),
+    )
+
     return MakeAtLetter(
         Block(
-            NewCommand("createdon", "\\gdef\\@createdon{#1}", n_args=1),
-            Raw("\\newtoks\\titlePageData", escape_spaces=False),
-            Raw("\\def\\tand{&}", escape_spaces=False),
-            Raw("\\titlePageData={\\tand}", escape_spaces=False),
-            DeclareRobustCommand(
-                "AddTitlePageDataSpace",
-                "\\titlePageData=\\expandafter{\\the\\titlePageData \\vspace{#1}}",
+            NewCommand(
+                "createdon",
+                Def("@createdon", "#1", global_=True),
                 n_args=1,
             ),
-            DeclareRobustCommand(
-                "AddTitlePageDataLine",
-                "\\titlePageData=\\expandafter{\\the\\titlePageData\\\\ "
-                "\\textbf{#1}\\tand #2}",
-                n_args=2,
-            ),
-            DeclareRobustCommand(
-                "GetTitlePageDataTable",
-                "\\begin{tabular}{@{} p{30mm} p{\\textwidth-30mm-2\\tabcolsep}}"
-                "\\the\\titlePageData\\end{tabular}",
-            ),
+            NewToks("titlePageData"),
+            Def("tand", "&"),
+            AssignToks("titlePageData", Command("tand")),
+            DeclareRobustCommand("AddTitlePageDataSpace", add_space_body, n_args=1),
+            DeclareRobustCommand("AddTitlePageDataLine", add_line_body, n_args=2),
+            DeclareRobustCommand("GetTitlePageDataTable", get_table_body),
         )
     )
 

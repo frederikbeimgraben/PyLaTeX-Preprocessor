@@ -1,9 +1,0 @@
-% Header / footer fields. Uses @-letter for \@author / \@title / \@auxout.
-\makeatletter
-\AtEndDocument{\immediate\write\@auxout{\string\gdef\string\@lastpage{\thepage}}}
-\ohead*{\ifnum\value{chapter}>0\relax \Roman{\thechapter}~–~\Chaptername \fi}
-\ifoot{\@author}
-\cfoot{\ifnum\value{chapter}>0\relax Seite~\thepage\@ifundefined{@lastpage}{}{~von~\@lastpage}\fi}
-\ohead{\ifnum\value{chapter}>0\relax \thechapter~–~\Chaptername \fi}
-\ihead{\@title}
-\makeatother

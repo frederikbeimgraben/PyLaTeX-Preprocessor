@@ -1,6 +1,19 @@
+from .library.biblatex import (
+    AddBibResource,
+    DeclareCiteCommand,
+    DeclareFieldFormat,
+    DeclareNameAlias,
+    ExecuteBibliographyOptions,
+    PrintBibliography,
+)
 from .library.builtins import (
+    Apptocmd,
+    AssignToks,
     AtBeginDocument,
+    AtBeginEnvironment,
     AtEndDocument,
+    AtEndEnvironment,
+    BeginAccSupp,
     Bold,
     BuiltinPackages,
     Command,
@@ -8,24 +21,34 @@ from .library.builtins import (
     CounterWithout,
     Crefname,
     DeclareRobustCommand,
+    Def,
     Emph,
     GlobalDef,
     Href,
     Huge,
     HugeHuge,
     Hypersetup,
+    Ifdefstring,
+    IfFontExistsTF,
+    Ifnum,
+    IfUndefined,
+    ImmediateWrite,
     Italic,
     Large,
     LargeLarge,
     LargeLargeLarge,
+    Let,
     MakeAtLetter,
     NewCommand,
     NewCounter,
     NewEnvironment,
     Newline,
     NewLength,
+    NewToks,
     Paragraph,
+    Pretocmd,
     ProvideCommand,
+    RegisterAssign,
     Relax,
     RenewCommand,
     Section,
@@ -41,10 +64,26 @@ from .library.builtins import (
     Texttt,
     Tiny,
     Underline,
+    Whiledo,
 )
 from .library.document import Document
 from .library.document_builtins import MakeTitle, NewPage, TableOfContents
-from .library.environments import Enumerate, Environment, Item, Itemize, Quote, Verbatim
+from .library.environments import (
+    Enumerate,
+    Environment,
+    Flushleft,
+    Item,
+    Itemize,
+    LongTable,
+    MDFramed,
+    Minipage,
+    Picture,
+    Put,
+    Quote,
+    TabularEnv,
+    Titlepage,
+    Verbatim,
+)
 from .library.figures import (
     SVG,
     Figure,
@@ -55,6 +94,7 @@ from .library.figures import (
     Tabular,
     tabular,
 )
+from .library.fontspec import NewFontFamily, SetMainFont, SetMonoFont, SetSansFont
 from .library.glossaries import (
     Acronyms,
     AcronymEntry,
@@ -67,6 +107,12 @@ from .library.glossaries import (
     acrlong,
     gls,
     glspl,
+)
+from .library.glossary_style import (
+    GlsAddKey,
+    NewColumnType,
+    NewGlossaryStyle,
+    SetGlossaryStyle,
 )
 from .library.inclusion import Include, IncludeTeX
 from .library.listings import (
@@ -148,6 +194,28 @@ __all__ = [
     "NewEnvironment",
     "GlobalDef",
     "BuiltinPackages",
+    # Low-level primitives
+    "Def",
+    "Let",
+    "NewToks",
+    "AssignToks",
+    "ImmediateWrite",
+    "RegisterAssign",
+    "Pretocmd",
+    "Apptocmd",
+    "AtBeginEnvironment",
+    "AtEndEnvironment",
+    "Whiledo",
+    "IfFontExistsTF",
+    "IfUndefined",
+    "Ifnum",
+    "Ifdefstring",
+    "BeginAccSupp",
+    # fontspec
+    "NewFontFamily",
+    "SetMainFont",
+    "SetSansFont",
+    "SetMonoFont",
     # Text formatting
     "Bold",
     "Italic",
@@ -182,6 +250,14 @@ __all__ = [
     "Enumerate",
     "Quote",
     "Verbatim",
+    "Minipage",
+    "Put",
+    "Picture",
+    "MDFramed",
+    "LongTable",
+    "TabularEnv",
+    "Flushleft",
+    "Titlepage",
     # Math
     "InlineMath",
     "DisplayMath",
@@ -225,6 +301,11 @@ __all__ = [
     "acr",
     "acrlong",
     "acrfull",
+    # Glossary style helpers
+    "NewColumnType",
+    "NewGlossaryStyle",
+    "SetGlossaryStyle",
+    "GlsAddKey",
     # Listings
     "Listing",
     "LstSet",
@@ -246,4 +327,11 @@ __all__ = [
     "LaTeXListing",
     # Markdown
     "Markdown",
+    # biblatex
+    "ExecuteBibliographyOptions",
+    "DeclareFieldFormat",
+    "DeclareCiteCommand",
+    "DeclareNameAlias",
+    "AddBibResource",
+    "PrintBibliography",
 ]

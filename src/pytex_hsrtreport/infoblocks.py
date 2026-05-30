@@ -1,21 +1,34 @@
-"""Coloured callout boxes, fully native.
+"""Coloured callout boxes, built from native pytex nodes.
 
 The TeX-side ``ColoredBox`` environment is gone — :class:`ColoredBox` is a
-:class:`pytex.TeX` node that emits the boxed-and-decorated body inline, with
-the icon/background opacity computed in Python from the nesting depth (which
-we determine by walking the TeX tree at construction time).
+:class:`pytex.TeX` node whose subtree is composed of :class:`Minipage`,
+:class:`MDFramed`, :class:`Picture` / :class:`Put` and a sequence of
+:class:`Command` nodes. The icon/background opacity is computed in Python
+from the nesting depth, which we determine by walking the TeX tree at
+construction time.
 
 ``InfoBox`` / ``WarningBox`` / ``SuccessBox`` / ``ImportantBox`` /
 ``DiscussionBox`` / ``CustomBox`` are thin wrappers that pick an icon + colour
 pair. ``VotingResults`` runs the Ja/Nein/Enthaltung branching in Python and
-builds the three sub-boxes inline.
+builds the three sub-boxes inline as native :class:`Minipage` nodes.
 """
 
 from dataclasses import dataclass, field
 from typing import override
 
-from pytex import BuiltinPackages, Group, Package, TeX
-from pytex.model.raw import Raw, coerce_tex
+from pytex import (
+    Bold,
+    BuiltinPackages,
+    Command,
+    MDFramed,
+    Minipage,
+    Package,
+    Picture,
+    Put,
+    TeX,
+)
+from pytex.model.raw import coerce_tex
+from pytex_komascript.model import Block
 
 from .colors import HSRTColor
 
@@ -47,6 +60,8 @@ class ColoredBox(TeX):
     ``\\begin{ColoredBox}`` environment exists in TeX. When a :class:`ColoredBox`
     is nested inside another, the inner instance's ``_level`` is bumped at
     construction time so its background tint deepens.
+
+    ``icon`` is the bare macro name (``"faInfoCircle"``, no leading backslash).
     """
 
     body: TeX
@@ -62,7 +77,7 @@ class ColoredBox(TeX):
         self,
         body: TeX | str,
         *,
-        icon: str = "\\faInfoCircle",
+        icon: str = "faInfoCircle",
         icon_color: HSRTColor | str = "blue",
         background_color: HSRTColor | str | None = None,
         icon_size: str = "28pt",
@@ -70,7 +85,7 @@ class ColoredBox(TeX):
         icon_offset_y: str = "0pt",
     ) -> None:
         self.body = coerce_tex(body)
-        self.icon = icon
+        self.icon = icon.lstrip("\\")
         self.icon_color = str(icon_color)
         self.background_color = str(
             background_color if background_color is not None else icon_color
@@ -79,7 +94,6 @@ class ColoredBox(TeX):
         self.icon_offset_x = icon_offset_x
         self.icon_offset_y = icon_offset_y
         self._level = 1
-        # Bump nested ColoredBoxes one notch deeper than this one.
         _bump_levels(self.body, self._level + 1)
 
     @property
@@ -92,37 +106,61 @@ class ColoredBox(TeX):
     def children(self) -> tuple[TeX, ...]:
         return (self.body,)
 
-    @override
-    def serialize(self) -> str:
-        bg_op, icon_op = _opacity_pair(self._level)
+    def set_level(self, level: int) -> None:
+        """Re-tag the nesting level (used by :func:`_bump_levels`)."""
+        self._level = level
+
+    def _mdframed_options(self, bg_op: int) -> str:
         return (
-            "\\vspace*{0.5\\baselineskip}\\noindent\n"
-            "\\begin{minipage}{\\linewidth}\n"
-            "\\begin{mdframed}["
             f"backgroundcolor={{{self.background_color}!{bg_op}}},"
             "hidealllines=true,"
             "skipabove=0.7\\baselineskip,skipbelow=0.7\\baselineskip,"
-            "splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\n"
-            "\\begin{picture}(\\linewidth, 0)(0, 0)\n"
-            f"\\put({self.icon_offset_x}-{self.icon_size},"
-            f"{self.icon_offset_y}-0.7cm){{"
-            f"\\fontsize{{{self.icon_size}}}{{{self.icon_size}}}\\selectfont "
-            f"\\color{{{self.icon_color}!{icon_op}}} {self.icon}}}\n"
-            "\\end{picture}\\hspace*{0.25cm}\n"
-            "\\begin{minipage}{\\linewidth-0.5cm}\n"
-            f"\\vspace*{{0.5\\baselineskip}}{self.body.serialize()}"
-            "\\vspace*{0.5\\baselineskip}\n"
-            "\\end{minipage}\n"
-            "\\end{mdframed}\n"
-            "\\end{minipage}"
+            "splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt"
         )
+
+    def _icon_body(self, icon_op: int) -> TeX:
+        return Block(
+            Command("fontsize", self.icon_size, self.icon_size),
+            Command("selectfont"),
+            Command("color", f"{self.icon_color}!{icon_op}"),
+            Command(self.icon),
+        )
+
+    def _tree(self) -> TeX:
+        bg_op, icon_op = _opacity_pair(self._level)
+        icon_put = Put(
+            x=f"{self.icon_offset_x}-{self.icon_size}",
+            y=f"{self.icon_offset_y}-0.7cm",
+            body=self._icon_body(icon_op),
+        )
+        inner = Minipage(
+            "\\linewidth-0.5cm",
+            Command("vspace*", "0.5\\baselineskip"),
+            self.body,
+            Command("vspace*", "0.5\\baselineskip"),
+        )
+        framed = MDFramed(
+            Picture(icon_put, width="\\linewidth", height="0", offset=("0", "0")),
+            Command("hspace*", "0.25cm"),
+            inner,
+            options=self._mdframed_options(bg_op),
+        )
+        wrapper = Minipage("\\linewidth", framed)
+        return Block(
+            Command("vspace*", "0.5\\baselineskip"),
+            Command("noindent"),
+            wrapper,
+        )
+
+    @override
+    def serialize(self) -> str:
+        return self._tree().serialize()
 
 
 def _bump_levels(node: TeX, level: int) -> None:
-    """Recursively raise the ``_level`` of every :class:`ColoredBox` under ``node``."""
+    """Recursively raise the level of every :class:`ColoredBox` under ``node``."""
     if isinstance(node, ColoredBox):
-        # Note: assignment is OK — ColoredBox is not frozen.
-        node._level = level
+        node.set_level(level)
         _bump_levels(node.body, level + 1)
         return
     for child in node.children:
@@ -135,6 +173,8 @@ def _bump_levels(node: TeX, level: int) -> None:
 
 
 def _body(parts: "tuple[TeX | str, ...]") -> TeX:
+    from pytex import Group
+
     if len(parts) == 1:
         return coerce_tex(parts[0])
     return Group(*parts)
@@ -144,7 +184,7 @@ def InfoBox(*body: TeX | str, icon_size: str = "24pt") -> ColoredBox:
     """Blue info callout (``\\faInfoCircle``)."""
     return ColoredBox(
         _body(body),
-        icon="\\faInfoCircle",
+        icon="faInfoCircle",
         icon_color="blue",
         icon_size=icon_size,
     )
@@ -154,7 +194,7 @@ def WarningBox(*body: TeX | str, icon_size: str = "24pt") -> ColoredBox:
     """Red warning callout (``\\faExclamationTriangle``)."""
     return ColoredBox(
         _body(body),
-        icon="\\faExclamationTriangle",
+        icon="faExclamationTriangle",
         icon_color="red",
         icon_size=icon_size,
     )
@@ -164,7 +204,7 @@ def SuccessBox(*body: TeX | str, icon_size: str = "24pt") -> ColoredBox:
     """Green success callout (``\\faCheckCircle``)."""
     return ColoredBox(
         _body(body),
-        icon="\\faCheckCircle",
+        icon="faCheckCircle",
         icon_color="green",
         icon_offset_y="2pt",
         icon_size=icon_size,
@@ -175,7 +215,7 @@ def ImportantBox(*body: TeX | str, icon_size: str = "24pt") -> ColoredBox:
     """Orange important callout (``\\faExclamationCircle``)."""
     return ColoredBox(
         _body(body),
-        icon="\\faExclamationCircle",
+        icon="faExclamationCircle",
         icon_color="orange",
         icon_size=icon_size,
     )
@@ -185,7 +225,7 @@ def DiscussionBox(*body: TeX | str, icon_size: str = "24pt") -> ColoredBox:
     """Han-blue discussion callout (``\\faComments``)."""
     return ColoredBox(
         _body(body),
-        icon="\\faComments",
+        icon="faComments",
         icon_color=HSRTColor.HANBLUE,
         icon_size=icon_size,
     )
@@ -198,13 +238,26 @@ def CustomBox(
     *,
     icon_size: str = "24pt",
 ) -> ColoredBox:
-    """ColoredBox with caller-chosen icon and accent colour."""
+    """ColoredBox with caller-chosen icon and accent colour.
+
+    ``icon`` is the bare macro name (no leading backslash).
+    """
     return ColoredBox(
         body,
         icon=icon,
         icon_color=color,
         icon_size=icon_size,
     )
+
+
+def _tally(label: str, count: int, icon: str, hue: HSRTColor | str) -> TeX:
+    """One Ja/Nein/Enthaltung sub-box wrapped in a 0.3-linewidth minipage."""
+    inner = CustomBox(
+        Block(Bold(f"{label}:"), coerce_tex(f" {count}")),
+        icon,
+        hue,
+    )
+    return Minipage("0.3\\linewidth", inner, position="t")
 
 
 def VotingResults(
@@ -226,29 +279,19 @@ def VotingResults(
     else:
         color = HSRTColor.EGGPLANT
 
-    def _tally(label: str, count: int, icon: str, hue: HSRTColor | str) -> str:
-        inner = CustomBox(
-            Raw(f"\\textbf{{{label}:}} {count}", escape_spaces=False),
-            icon,
-            hue,
-        )
-        return (
-            f"\\begin{{minipage}}[t]{{0.3\\linewidth}}"
-            f"{inner.serialize()}"
-            f"\\end{{minipage}}"
-        )
-
-    tally = (
-        "\\par\\medskip\\noindent\n"
-        f"{_tally('Ja', yes, '\\faThumbsUp', HSRTColor.BRITISH_RACING_GREEN)}"
-        "\\hfill\n"
-        f"{_tally('Nein', no, '\\faThumbsDown', 'red')}"
-        "\\hfill\n"
-        f"{_tally('Enthaltung', abstain, '\\faQuestion', HSRTColor.EGGPLANT)}"
+    tally = Block(
+        Command("par"),
+        Command("medskip"),
+        Command("noindent"),
+        _tally("Ja", yes, "faThumbsUp", HSRTColor.BRITISH_RACING_GREEN),
+        Command("hfill"),
+        _tally("Nein", no, "faThumbsDown", "red"),
+        Command("hfill"),
+        _tally("Enthaltung", abstain, "faQuestion", HSRTColor.EGGPLANT),
     )
     return ColoredBox(
-        Group(coerce_tex(body), Raw(tally, escape_spaces=False)),
-        icon="\\faVoteYea",
+        Block(coerce_tex(body), tally),
+        icon="faVoteYea",
         icon_color=color,
         icon_offset_x="-0.2cm",
         icon_size="24pt",

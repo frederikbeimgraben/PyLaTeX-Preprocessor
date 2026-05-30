@@ -1,9 +1,11 @@
 """KOMA section styles, counter wiring and chapter-mark indirection."""
 
 from pytex import (
+    Command,
     CounterWithin,
     CounterWithout,
-    IncludeTeX,
+    Def,
+    Let,
     NewCommand,
     RenewCommand,
     SetLength,
@@ -12,7 +14,30 @@ from pytex import (
 from pytex_komascript import RedeclareSectionCommand, SetKomaFont
 from pytex_komascript.model import Block
 
-from ..paths import TEX_DIR
+_MARK_NAMES: tuple[tuple[str, str], ...] = (
+    ("Chapter", "chapter"),
+    ("Section", "section"),
+    ("Subsection", "subsection"),
+    ("Subsubsection", "subsubsection"),
+)
+
+
+def _mark_indirection(capital: str, lower: str) -> TeX:
+    """``\\let\\<C>mark\\<l>mark`` + redefined mark that captures the name."""
+    name_macro = f"{capital}name"
+    return Block(
+        Let(f"{capital}mark", f"{lower}mark"),
+        Def(
+            f"{lower}mark",
+            Block(Def(name_macro, "#1"), Command(f"{capital}mark", "#1")),
+            param_text="#1",
+        ),
+    )
+
+
+def _section_marks_block() -> TeX:
+    """Native replacement for the old ``sections_marks.tex`` snippet."""
+    return Block(*(_mark_indirection(c, l) for c, l in _MARK_NAMES))
 
 
 def sections_block() -> TeX:
@@ -22,7 +47,7 @@ def sections_block() -> TeX:
         SetKomaFont("section", "\\Large\\blenderfont\\bfseries"),
         SetKomaFont("subsection", "\\large\\blenderfont\\bfseries"),
         SetKomaFont("subsubsection", "\\large\\blenderfont\\bfseries"),
-        IncludeTeX(TEX_DIR / "sections_marks.tex"),
+        _section_marks_block(),
         RedeclareSectionCommand(
             "chapter",
             "beforeskip=3ex plus 1ex minus 0.5ex,afterskip=1.5ex plus 0.3ex,style=section",

@@ -1,9 +1,0 @@
-% Table-of-contents tweaks. Uses @-letter for \@dottedtocline.
-\makeatletter
-\pretocmd{\addchaptertocentry}{\needspace{8\baselineskip}}{}{}
-\apptocmd{\addchaptertocentry}{\nopagebreak[4]}{}{}
-\AtBeginEnvironment{toc}{\clubpenalty=10000 \widowpenalty=10000 \interlinepenalty=500}
-\pretocmd{\addsectiontocentry}{\penalty-500}{}{}
-\pretocmd{\addsubsectiontocentry}{\nopagebreak[3]}{}{}
-\renewcommand*{\l@lstlisting}[2]{\@dottedtocline{1}{1em}{2.3em}{\blenderfont#1}{\blenderfont#2}}
-\makeatother
