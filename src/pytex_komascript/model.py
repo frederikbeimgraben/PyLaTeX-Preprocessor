@@ -30,4 +30,8 @@ class Block(TeX):
 
     @override
     def serialize(self) -> str:
-        return "".join(child.serialize() + "\n" for child in self._children)
+        # Newline-joined (no trailing newline) so the block fits cleanly inside
+        # another LaTeX group — a trailing newline plus the closing brace would
+        # show up as a blank line and trip TeX's paragraph detection inside
+        # \AtBeginPage / \AtBeginDocument bodies.
+        return "\n".join(child.serialize() for child in self._children)

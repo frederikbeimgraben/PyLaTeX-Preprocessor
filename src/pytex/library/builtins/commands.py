@@ -16,7 +16,18 @@ from dataclasses import dataclass
 from typing import ClassVar, override
 
 from ...model.base_model import Package, TeX
-from ...model.raw import coerce_tex
+from ...model.raw import Raw, coerce_tex
+
+
+def _coerce_body(value: TeX | str) -> TeX:
+    """Coerce a command body to TeX without space-escaping it.
+
+    Macro / environment bodies are TeX source — internal spaces must survive
+    as actual spaces, not as ``~`` ties.
+    """
+    if isinstance(value, TeX):
+        return value
+    return Raw(value, escape_spaces=False)
 
 
 @dataclass(init=False)
@@ -82,7 +93,7 @@ class _DefBase(TeX):
         default: str | None = None,
     ) -> None:
         self.name = name
-        self.body = coerce_tex(body)
+        self.body = _coerce_body(body)
         self.n_args = n_args
         self.default = default
 
@@ -367,8 +378,8 @@ class NewEnvironment(TeX):
         renew: bool = False,
     ) -> None:
         self.name = name
-        self.begin = coerce_tex(begin)
-        self.end = coerce_tex(end)
+        self.begin = _coerce_body(begin)
+        self.end = _coerce_body(end)
         self.n_args = n_args
         self.default = default
         self.renew = renew

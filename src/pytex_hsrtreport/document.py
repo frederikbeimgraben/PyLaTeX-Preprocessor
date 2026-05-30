@@ -1,15 +1,15 @@
 """The :func:`HSRTReport` builder.
 
 Reproduces the behaviour of the original ``HSRTReport.cls`` without defining a
-LaTeX document class: a plain ``scrbook`` :class:`KomaDocument` is emitted with
-a Python-built preamble. Every per-document decision the original class made
-with ``\\strcompare`` / class options is taken in Python here, and every
-preamble fragment is either a native :mod:`pytex` node or an
-``IncludeTeX(...)`` of a small ``tex/`` asset.
+LaTeX document class: a plain ``scrbook`` :class:`KomaDocument` is emitted
+with a Python-built preamble. All per-document branching the original class
+made with ``\\strcompare`` / class options happens in Python; every preamble
+fragment is a :mod:`pytex` / :mod:`pytex_tikz` native node, with a small
+handful of ``.tex`` snippets included via :class:`pytex.IncludeTeX` only when
+pure-Python expression would be hostile (expl3, @-letter, FP eval, ...).
 """
 
 from collections.abc import Mapping
-from pathlib import Path
 
 from pytex import Acronyms, Glossary, Package, TeX
 from pytex.model.raw import Raw
@@ -26,7 +26,9 @@ from .bibliography import (
     makebib_command,
 )
 from .colors import colors_block
-from .config import (
+from .fonts import fonts_block
+from .logos import DEFAULT_GLOBAL_SCALE, DEFAULT_MAIN_SCALE, logos_block
+from .preamble import (
     IMPORTS_PACKAGES,
     at_begin_document_block,
     at_end_document_block,
@@ -36,14 +38,10 @@ from .config import (
     imports_block,
     page_setup_block,
     pagebreaks_block,
-    path_defs_block,
     sections_block,
     toc_config_block,
     typography_block,
 )
-from .fonts import fonts_block
-from .infoblocks import infoblocks_preamble
-from .logos import logos_block
 from .titlepage import title_metadata_block, title_page_defs
 from .variants import Variant
 from .watermark import watermark_block
@@ -54,10 +52,6 @@ def _paper_option(paper_size: str) -> str:
     if "=" in paper_size or paper_size.endswith("paper"):
         return paper_size
     return f"paper={paper_size}"
-
-
-def _default_assets_path() -> str:
-    return str(Path(__file__).parent / "Assets")
 
 
 def HSRTReport(
@@ -87,26 +81,35 @@ def HSRTReport(
     toc: bool = False,
     footer_logos: bool = False,
     wordcount: bool = False,
-    assets_path: str | None = None,
+    logos_scale: float = DEFAULT_GLOBAL_SCALE,
+    main_logo_scale: float = DEFAULT_MAIN_SCALE,
     koma_fonts: Mapping[str, str] | None = None,
 ) -> KomaDocument:
-    """Build an HSRT report as a ``scrbook`` :class:`KomaDocument`."""
+    """Build an HSRT report as a ``scrbook`` :class:`KomaDocument`.
+
+    ``logos_scale`` / ``main_logo_scale`` are Python-only multipliers that
+    replace the original ``\\logosScale`` / ``\\mainLogoScale`` TeX macros —
+    each logo's pixel height is baked into the include at build time.
+    """
     body = content if isinstance(content, TeX) else Raw(content, escape_spaces=False)
 
     has_glossary = bool(glossary)
     has_acronyms = bool(acronyms)
     has_bibliography = bibliography is not None
 
-    if assets_path is None:
-        assets_path = _default_assets_path()
-
     # Title-page data (Python computes the wordcount line)
     data_lines = list(title_page_data or [])
     if wordcount:
         data_lines.append(("Wortanzahl", str(count_words(body))))
 
-    # Logo resolution — used by both at-begin-page and the title-page redef
-    logos_setup, resolved = logos_block(variant, logos, footer_logos)
+    # Logo resolution — used by both at-begin-page and the title-page redef.
+    logos_setup, resolved = logos_block(
+        variant,
+        logos,
+        footer_logos,
+        global_scale=logos_scale,
+        main_scale=main_logo_scale,
+    )
 
     watermark_text = (
         watermark.serialize() if isinstance(watermark, TeX) else (watermark or "")
@@ -126,10 +129,13 @@ def HSRTReport(
     # Preamble parts (in document order)
     # ------------------------------------------------------------------
     parts: list[TeX] = [
-        path_defs_block(assets_path, variant),
         imports_block(),
         colors_block(),
-        title_page_defs(resolved),
+        title_page_defs(
+            resolved,
+            global_scale=logos_scale,
+            main_scale=main_logo_scale,
+        ),
         makebib_command(),
         hyperref_block(),
     ]
@@ -146,7 +152,6 @@ def HSRTReport(
             pagebreaks_block(),
             cleveref_block(),
             logos_setup,
-            infoblocks_preamble(),
             watermark_block(watermark_text),
             title_metadata_block(
                 title=title,

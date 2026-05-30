@@ -55,10 +55,8 @@ def CurveTo(
         return PathOp(f".. {target.serialize()}")
     if len(controls) == 1:
         return PathOp(f".. controls {controls[0].serialize()} .. {target.serialize()}")
-    return PathOp(
-        f".. controls {controls[0].serialize()} and {controls[1].serialize()}"
-        f" .. {target.serialize()}"
-    )
+    head = f".. controls {controls[0].serialize()} and {controls[1].serialize()}"
+    return PathOp(f"{head} .. {target.serialize()}")
 
 
 def Rectangle(opposite: Coordinate) -> PathOp:

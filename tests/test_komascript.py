@@ -50,7 +50,9 @@ class TestBlock:
     def test_block_no_braces(self):
         block = Block(Subject(Raw("A")), Pagestyle("scrheadings"))
         out = block.serialize()
-        assert out == "\\subject{A}\n\\pagestyle{scrheadings}\n"
+        # Block joins children with newlines, no trailing newline, so the
+        # output fits cleanly inside another LaTeX group without forcing \par.
+        assert out == "\\subject{A}\n\\pagestyle{scrheadings}"
         assert "{" not in out.replace("\\subject{A}", "").replace(
             "\\pagestyle{scrheadings}", ""
         )

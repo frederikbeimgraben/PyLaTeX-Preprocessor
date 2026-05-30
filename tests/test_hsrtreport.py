@@ -5,6 +5,7 @@ from pytex_hsrtreport import (
     CustomBox,
     HSRTReport,
     InfoBox,
+    SuccessBox,
     VotingResults,
     WarningBox,
     content_text,
@@ -62,12 +63,14 @@ class TestDocumentStructure:
         assert out.count("\\maketitle") == 2
 
     def test_logos_emitted(self):
-        # Logos are now baked from Python as per-logo tikz nodes that
-        # \includegraphics the resolved logo PDF; \AddLogo no longer exists.
+        # Per-logo tikz nodes are baked from Python with absolute PDF paths
+        # and pixel-cm heights computed at build time. The exact path depends
+        # on where pytex_hsrtreport is installed, so we look for the suffix.
         out = _serialize(variant="INF_meti")
-        assert "{\\logospath INF/Kombiniert.pdf}" in out
-        assert "{\\logospath HSRT.pdf}" in out
-        assert "1.5cm*\\real{0.9}" in out
+        assert "Images/Logos/INF/Kombiniert.pdf}" in out
+        assert "Images/Logos/HSRT.pdf}" in out
+        # Default logo scale is 0.9, global 1.0 -> 1.5 × 0.9 × 1.0 = 1.35cm.
+        assert "height=1.35cm" in out
 
     def test_footer_logos_toggle(self):
         # The footer-logo nodes are emitted by Python only when footer_logos
@@ -77,8 +80,16 @@ class TestDocumentStructure:
         assert marker not in _serialize(footer_logos=False)
 
     def test_watermark(self):
+        # The watermark text is baked directly into the DraftwatermarkOptions
+        # body; no \waterMarkText TeX define is emitted.
         out = _serialize(watermark="DRAFT")
-        assert "\\newcommand{\\waterMarkText}{DRAFT}" in out
+        assert "DRAFT~~" in out
+        assert "\\DraftwatermarkOptions{" in out
+
+    def test_no_watermark_text_define(self):
+        # Even when set, the text is inlined — no separate command exists.
+        out = _serialize(watermark="DRAFT")
+        assert "\\newcommand{\\waterMarkText}" not in out
 
     def test_preamble_blocks_present(self):
         out = _serialize()
@@ -87,14 +98,17 @@ class TestDocumentStructure:
             "\\hypersetup{",
             "\\setkomafont{disposition}",
             "\\definecolor{hanblue}",
-            "blstlisting",
-            # ColoredBox is now the only callout env; InfoBox/Warning/... are
-            # baked from Python as \begin{ColoredBox}[opts] calls.
-            "\\NewEnviron{ColoredBox}",
             "\\DraftwatermarkOptions{",
             "\\makeatletter",
         ):
             assert needle in out, needle
+
+    def test_no_coloredbox_env_defined(self):
+        # ColoredBox is no longer a TeX environment — it is a Python type that
+        # emits its contents inline.
+        out = _serialize()
+        assert "\\NewEnviron{ColoredBox}" not in out
+        assert "\\NewEnviron{InfoBox}" not in out
 
 
 class TestToggles:
@@ -134,40 +148,63 @@ class TestToggles:
 
 class TestInfoBoxes:
     def test_infobox(self):
-        # All boxes are emitted as ColoredBox with Python-baked options.
+        # ColoredBox emits its mdframed contents inline — no environment.
         out = InfoBox(Raw("hi")).serialize()
-        assert out.startswith("\\begin{ColoredBox}[")
-        assert out.endswith("\\end{ColoredBox}")
-        assert "icon={\\faInfoCircle}" in out
-
-    def test_infobox_options(self):
-        out = InfoBox(Raw("hi"), options="background.color={red}").serialize()
-        # Defaults come first, the override is appended so setkeys wins it.
-        assert "background.color={blue},background.color={red}" in out
+        assert "\\begin{ColoredBox}" not in out
+        assert "\\begin{mdframed}" in out
+        assert "\\faInfoCircle" in out
+        # Default nesting level=1 -> bg 12%, icon 32%.
+        assert "{blue!12}" in out
+        assert "{blue!32}" in out
 
     def test_warningbox(self):
         out = WarningBox(Raw("x")).serialize()
-        assert out.startswith("\\begin{ColoredBox}[")
-        assert "icon={\\faExclamationTriangle}" in out
-        assert "icon.color={red}" in out
+        assert "\\faExclamationTriangle" in out
+        assert "{red!12}" in out
+        assert "{red!32}" in out
+
+    def test_successbox_offset_y(self):
+        # SuccessBox bumps icon_offset_y to 2pt.
+        out = SuccessBox(Raw("x")).serialize()
+        assert "\\faCheckCircle" in out
+        assert "2pt-0.7cm" in out  # SuccessBox icon_offset_y=2pt
 
     def test_custombox_args(self):
         out = CustomBox(Raw("x"), "\\faStar", "blue").serialize()
-        assert out.startswith("\\begin{ColoredBox}[")
-        assert "icon={\\faStar}" in out
-        assert "icon.color={blue}" in out
-        assert "background.color={blue}" in out
+        assert "\\faStar" in out
+        assert "{blue!12}" in out
 
-    def test_voting_results(self):
-        # Python picks the accent colour from the tally and bakes the three
-        # Ja/Nein/Enthaltung CustomBoxes into the body.
+    def test_voting_results_yes_wins(self):
         out = VotingResults(Raw("Antrag"), 5, 2, 1).serialize()
-        assert out.startswith("\\begin{ColoredBox}[")
-        assert "icon={\\faVoteYea}" in out
-        assert "icon.color={britishracinggreen}" in out  # yes > no
+        assert "\\faVoteYea" in out
+        assert "{britishracinggreen!12}" in out  # yes > no
         assert "\\textbf{Ja:} 5" in out
         assert "\\textbf{Nein:} 2" in out
         assert "\\textbf{Enthaltung:} 1" in out
+
+    def test_voting_results_no_wins(self):
+        out = VotingResults(Raw("Antrag"), 1, 5, 2).serialize()
+        assert "{red!12}" in out
+
+    def test_voting_results_tie(self):
+        out = VotingResults(Raw("Antrag"), 3, 3, 1).serialize()
+        assert "{eggplant!12}" in out
+
+    def test_nested_coloredbox_bumps_opacity(self):
+        # Inner ColoredBox at level=2 -> bg=round((0.05 + 0.075*2)*100) = 20.
+        outer = InfoBox(WarningBox(Raw("inner")))
+        out = outer.serialize()
+        assert "{blue!12}" in out  # outer at L=1
+        assert "{red!20}" in out  # inner at L=2
+
+    def test_coloredbox_required_packages(self):
+        pkgs = InfoBox(Raw("hi")).required_packages
+        assert any(
+            (p if isinstance(p, str) else p.name) == "mdframed" for p in pkgs
+        )
+        assert any(
+            (p if isinstance(p, str) else p.name) == "fontawesome5" for p in pkgs
+        )
 
 
 class TestWordCount:

@@ -1,11 +1,13 @@
-"""HSRT report layout built on :mod:`pytex` and :mod:`pytex_komascript`.
+"""HSRT report layout built on :mod:`pytex`, :mod:`pytex_komascript`, and
+:mod:`pytex_tikz`.
 
-Reproduces the original ``HSRTReport`` LaTeX document class as a Python builder:
-:func:`HSRTReport` emits a ``scrbook`` document with the full HSRT preamble, with
-all class logic (variant logos, glossary/bibliography toggles, word count)
-computed in Python rather than in TeX.
+:func:`HSRTReport` emits a ``scrbook`` document with the full HSRT preamble;
+every per-document branching decision (variant logos, glossary/bibliography
+toggles, watermark text, scale factors, font availability, ...) is computed in
+Python rather than encoded in TeX macros.
 
-Example:
+Example::
+
     from pytex import Group, Raw, Section
     from pytex_hsrtreport import HSRTReport, InfoBox
 
@@ -24,11 +26,21 @@ Example:
 from pytex import (
     Acronyms,
     AcronymEntry,
+    AtBeginDocument,
+    AtEndDocument,
+    BuiltinPackages,
+    Crefname,
     Glossary,
     GlossaryEntry,
+    Hypersetup,
     Listing,
     MakeGlossaries,
+    NewCommand,
+    NewEnvironment,
+    Package,
     PrintGlossary,
+    RenewCommand,
+    SetLength,
     acr,
     acrfull,
     acrlong,
@@ -36,7 +48,18 @@ from pytex import (
     glspl,
 )
 
-from .colors import COLOR_DEFS, DefineColor
+from .colors import (
+    COLOR_DEFS,
+    Color,
+    ColorBritishRacingGreen,
+    ColorEggplant,
+    ColorHanblue,
+    ColorNavyblue,
+    ColorPansypurple,
+    ColorShockingpink,
+    DefineColor,
+    HSRTColor,
+)
 from .document import HSRTReport
 from .infoblocks import (
     ColoredBox,
@@ -49,24 +72,20 @@ from .infoblocks import (
     WarningBox,
 )
 from .markdown import Markdown, markdown_to_tex
+from .paths import (
+    ASSETS_DIR,
+    AssetPath,
+    ClassPath,
+    DummyFootPath,
+    FontsPath,
+    ImagesPath,
+    LogosPath,
+    SkylinePath,
+    TEX_DIR,
+    logo_pdf,
+)
 from .variants import VARIANT_LOGOS, Logo, Variant, resolve_logos
 from .wordcount import content_text, count_words
-
-# Re-export the most commonly used native pytex preamble primitives so
-# downstream documents can build extra blocks without reaching into
-# ``pytex.library.builtins`` directly.
-from pytex import (
-    AtBeginDocument,
-    AtEndDocument,
-    BuiltinPackages,
-    Crefname,
-    Hypersetup,
-    NewCommand,
-    NewEnvironment,
-    Package,
-    RenewCommand,
-    SetLength,
-)
 
 __version__ = "0.1.0"
 
@@ -88,8 +107,27 @@ __all__ = [
     "CustomBox",
     "VotingResults",
     # Colors
+    "HSRTColor",
     "DefineColor",
     "COLOR_DEFS",
+    "Color",
+    "ColorBritishRacingGreen",
+    "ColorEggplant",
+    "ColorHanblue",
+    "ColorNavyblue",
+    "ColorPansypurple",
+    "ColorShockingpink",
+    # Asset paths
+    "ASSETS_DIR",
+    "TEX_DIR",
+    "AssetPath",
+    "ClassPath",
+    "FontsPath",
+    "ImagesPath",
+    "LogosPath",
+    "SkylinePath",
+    "DummyFootPath",
+    "logo_pdf",
     # Glossary primitives (from pytex)
     "Glossary",
     "GlossaryEntry",
