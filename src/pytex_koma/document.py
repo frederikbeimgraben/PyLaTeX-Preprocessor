@@ -59,6 +59,7 @@ class KomaDocument(Document):
     extra_class_options: set[PackageOption] = field(default_factory=set)
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if self.document_class not in KOMA_CLASSES:
             raise ValueError(
                 f"Unknown KOMA-Script class {self.document_class!r}; "

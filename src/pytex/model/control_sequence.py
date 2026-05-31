@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Final, Generic, TypeVar, override
 
+from ..helpers.parenting import attach
 from ..interface.control_sequence import Parameters, ParameterType
 from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
@@ -15,6 +16,12 @@ T = TypeVar("T", covariant=True, bound=ParameterType, default=ParameterType)
 class Parameter(TeX, Generic[T]):
     value: Final[T]
     optional: Final[bool] = False
+    _parent: "TeX | None" = field(
+        default=None, init=False, compare=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        attach(self, self.value)
 
     @property
     def _braces(self) -> tuple[str, str]:
@@ -52,6 +59,13 @@ class ControlSequence(TeX, Generic[P]):
     name: Final[str]
     params: Final[P]
     required_packages: frozenset[PackageProtocol] = field(default_factory=frozenset)
+    _parent: "TeX | None" = field(
+        default=None, init=False, compare=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        if self.params is not None:
+            attach(self, *self.params)
 
     @property
     @override

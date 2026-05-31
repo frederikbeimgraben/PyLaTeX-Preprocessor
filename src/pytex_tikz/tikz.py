@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final, override
 
+from pytex.helpers.parenting import attach
 from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.packages import PGF, TIKZ
@@ -62,6 +63,10 @@ class Node(TeX):
     name: Final[str | None] = None
     at: Final[TikzCoord | None] = None
     options: Final[tuple[TikzOption, ...]] = ()
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        attach(self, self.label)
 
     @property
     @override
@@ -184,6 +189,8 @@ class TikzPicture(TeX):
     ) -> None:
         object.__setattr__(self, "elements", elements)
         object.__setattr__(self, "options", options)
+        object.__setattr__(self, "_parent", None)
+        attach(self, *elements)
 
     @property
     @override
@@ -232,6 +239,8 @@ class Scope(TeX):
     ) -> None:
         object.__setattr__(self, "elements", elements)
         object.__setattr__(self, "options", options)
+        object.__setattr__(self, "_parent", None)
+        attach(self, *elements)
 
     @property
     @override

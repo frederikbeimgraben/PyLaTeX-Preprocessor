@@ -30,6 +30,21 @@ class PackageProtocol(Protocol):
     def requires(self) -> frozenset[Self]:
         return self.after
 
+    @property
+    def parent(self) -> Self | None:
+        """Parent node in the document tree, or None if root/detached."""
+        return getattr(self, "_parent", None)
+
+    @property
+    def parents(self) -> tuple[Self, ...]:
+        """Chain of ancestors from immediate parent up to root."""
+        out: list[Self] = []
+        cur = self.parent
+        while cur is not None:
+            out.append(cur)
+            cur = cur.parent
+        return tuple(out)
+
     @override
     def __str__(self) -> str:
         return self.rendered

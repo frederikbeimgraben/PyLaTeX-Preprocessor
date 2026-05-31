@@ -6,6 +6,8 @@ from ..registry import Registry
 
 @Registry.add
 class EmptyTeX(TeX):
+    _parent: "TeX | None" = None
+
     @property
     @override
     def rendered(self) -> str:

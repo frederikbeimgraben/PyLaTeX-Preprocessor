@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import override
 
 from ..helpers.coerce import coerce_tex
+from ..helpers.parenting import attach
 from ..interface.package import PackageOption, PackageProtocol
 from ..interface.tex import TeX
 from ..registry import Registry
@@ -19,6 +20,10 @@ class Document(TeX):
     document_class_options: set[PackageOption] = field(default_factory=set)
     preamble: TeX | str = Empty
     extra_packages: frozenset[PackageProtocol] = field(default_factory=frozenset)
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        attach(self, self.body, self.preamble)
 
     @property
     def packages(self) -> frozenset[PackageProtocol]:

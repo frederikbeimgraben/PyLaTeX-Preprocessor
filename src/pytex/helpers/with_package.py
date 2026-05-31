@@ -1,11 +1,12 @@
 # pyright: reportAny=false, reportExplicitAny=false
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Callable, override
 
 from ..interface.tex import TeX
 from ..model.package import Package
 from ..registry import Registry
+from .parenting import attach
 
 
 @Registry.add
@@ -21,6 +22,10 @@ def coerce_package(pkg: Package | str) -> Package:
 class WithPackage[T: TeX](TeX):
     child: T
     package: Package | str
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        attach(self, self.child)
 
     @property
     @override

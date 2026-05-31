@@ -39,6 +39,7 @@ class Raw(TeX):
     content: str
     namespace: dict[str, object] | None = field(default=None)
     allow_replacements: bool = True
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
 
     @property
     @override
