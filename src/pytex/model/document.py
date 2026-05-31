@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import override
 
 from ..helpers.coerce import coerce_tex
-from ..interface.package import PackageProtocol
+from ..interface.package import PackageOption, PackageProtocol
 from ..interface.tex import TeX
 from .concat import Concat
 from .document_class import DocumentClass
@@ -14,7 +14,7 @@ from .environment import Environment
 class Document(TeX):
     body: TeX | str
     document_class: str = "article"
-    document_class_options: dict[str, str] = field(default_factory=dict)
+    document_class_options: set[PackageOption] = field(default_factory=set)
     preamble: TeX | str = Empty
     extra_packages: frozenset[PackageProtocol] = field(default_factory=frozenset)
 

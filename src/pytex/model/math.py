@@ -1,26 +1,10 @@
-from pytex.interface.package import PackageProtocol
-
+from ..helpers.with_package import with_package
 from ..interface.tex import TeX
+from ..packages import AMSFONTS, AMSMATH
 from .concat import Concat
 from .control_sequence import ControlSequence, Parameter
-from .environment import Begin, End
-from .package import DefinePackage
+from .environment import Environment
 from .raw import Raw
-
-amsmath = DefinePackage("amsmath")
-amssymb = DefinePackage("amssymb")
-amsfonts = DefinePackage("amsfonts")
-mathtools = DefinePackage("mathtools")
-
-
-def _env_with_packages(
-    name: str, body: TeX | str, packages: frozenset[PackageProtocol]
-) -> TeX:
-    return Concat(
-        ControlSequence("begin", (Parameter(Raw(name)),), required_packages=packages),
-        body,
-        End(name),
-    )
 
 
 def Math(body: TeX | str) -> TeX:
@@ -40,66 +24,79 @@ def DisplayMath(body: TeX | str) -> TeX:
 
 
 def Equation(body: TeX | str) -> TeX:
-    return Concat(Begin("equation"), body, End("equation"))
+    return Environment("equation", body)
 
 
 def EquationStar(body: TeX | str) -> TeX:
-    return Concat(Begin("equation*"), body, End("equation*"))
+    return Environment("equation*", body)
 
 
+@with_package(AMSMATH)
 def Align(body: TeX | str) -> TeX:
-    return _env_with_packages("align", body, frozenset({amsmath}))
+    return Environment("align", body)
 
 
+@with_package(AMSMATH)
 def AlignStar(body: TeX | str) -> TeX:
-    return _env_with_packages("align*", body, frozenset({amsmath}))
+    return Environment("align*", body)
 
 
+@with_package(AMSMATH)
 def Gather(body: TeX | str) -> TeX:
-    return _env_with_packages("gather", body, frozenset({amsmath}))
+    return Environment("gather", body)
 
 
+@with_package(AMSMATH)
 def GatherStar(body: TeX | str) -> TeX:
-    return _env_with_packages("gather*", body, frozenset({amsmath}))
+    return Environment("gather*", body)
 
 
+@with_package(AMSMATH)
 def Multline(body: TeX | str) -> TeX:
-    return _env_with_packages("multline", body, frozenset({amsmath}))
+    return Environment("multline", body)
 
 
+@with_package(AMSMATH)
 def Split(body: TeX | str) -> TeX:
-    return _env_with_packages("split", body, frozenset({amsmath}))
+    return Environment("split", body)
 
 
+@with_package(AMSMATH)
 def Cases(body: TeX | str) -> TeX:
-    return _env_with_packages("cases", body, frozenset({amsmath}))
+    return Environment("cases", body)
 
 
 def _matrix(kind: str, rows: list[list[TeX | str]]) -> TeX:
     body_str = " \\\\ ".join(" & ".join(str(c) for c in row) for row in rows)
-    return _env_with_packages(kind, Raw(body_str), frozenset({amsmath}))
+    return Environment(kind, Raw(body_str))
 
 
+@with_package(AMSMATH)
 def Matrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("matrix", rows)
 
 
+@with_package(AMSMATH)
 def Pmatrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("pmatrix", rows)
 
 
+@with_package(AMSMATH)
 def Bmatrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("bmatrix", rows)
 
 
+@with_package(AMSMATH)
 def Vmatrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("vmatrix", rows)
 
 
+@with_package(AMSMATH)
 def BBmatrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("Bmatrix", rows)
 
 
+@with_package(AMSMATH)
 def VVmatrix(rows: list[list[TeX | str]]) -> TeX:
     return _matrix("Vmatrix", rows)
 
@@ -108,28 +105,19 @@ def Frac(num: TeX | str, den: TeX | str) -> TeX:
     return ControlSequence("frac", (Parameter(num), Parameter(den)))
 
 
+@with_package(AMSMATH)
 def Dfrac(num: TeX | str, den: TeX | str) -> TeX:
-    return ControlSequence(
-        "dfrac",
-        (Parameter(num), Parameter(den)),
-        required_packages=frozenset({amsmath}),
-    )
+    return ControlSequence("dfrac", (Parameter(num), Parameter(den)))
 
 
+@with_package(AMSMATH)
 def Tfrac(num: TeX | str, den: TeX | str) -> TeX:
-    return ControlSequence(
-        "tfrac",
-        (Parameter(num), Parameter(den)),
-        required_packages=frozenset({amsmath}),
-    )
+    return ControlSequence("tfrac", (Parameter(num), Parameter(den)))
 
 
+@with_package(AMSMATH)
 def Binom(top: TeX | str, bot: TeX | str) -> TeX:
-    return ControlSequence(
-        "binom",
-        (Parameter(top), Parameter(bot)),
-        required_packages=frozenset({amsmath}),
-    )
+    return ControlSequence("binom", (Parameter(top), Parameter(bot)))
 
 
 def Sqrt(body: TeX | str, n: TeX | str | None = None) -> TeX:
@@ -179,6 +167,16 @@ def OInt(lower: TeX | str | None = None, upper: TeX | str | None = None) -> TeX:
     return _sub_super(ControlSequence("oint", ()), lower, upper)
 
 
+@with_package(AMSMATH)
+def IInt(lower: TeX | str | None = None, upper: TeX | str | None = None) -> TeX:
+    return _sub_super(ControlSequence("iint", ()), lower, upper)
+
+
+@with_package(AMSMATH)
+def IIInt(lower: TeX | str | None = None, upper: TeX | str | None = None) -> TeX:
+    return _sub_super(ControlSequence("iiint", ()), lower, upper)
+
+
 def Lim(var: TeX | str, to: TeX | str) -> TeX:
     return _sub_super(
         ControlSequence("lim", ()),
@@ -191,32 +189,23 @@ def Lim(var: TeX | str, to: TeX | str) -> TeX:
     )
 
 
+@with_package(AMSMATH)
 def Text(body: TeX | str) -> TeX:
-    return ControlSequence(
-        "text",
-        (Parameter(body),),
-        required_packages=frozenset({amsmath}),
-    )
+    return ControlSequence("text", (Parameter(body),))
 
 
+@with_package(AMSFONTS)
 def Mathbb(body: TeX | str) -> TeX:
-    return ControlSequence(
-        "mathbb",
-        (Parameter(body),),
-        required_packages=frozenset({amsfonts}),
-    )
+    return ControlSequence("mathbb", (Parameter(body),))
 
 
 def Mathcal(body: TeX | str) -> TeX:
     return ControlSequence("mathcal", (Parameter(body),))
 
 
+@with_package(AMSFONTS)
 def Mathfrak(body: TeX | str) -> TeX:
-    return ControlSequence(
-        "mathfrak",
-        (Parameter(body),),
-        required_packages=frozenset({amsfonts}),
-    )
+    return ControlSequence("mathfrak", (Parameter(body),))
 
 
 def Mathbf(body: TeX | str) -> TeX:
@@ -247,6 +236,14 @@ def Underline(body: TeX | str) -> TeX:
     return ControlSequence("underline", (Parameter(body),))
 
 
+def Overbrace(body: TeX | str) -> TeX:
+    return ControlSequence("overbrace", (Parameter(body),))
+
+
+def Underbrace(body: TeX | str) -> TeX:
+    return ControlSequence("underbrace", (Parameter(body),))
+
+
 def Hat(body: TeX | str) -> TeX:
     return ControlSequence("hat", (Parameter(body),))
 
@@ -275,9 +272,16 @@ def Label(name: str) -> TeX:
     return ControlSequence("label", (Parameter(name),))
 
 
+@with_package(AMSMATH)
 def Eqref(name: str) -> TeX:
-    return ControlSequence(
-        "eqref",
-        (Parameter(name),),
-        required_packages=frozenset({amsmath}),
-    )
+    return ControlSequence("eqref", (Parameter(name),))
+
+
+@with_package(AMSMATH)
+def Operatorname(name: str) -> TeX:
+    return ControlSequence("operatorname", (Parameter(name),))
+
+
+@with_package(AMSMATH)
+def Substack(body: TeX | str) -> TeX:
+    return ControlSequence("substack", (Parameter(body),))

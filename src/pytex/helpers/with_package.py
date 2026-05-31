@@ -34,7 +34,7 @@ class WithPackage[T: TeX](TeX):
         return frozenset({coerce_package(self.package)})
 
 
-def with_package[C: Callable[[], TeX]](pkg: Package | str) -> Callable[[C], C]:
+def with_package[C: Callable[..., TeX]](pkg: Package | str) -> Callable[[C], C]:
     def decorator(func: C) -> C:
         def wrapper(*args: Any, **kwargs: Any) -> TeX:
             return WithPackage(func(*args, **kwargs), pkg)

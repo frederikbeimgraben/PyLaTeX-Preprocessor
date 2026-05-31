@@ -10,7 +10,7 @@ class Concat(TeX):
     elements: Final[tuple[TeX]]
 
     def __init__(self, *elements: TeX | str) -> None:
-        object.__setattr__(self, "elements", (coerce_tex(e) for e in elements))
+        object.__setattr__(self, "elements", tuple(coerce_tex(e) for e in elements))
 
     @property
     @override

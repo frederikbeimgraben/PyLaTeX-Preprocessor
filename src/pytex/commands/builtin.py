@@ -194,9 +194,6 @@ def Description(*items: tuple[TeX | str, TeX | str] | TeX) -> TeX:
 
 
 def _is_item(node: TeX | str) -> bool:
-    if isinstance(node, Concat):
-        first = node.elements[0] if node.elements else None
-        return isinstance(first, ControlSequence) and first.name == "item"
     return isinstance(node, ControlSequence) and node.name == "item"
 
 

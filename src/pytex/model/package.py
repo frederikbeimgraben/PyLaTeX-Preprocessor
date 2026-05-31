@@ -1,3 +1,4 @@
+from logging import Logger
 from typing import Self, override
 
 from ..interface.package import PackageProtocol
@@ -61,6 +62,10 @@ class Package(PackageProtocol, TeX):
     def __post_init__(self) -> None:
         if self.name not in _PACKAGES:
             _PACKAGES[self.name] = self
+        else:
+            Logger(self.__class__.__name__).warning(
+                f"Multiple Instances of {self.name} in circulation!"
+            )
 
     @property
     def _options_string(self) -> str:
