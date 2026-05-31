@@ -3,12 +3,14 @@ from typing import Self, override
 
 from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
+from ..registry import Registry
 
 _PACKAGES = dict[str, "Package"]()
 
 type PackageOption = str | tuple[str, str]
 
 
+@Registry.add
 class Package(PackageProtocol, TeX):
     _name: str
     _after: set[Self]
@@ -24,9 +26,9 @@ class Package(PackageProtocol, TeX):
     ):
         self._name, self._after, self._incompatible, self._options = (
             name,
-            set(*(after or set())),
-            set(*(incompatible or set())),
-            set(*(options or set())),
+            set(after or set()),
+            set(incompatible or set()),
+            set(options or set()),
         )
 
     @property
@@ -102,6 +104,7 @@ class Package(PackageProtocol, TeX):
         return self.rendered
 
 
+@Registry.add
 def DefinePackage(
     name: str,
     after: set[Package] | None = None,

@@ -1,11 +1,14 @@
 # pyright: reportAny=false, reportExplicitAny=false
 from dataclasses import dataclass
+from functools import wraps
 from typing import Any, Callable, override
 
 from ..interface.tex import TeX
 from ..model.package import Package
+from ..registry import Registry
 
 
+@Registry.add
 def coerce_package(pkg: Package | str) -> Package:
     if isinstance(pkg, Package):
         return pkg
@@ -13,6 +16,7 @@ def coerce_package(pkg: Package | str) -> Package:
     return Package(pkg)
 
 
+@Registry.add
 @dataclass
 class WithPackage[T: TeX](TeX):
     child: T
@@ -36,6 +40,7 @@ class WithPackage[T: TeX](TeX):
 
 def with_package[C: Callable[..., TeX]](pkg: Package | str) -> Callable[[C], C]:
     def decorator(func: C) -> C:
+        @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> TeX:
             return WithPackage(func(*args, **kwargs), pkg)
 

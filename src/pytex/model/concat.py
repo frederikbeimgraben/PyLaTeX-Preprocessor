@@ -3,8 +3,10 @@ from typing import Final, override
 
 from ..helpers.coerce import coerce_tex
 from ..interface.tex import TeX
+from ..registry import Registry
 
 
+@Registry.add
 @dataclass(frozen=True, init=False)
 class Concat(TeX):
     elements: Final[tuple[TeX]]

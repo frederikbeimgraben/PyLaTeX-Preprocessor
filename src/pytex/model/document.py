@@ -4,12 +4,14 @@ from typing import override
 from ..helpers.coerce import coerce_tex
 from ..interface.package import PackageOption, PackageProtocol
 from ..interface.tex import TeX
+from ..registry import Registry
 from .concat import Concat
 from .document_class import DocumentClass
 from .empty import Empty
 from .environment import Environment
 
 
+@Registry.add
 @dataclass
 class Document(TeX):
     body: TeX | str

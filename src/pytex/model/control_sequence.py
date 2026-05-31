@@ -4,11 +4,13 @@ from typing import Final, Generic, TypeVar, override
 from ..interface.control_sequence import Parameters, ParameterType
 from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
+from ..registry import Registry
 from .raw import Raw
 
 T = TypeVar("T", covariant=True, bound=ParameterType)
 
 
+@Registry.add
 @dataclass(frozen=True, slots=True)
 class Parameter(TeX, Generic[T]):
     value: Final[T]
@@ -44,6 +46,7 @@ class Parameter(TeX, Generic[T]):
 P = TypeVar("P", covariant=True, bound=Parameters)
 
 
+@Registry.add
 @dataclass(frozen=True, slots=True)
 class ControlSequence(TeX, Generic[P]):
     name: Final[str]

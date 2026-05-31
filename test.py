@@ -120,7 +120,7 @@ math_section = Concat(
             Bmatrix([["a", "b", "c"], ["d", "e", "f"]]),
         )
     ),
-    Subsubsection("Integrals & sets"),
+    Subsubsection(r"Integrals \& sets"),
     DisplayMath(
         Concat(
             Int("0", r"\infty"),
@@ -144,7 +144,7 @@ formatting = Concat(
     "Normal. ",
     Bold(Italicized := Emph("bold-emph")),
     Hfill(),
-    "right-flushed",
+    " right-flushed",
     Newline(),
     Bigskip(),
     Paragraph("A paragraph heading."),

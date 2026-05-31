@@ -1,6 +1,7 @@
 from pytex.model.empty import Empty
 
 from ..interface.package import PackageOption
+from ..registry import Registry
 from .control_sequence import ControlSequence, Parameter
 from .raw import Raw
 
@@ -11,6 +12,7 @@ def _render_options(options: set[PackageOption] | frozenset[PackageOption]) -> s
     )
 
 
+@Registry.add
 def DocumentClass(
     name: str,
     options: set[PackageOption] | frozenset[PackageOption] | None = None,

@@ -3,6 +3,7 @@ from ..model.concat import Concat
 from ..model.control_sequence import ControlSequence, Parameter
 from ..model.environment import Environment
 from ..model.raw import Raw
+from ..registry import Registry
 
 
 def _section_like(name: str, title: TeX | str, short: TeX | str | None) -> TeX:
@@ -11,152 +12,188 @@ def _section_like(name: str, title: TeX | str, short: TeX | str | None) -> TeX:
     return ControlSequence(name, (Parameter(short, optional=True), Parameter(title)))
 
 
+@Registry.add
 def Part(title: TeX | str, short: TeX | str | None = None) -> TeX:
     return _section_like("part", title, short)
 
 
+@Registry.add
 def Chapter(title: TeX | str, short: TeX | str | None = None) -> TeX:
     return _section_like("chapter", title, short)
 
 
+@Registry.add
 def Section(title: TeX | str, short: TeX | str | None = None) -> TeX:
     return _section_like("section", title, short)
 
 
+@Registry.add
 def Subsection(title: TeX | str, short: TeX | str | None = None) -> TeX:
     return _section_like("subsection", title, short)
 
 
+@Registry.add
 def Subsubsection(title: TeX | str, short: TeX | str | None = None) -> TeX:
     return _section_like("subsubsection", title, short)
 
 
+@Registry.add
 def Paragraph(title: TeX | str) -> TeX:
     return ControlSequence("paragraph", (Parameter(title),))
 
 
+@Registry.add
 def Subparagraph(title: TeX | str) -> TeX:
     return ControlSequence("subparagraph", (Parameter(title),))
 
 
+@Registry.add
 def Textbf(body: TeX | str) -> TeX:
     return ControlSequence("textbf", (Parameter(body),))
 
 
+@Registry.add
 def Textit(body: TeX | str) -> TeX:
     return ControlSequence("textit", (Parameter(body),))
 
 
+@Registry.add
 def Textsl(body: TeX | str) -> TeX:
     return ControlSequence("textsl", (Parameter(body),))
 
 
+@Registry.add
 def Textsc(body: TeX | str) -> TeX:
     return ControlSequence("textsc", (Parameter(body),))
 
 
+@Registry.add
 def Texttt(body: TeX | str) -> TeX:
     return ControlSequence("texttt", (Parameter(body),))
 
 
+@Registry.add
 def Textsf(body: TeX | str) -> TeX:
     return ControlSequence("textsf", (Parameter(body),))
 
 
+@Registry.add
 def Textrm(body: TeX | str) -> TeX:
     return ControlSequence("textrm", (Parameter(body),))
 
 
+@Registry.add
 def Textmd(body: TeX | str) -> TeX:
     return ControlSequence("textmd", (Parameter(body),))
 
 
+@Registry.add
 def Textup(body: TeX | str) -> TeX:
     return ControlSequence("textup", (Parameter(body),))
 
 
+@Registry.add
 def Emph(body: TeX | str) -> TeX:
     return ControlSequence("emph", (Parameter(body),))
 
 
+@Registry.add
 def Underline(body: TeX | str) -> TeX:
     return ControlSequence("underline", (Parameter(body),))
 
 
+@Registry.add
 def Bold(body: TeX | str) -> TeX:
     return Textbf(body)
 
 
+@Registry.add
 def Italic(body: TeX | str) -> TeX:
     return Textit(body)
 
 
+@Registry.add
 def Newline() -> TeX:
     return Raw("\\\\")
 
 
+@Registry.add
 def Linebreak(n: int | None = None) -> TeX:
     if n is None:
         return ControlSequence("linebreak", ())
     return ControlSequence("linebreak", (Parameter(str(n), optional=True),))
 
 
+@Registry.add
 def Newpage() -> TeX:
     return ControlSequence("newpage", ())
 
 
+@Registry.add
 def Clearpage() -> TeX:
     return ControlSequence("clearpage", ())
 
 
+@Registry.add
 def Cleardoublepage() -> TeX:
     return ControlSequence("cleardoublepage", ())
 
 
+@Registry.add
 def Pagebreak(n: int | None = None) -> TeX:
     if n is None:
         return ControlSequence("pagebreak", ())
     return ControlSequence("pagebreak", (Parameter(str(n), optional=True),))
 
 
+@Registry.add
 def Hspace(amount: str, star: bool = False) -> TeX:
     name = "hspace*" if star else "hspace"
     return ControlSequence(name, (Parameter(amount),))
 
 
+@Registry.add
 def Vspace(amount: str, star: bool = False) -> TeX:
     name = "vspace*" if star else "vspace"
     return ControlSequence(name, (Parameter(amount),))
 
 
+@Registry.add
 def Hfill() -> TeX:
     return ControlSequence("hfill", ())
 
 
+@Registry.add
 def Vfill() -> TeX:
     return ControlSequence("vfill", ())
 
 
+@Registry.add
 def Smallskip() -> TeX:
     return ControlSequence("smallskip", ())
 
 
+@Registry.add
 def Medskip() -> TeX:
     return ControlSequence("medskip", ())
 
 
+@Registry.add
 def Bigskip() -> TeX:
     return ControlSequence("bigskip", ())
 
 
+@Registry.add
 def Noindent() -> TeX:
     return ControlSequence("noindent", ())
 
 
+@Registry.add
 def Indent() -> TeX:
     return ControlSequence("indent", ())
 
 
+@Registry.add
 def Item(body: TeX | str | None = None, label: TeX | str | None = None) -> TeX:
     head: TeX = (
         ControlSequence("item", (Parameter(label, optional=True),))
@@ -168,6 +205,7 @@ def Item(body: TeX | str | None = None, label: TeX | str | None = None) -> TeX:
     return Concat(head, Raw(" "), body)
 
 
+@Registry.add
 def Itemize(*items: TeX | str) -> TeX:
     return Environment(
         "itemize",
@@ -175,6 +213,7 @@ def Itemize(*items: TeX | str) -> TeX:
     )
 
 
+@Registry.add
 def Enumerate(*items: TeX | str) -> TeX:
     return Environment(
         "enumerate",
@@ -182,6 +221,7 @@ def Enumerate(*items: TeX | str) -> TeX:
     )
 
 
+@Registry.add
 def Description(*items: tuple[TeX | str, TeX | str] | TeX) -> TeX:
     body_parts: list[TeX] = []
     for it in items:
@@ -197,22 +237,27 @@ def _is_item(node: TeX | str) -> bool:
     return isinstance(node, ControlSequence) and node.name == "item"
 
 
+@Registry.add
 def Label(name: str) -> TeX:
     return ControlSequence("label", (Parameter(name),))
 
 
+@Registry.add
 def Ref(name: str) -> TeX:
     return ControlSequence("ref", (Parameter(name),))
 
 
+@Registry.add
 def Pageref(name: str) -> TeX:
     return ControlSequence("pageref", (Parameter(name),))
 
 
+@Registry.add
 def Nameref(name: str) -> TeX:
     return ControlSequence("nameref", (Parameter(name),))
 
 
+@Registry.add
 def Cite(*keys: str, prenote: str | None = None) -> TeX:
     key_param = Parameter(",".join(keys))
     if prenote is None:
@@ -220,151 +265,188 @@ def Cite(*keys: str, prenote: str | None = None) -> TeX:
     return ControlSequence("cite", (Parameter(prenote, optional=True), key_param))
 
 
+@Registry.add
 def Title(title: TeX | str) -> TeX:
     return ControlSequence("title", (Parameter(title),))
 
 
+@Registry.add
 def Author(author: TeX | str) -> TeX:
     return ControlSequence("author", (Parameter(author),))
 
 
+@Registry.add
 def Date(date: TeX | str) -> TeX:
     return ControlSequence("date", (Parameter(date),))
 
 
+@Registry.add
 def Today() -> TeX:
     return ControlSequence("today", ())
 
 
+@Registry.add
 def MakeTitle() -> TeX:
     return ControlSequence("maketitle", ())
 
 
+@Registry.add
 def Thanks(body: TeX | str) -> TeX:
     return ControlSequence("thanks", (Parameter(body),))
 
 
+@Registry.add
 def TableOfContents() -> TeX:
     return ControlSequence("tableofcontents", ())
 
 
+@Registry.add
 def ListOfFigures() -> TeX:
     return ControlSequence("listoffigures", ())
 
 
+@Registry.add
 def ListOfTables() -> TeX:
     return ControlSequence("listoftables", ())
 
 
+@Registry.add
 def Footnote(body: TeX | str) -> TeX:
     return ControlSequence("footnote", (Parameter(body),))
 
 
+@Registry.add
 def Footnotemark(n: int | None = None) -> TeX:
     if n is None:
         return ControlSequence("footnotemark", ())
     return ControlSequence("footnotemark", (Parameter(str(n), optional=True),))
 
 
+@Registry.add
 def Footnotetext(body: TeX | str) -> TeX:
     return ControlSequence("footnotetext", (Parameter(body),))
 
 
+@Registry.add
 def Input(path: str) -> TeX:
     return ControlSequence("input", (Parameter(path),))
 
 
+@Registry.add
 def Include(path: str) -> TeX:
     return ControlSequence("include", (Parameter(path),))
 
 
+@Registry.add
 def IncludeOnly(*paths: str) -> TeX:
     return ControlSequence("includeonly", (Parameter(",".join(paths)),))
 
 
+@Registry.add
 def Center(body: TeX | str) -> TeX:
     return Environment("center", body)
 
 
+@Registry.add
 def FlushLeft(body: TeX | str) -> TeX:
     return Environment("flushleft", body)
 
 
+@Registry.add
 def FlushRight(body: TeX | str) -> TeX:
     return Environment("flushright", body)
 
 
+@Registry.add
 def Centering() -> TeX:
     return ControlSequence("centering", ())
 
 
+@Registry.add
 def Raggedright() -> TeX:
     return ControlSequence("raggedright", ())
 
 
+@Registry.add
 def Raggedleft() -> TeX:
     return ControlSequence("raggedleft", ())
 
 
+@Registry.add
 def Quote(body: TeX | str) -> TeX:
     return Environment("quote", body)
 
 
+@Registry.add
 def Quotation(body: TeX | str) -> TeX:
     return Environment("quotation", body)
 
 
+@Registry.add
 def Verse(body: TeX | str) -> TeX:
     return Environment("verse", body)
 
 
+@Registry.add
 def Verbatim(body: TeX | str) -> TeX:
     return Environment("verbatim", body)
 
 
+@Registry.add
 def Verb(body: str, delim: str = "|") -> TeX:
     return Raw(f"\\verb{delim}{body}{delim}")
 
 
+@Registry.add
 def Tiny(body: TeX | str) -> TeX:
     return Concat(ControlSequence("tiny", ()), Raw(" "), body)
 
 
+@Registry.add
 def Scriptsize(body: TeX | str) -> TeX:
     return Concat(ControlSequence("scriptsize", ()), Raw(" "), body)
 
 
+@Registry.add
 def Footnotesize(body: TeX | str) -> TeX:
     return Concat(ControlSequence("footnotesize", ()), Raw(" "), body)
 
 
+@Registry.add
 def Small(body: TeX | str) -> TeX:
     return Concat(ControlSequence("small", ()), Raw(" "), body)
 
 
+@Registry.add
 def Normalsize(body: TeX | str) -> TeX:
     return Concat(ControlSequence("normalsize", ()), Raw(" "), body)
 
 
+@Registry.add
 def Large(body: TeX | str) -> TeX:
     return Concat(ControlSequence("large", ()), Raw(" "), body)
 
 
+@Registry.add
 def LLarge(body: TeX | str) -> TeX:
     return Concat(ControlSequence("Large", ()), Raw(" "), body)
 
 
+@Registry.add
 def LLLarge(body: TeX | str) -> TeX:
     return Concat(ControlSequence("LARGE", ()), Raw(" "), body)
 
 
+@Registry.add
 def Huge(body: TeX | str) -> TeX:
     return Concat(ControlSequence("huge", ()), Raw(" "), body)
 
 
+@Registry.add
 def HHuge(body: TeX | str) -> TeX:
     return Concat(ControlSequence("Huge", ()), Raw(" "), body)
 
 
+@Registry.add
 def Group(body: TeX | str) -> TeX:
     return Concat(Raw("{"), body, Raw("}"))
