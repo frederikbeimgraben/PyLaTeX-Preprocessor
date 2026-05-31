@@ -1,9 +1,12 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from pytex.interface.tex import TeX
 
+type ParameterType = TeX | str | dict[str, str]
 
-class ParameterProtocol[T: TeX | str](TeX, Protocol):
+
+@runtime_checkable
+class ParameterProtocol[T: ParameterType = ParameterType](TeX, Protocol):
     @property
     def optional(self) -> bool: ...
 
@@ -11,9 +14,10 @@ class ParameterProtocol[T: TeX | str](TeX, Protocol):
     def value(self) -> T: ...
 
 
-type Parameters = tuple[ParameterProtocol[TeX], ...] | None
+type Parameters = tuple[ParameterProtocol, ...] | None
 
 
+@runtime_checkable
 class ControlSequenceProtocol[P: Parameters](TeX, Protocol):
     @property
     def name(self) -> str: ...

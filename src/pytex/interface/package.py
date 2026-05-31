@@ -1,13 +1,21 @@
-from typing import Protocol, override
+from typing import Protocol, Self, override, runtime_checkable
 
 type PackageOption = str | tuple[str, str]
 
 
-class Package(Protocol):
-    name: str
-    after: set["Package"]
-    incompatible: set["Package"]
-    options: set[PackageOption]
+@runtime_checkable
+class PackageProtocol(Protocol):
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def after(self) -> frozenset[Self]: ...
+
+    @property
+    def incompatible(self) -> frozenset[Self]: ...
+
+    @property
+    def options(self) -> frozenset[PackageOption]: ...
 
     @property
     def rendered(self) -> str:
@@ -15,11 +23,11 @@ class Package(Protocol):
         ...
 
     @property
-    def children(self) -> None:
-        return None
+    def children(self) -> tuple[Self, ...]:
+        return ()
 
     @property
-    def requires(self) -> set["Package"]:
+    def requires(self) -> frozenset[Self]:
         return self.after
 
     @override

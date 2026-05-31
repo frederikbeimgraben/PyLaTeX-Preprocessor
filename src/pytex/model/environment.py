@@ -18,7 +18,7 @@ def End(name: str):
     return ControlSequence("end", (Parameter(Raw(name)),))
 
 
-def Environment(name: str, params: Parameters, body: TeX) -> TeX:
+def Environment(name: str, body: TeX | str, params: Parameters = None) -> TeX:
     return Concat(
         Begin(name, params),
         body,

@@ -1,12 +1,14 @@
+from dataclasses import field
 from typing import Final, Generic, TypeVar, override
 
 from pydantic.dataclasses import dataclass
 
-from pytex.interface.control_sequence import Parameters
+from pytex.interface.control_sequence import Parameters, ParameterType
+from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.raw import Raw
 
-T = TypeVar("T", covariant=True, bound=TeX | str)
+T = TypeVar("T", covariant=True, bound=ParameterType)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,10 +22,25 @@ class Parameter(TeX, Generic[T]):
 
     @property
     @override
+    def children(self) -> tuple[TeX]:
+        if isinstance(self.value, dict):
+            return tuple[TeX]()
+
+        return (self.value if isinstance(self.value, TeX) else Raw(self.value),)
+
+    @property
+    @override
     def rendered(self) -> str:
         """Render this Node to a valid LaTeX-String"""
 
-        return f"{self._braces[0]}{self.value.rendered if isinstance(self.value, TeX) else Raw(self.value)}{self._braces[1]}"
+        content: str | TeX = ""
+
+        if isinstance(self.value, TeX) or isinstance(self.value, str):
+            content = self.value
+        else:
+            content = ",".join(f"{key}={value}" for key, value in self.value.items())
+
+        return f"{self._braces[0]}{content}{self._braces[1]}"
 
 
 P = TypeVar("P", covariant=True, bound=Parameters)
@@ -33,6 +50,12 @@ P = TypeVar("P", covariant=True, bound=Parameters)
 class ControlSequence(TeX, Generic[P]):
     name: Final[str]
     params: Final[P]
+    required_packages: frozenset[PackageProtocol] = field(default_factory=frozenset)
+
+    @property
+    @override
+    def requires(self) -> frozenset[PackageProtocol]:
+        return self.required_packages
 
     @property
     @override

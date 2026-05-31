@@ -1,4 +1,4 @@
-from typing import Final, TypeVarTuple, Unpack, cast, override
+from typing import Final, TypeVarTuple, Unpack, override
 
 from pydantic.dataclasses import dataclass
 
@@ -16,5 +16,10 @@ class Concat[*C](TeX):
 
     @property
     @override
+    def children(self) -> tuple[TeX, ...]:
+        return tuple(e for e in self.elements if isinstance(e, TeX))
+
+    @property
+    @override
     def rendered(self) -> str:
-        return "\\relax ".join(cast(TeX, e).rendered for e in self.elements)
+        return "\\relax ".join(str(e) for e in self.elements)

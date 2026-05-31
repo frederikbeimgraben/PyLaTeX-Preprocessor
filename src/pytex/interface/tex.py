@@ -1,6 +1,6 @@
 from typing import Protocol, override, runtime_checkable
 
-from .package import Package
+from .package import PackageProtocol
 
 
 @runtime_checkable
@@ -11,12 +11,12 @@ class TeX(Protocol):
         ...
 
     @property
-    def children(self) -> "TeX | None":
+    def children(self) -> tuple["TeX", ...]:
         """Children of the Node"""
-        return None
+        return ()
 
     @property
-    def requires(self) -> Package | None:
+    def requires(self) -> frozenset[PackageProtocol] | None:
         return None
 
     @override
