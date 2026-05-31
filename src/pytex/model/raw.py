@@ -2,7 +2,7 @@ from typing import override
 
 from pydantic.dataclasses import dataclass
 
-from pytex.interface.tex import TeX
+from ..interface.tex import TeX
 
 
 @dataclass

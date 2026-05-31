@@ -3,10 +3,10 @@ from typing import Final, Generic, TypeVar, override
 
 from pydantic.dataclasses import dataclass
 
-from pytex.interface.control_sequence import Parameters, ParameterType
-from pytex.interface.package import PackageProtocol
-from pytex.interface.tex import TeX
-from pytex.model.raw import Raw
+from ..interface.control_sequence import Parameters, ParameterType
+from ..interface.package import PackageProtocol
+from ..interface.tex import TeX
+from .raw import Raw
 
 T = TypeVar("T", covariant=True, bound=ParameterType)
 

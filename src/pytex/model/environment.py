@@ -1,8 +1,8 @@
-from pytex.interface.control_sequence import Parameters
-from pytex.interface.tex import TeX
-from pytex.model.concat import Concat
-from pytex.model.control_sequence import ControlSequence, Parameter
-from pytex.model.raw import Raw
+from ..interface.control_sequence import Parameters
+from ..interface.tex import TeX
+from .concat import Concat
+from .control_sequence import ControlSequence, Parameter
+from .raw import Raw
 
 
 def Begin(name: str, params: Parameters = None):

@@ -1,4 +1,4 @@
-from pytex.model.control_sequence import ControlSequence, Parameter
+from .control_sequence import ControlSequence, Parameter
 
 
 def DocumentClass(name: str, params: dict[str, str]):

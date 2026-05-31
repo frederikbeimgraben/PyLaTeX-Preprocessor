@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from pytex.interface.tex import TeX
+from .tex import TeX
 
 type ParameterType = TeX | str | dict[str, str]
 

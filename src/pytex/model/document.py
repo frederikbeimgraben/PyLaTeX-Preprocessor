@@ -3,13 +3,13 @@ from typing import override
 
 from pydantic.dataclasses import dataclass
 
-from pytex.helpers.coerce import coerce_tex
-from pytex.interface.package import PackageProtocol
-from pytex.interface.tex import TeX
-from pytex.model.concat import Concat
-from pytex.model.document_class import DocumentClass
-from pytex.model.empty import Empty
-from pytex.model.environment import Environment
+from ..helpers.coerce import coerce_tex
+from ..interface.package import PackageProtocol
+from ..interface.tex import TeX
+from .concat import Concat
+from .document_class import DocumentClass
+from .empty import Empty
+from .environment import Environment
 
 
 @dataclass

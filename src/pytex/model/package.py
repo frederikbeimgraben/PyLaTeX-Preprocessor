@@ -1,7 +1,7 @@
 from typing import Self, override
 
-from pytex.interface.package import PackageProtocol
-from pytex.interface.tex import TeX
+from ..interface.package import PackageProtocol
+from ..interface.tex import TeX
 
 _PACKAGES = dict[str, "Package"]()
 

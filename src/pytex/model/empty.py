@@ -1,6 +1,6 @@
 from typing import override
 
-from pytex.interface.tex import TeX
+from ..interface.tex import TeX
 
 
 class _Empty(TeX):

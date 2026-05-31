@@ -2,7 +2,7 @@ from typing import Final, TypeVarTuple, Unpack, override
 
 from pydantic.dataclasses import dataclass
 
-from pytex.interface.tex import TeX
+from ..interface.tex import TeX
 
 C = TypeVarTuple("C")
 
