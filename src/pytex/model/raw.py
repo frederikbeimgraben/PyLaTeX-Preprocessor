@@ -6,8 +6,18 @@ from typing import override
 from ..interface.tex import TeX
 from ..registry import Registry
 
-_START = re.compile(r"\\iffalse\s*\{\s*pytex\s*\(", re.DOTALL)
-_END = re.compile(r"\)\s*\}\s*\\fi", re.DOTALL)
+
+def _nested_inner(depth: int) -> str:
+    inner = r"[^()]*"
+    for _ in range(depth):
+        inner = rf"(?:[^()]|\({inner}\))*"
+    return inner
+
+
+_PATTERN = re.compile(
+    rf"\\iffalse\s*\{{\s*pytex\s*\((?P<expr>{_nested_inner(8)})\)\s*\}}\s*\\fi",
+    re.DOTALL,
+)
 
 
 def _evaluate(content: str, extra: dict[str, object]) -> str:
@@ -16,35 +26,11 @@ def _evaluate(content: str, extra: dict[str, object]) -> str:
         **Registry.namespace(),
         **extra,
     }
-    out: list[str] = []
-    i = 0
-    while True:
-        m = _START.search(content, i)
-        if m is None:
-            out.append(content[i:])
-            break
-        out.append(content[i : m.start()])
-        depth = 1
-        j = m.end()
-        while j < len(content) and depth > 0:
-            ch = content[j]
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-        if depth != 0:
-            raise ValueError(f"unbalanced parens in pytex eval at offset {m.start()}")
-        expr = content[m.end() : j]
-        end_m = _END.match(content, j)
-        if end_m is None:
-            raise ValueError(f"missing `)}}\\fi` terminator at offset {j}")
-        result = eval(expr, namespace)  # noqa: S307
-        out.append(str(result))
-        i = end_m.end()
-    return "".join(out)
+
+    def _sub(match: re.Match[str]) -> str:
+        return str(eval(match.group("expr"), namespace))  # noqa: S307
+
+    return _PATTERN.sub(_sub, content)
 
 
 @Registry.add

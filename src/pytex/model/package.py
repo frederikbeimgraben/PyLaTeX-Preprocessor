@@ -120,9 +120,11 @@ def DefinePackage(
         _PACKAGES[name].amend(after=after, incompatible=incompatible)
         return _PACKAGES[name]
 
-    return Package(
+    pkg = Package(
         name=name,
         after=after,
         incompatible=incompatible,
         options=options,
     )
+    _PACKAGES[name] = pkg
+    return pkg

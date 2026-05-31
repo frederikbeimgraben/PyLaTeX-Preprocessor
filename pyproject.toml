@@ -27,3 +27,7 @@ pytex_hsrtreport = ["Assets/**/*"]
 
 [tool.pyright]
 extraPaths = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
