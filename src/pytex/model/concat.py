@@ -1,22 +1,21 @@
 from dataclasses import dataclass
-from typing import Final, TypeVarTuple, Unpack, override
+from typing import Final, override
 
+from ..helpers.coerce import coerce_tex
 from ..interface.tex import TeX
-
-C = TypeVarTuple("C")
 
 
 @dataclass(frozen=True, init=False)
-class Concat[*C](TeX):
-    elements: Final[tuple[Unpack[C]]]
+class Concat(TeX):
+    elements: Final[tuple[TeX]]
 
-    def __init__(self, *elements: *C) -> None:
-        object.__setattr__(self, "elements", elements)
+    def __init__(self, *elements: TeX | str) -> None:
+        object.__setattr__(self, "elements", (coerce_tex(e) for e in elements))
 
     @property
     @override
     def children(self) -> tuple[TeX, ...]:
-        return tuple(e for e in self.elements if isinstance(e, TeX))
+        return self.elements
 
     @property
     @override
