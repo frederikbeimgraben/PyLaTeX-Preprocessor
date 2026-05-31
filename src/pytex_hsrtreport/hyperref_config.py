@@ -1,25 +1,43 @@
 from typing import Final
 
-from pytex.commands.hyperref import Hypersetup
 from pytex.interface.tex import TeX
+from pytex.model.color import Color
+from pytex.model.control_sequence import ControlSequence, Parameter
+from pytex.model.raw import Raw
 from pytex.registry import Registry
 
-_HSRT_HYPER_OPTS: Final[dict[str, str]] = {
+type HyperOption = bool | int | str | TeX
+
+HSRT_CITE_COLOR: Final[Color] = Color.rgb(0.286, 0.427, 0.537, name="hsrtcite")
+HSRT_LINK_COLOR: Final[Color] = Color.rgb(0.161, 0.310, 0.427, name="hsrtlink")
+HSRT_URL_COLOR: Final[Color] = Color.rgb(0.071, 0.212, 0.322, name="hsrturl")
+
+
+HSRT_HYPER_OPTIONS: Final[dict[str, HyperOption]] = {
     "pdfpagemode": "UseOutlines",
-    "bookmarksopen": "true",
-    "bookmarksopenlevel": "0",
-    "hypertexnames": "false",
-    "colorlinks": "true",
-    "citecolor": "[rgb]{0.286, 0.427, 0.537}",
-    "linkcolor": "[rgb]{0.161, 0.31, 0.427}",
-    "urlcolor": "[rgb]{0.071, 0.212, 0.322}",
+    "bookmarksopen": True,
+    "bookmarksopenlevel": 0,
+    "hypertexnames": False,
+    "colorlinks": True,
+    "citecolor": HSRT_CITE_COLOR,
+    "linkcolor": HSRT_LINK_COLOR,
+    "urlcolor": HSRT_URL_COLOR,
     "pdfstartview": "FitV",
-    "unicode": "",
-    "breaklinks": "true",
+    "unicode": True,
+    "breaklinks": True,
 }
+
+
+def _format(value: HyperOption) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, TeX):
+        return value.rendered
+    return str(value)
 
 
 @Registry.add
 def HSRTHyperref() -> TeX:
-    """Hypersetup with HSRT brand colors (blue-gray citations, dark blue links)."""
-    return Hypersetup(_HSRT_HYPER_OPTS)
+    """Hypersetup using `HSRT_HYPER_OPTIONS` (structured Python, not a TeX blob)."""
+    body = ",".join(f"{k}={_format(v)}" for k, v in HSRT_HYPER_OPTIONS.items())
+    return ControlSequence("hypersetup", (Parameter(Raw(body)),))

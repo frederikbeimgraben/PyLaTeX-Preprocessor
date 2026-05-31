@@ -4,7 +4,7 @@ from pytex_hsrtreport.colors import HSRT_PALETTE, HSRTColors
 from pytex_hsrtreport.glossary import AcrShortcut, HSRTGlossarySetup
 from pytex_hsrtreport.hyperref_config import HSRTHyperref
 from pytex_hsrtreport.listings import HSRTListingStyles, style_options
-from pytex_hsrtreport.logos import Logo, LogoSet, logo_set_from_paths
+from pytex_hsrtreport.logos import Logo, LogoStrip, logo_path
 from pytex_hsrtreport.pagebreak import (
     Conditionalpagebreak,
     Keeptogether,
@@ -12,7 +12,7 @@ from pytex_hsrtreport.pagebreak import (
     Smartsubsection,
 )
 from pytex_hsrtreport.titlepage import TitlePage, TitlePageDataLine
-from pytex_hsrtreport.variants import Variant, default_logos
+from pytex_hsrtreport.variants import Variant
 from pytex_hsrtreport.wordcount import WordcountCommands
 
 
@@ -35,7 +35,9 @@ def test_german_cref_names_emits_pairs():
 def test_hsrt_hyperref_brand_colors():
     out = HSRTHyperref().rendered
     assert "colorlinks=true" in out
-    assert "citecolor=[rgb]{0.286" in out
+    assert "citecolor=hsrtcite" in out
+    assert "linkcolor=hsrtlink" in out
+    assert "urlcolor=hsrturl" in out
 
 
 def test_glossary_setup_renders():
@@ -61,28 +63,31 @@ def test_style_options_lookup():
 
 
 def test_logo_renders_includegraphics():
-    out = Logo("foo.pdf", scale=0.5).rendered
-    assert "scale=0.5" in out and "{foo.pdf}" in out
+    out = Logo("HSRT", inline_base64=False).rendered
+    assert "includegraphics" in out and "HSRT.pdf" in out
 
 
-def test_logo_set_empty_is_empty():
-    assert LogoSet().rendered == ""
+def test_logo_unknown_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        Logo("DOES_NOT_EXIST", inline_base64=False)
 
 
-def test_logo_set_separator_inserted_between_logos():
-    out = LogoSet((Logo("a.pdf"), Logo("b.pdf"))).rendered
-    assert "a.pdf" in out and "b.pdf" in out
+def test_logo_strip_renders_each():
+    out = LogoStrip(("HSRT", "INF"), inline_base64=False).rendered
+    assert "HSRT.pdf" in out and "INF.pdf" in out
     assert "\\hspace{0.5cm}" in out
 
 
-def test_logo_set_from_paths():
-    ls = logo_set_from_paths("assets/logos", (("INF", 1.0), ("METI", 0.8)))
-    assert ls.logos[0].path == "assets/logos/INF.pdf"
-    assert ls.logos[1].scale == 0.8
+def test_logo_path_lookup():
+    p = logo_path("INF")
+    assert p.name == "INF.pdf"
 
 
-def test_variants_default_logos():
-    assert default_logos(Variant.METI) == (("INF", 1.0), ("METI", 1.0))
+def test_variants_default_logos_inf():
+    from pytex_hsrtreport.variants import default_logo_names
+    assert default_logo_names(Variant.INF) == ("HSRT", "INF")
 
 
 def test_titlepage_basic_render():

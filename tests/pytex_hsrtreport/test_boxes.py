@@ -51,7 +51,7 @@ def test_renders_with_computed_opacities():
     _ = WarningBox(inner)
     out = inner.rendered
     bg = round((0.05 + 0.075 * 2) * 100)
-    assert f"backgroundcolor={{blue!{bg}}}" in out
+    assert f"backgroundcolor=blue!{bg}" in out
 
 
 def test_requires_packages():

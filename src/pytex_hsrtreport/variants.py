@@ -2,23 +2,21 @@ from enum import Enum
 
 
 class Variant(Enum):
-    METI = "meti"
-    MKI = "mki"
-    HUC = "huc"
+    """HSRT report variant — picks default logo set on the title page."""
+
+    INF = "inf"
     STUPA = "stupa"
     ASTA = "asta"
     ECHO = "echo"
 
 
-_DEFAULT_LOGOS: dict[Variant, tuple[tuple[str, float], ...]] = {
-    Variant.METI: (("INF", 1.0), ("METI", 1.0)),
-    Variant.MKI: (("INF", 1.0), ("MKI", 1.0)),
-    Variant.HUC: (("INF", 1.0), ("HUC", 1.0)),
-    Variant.STUPA: (("STUPA", 1.0),),
-    Variant.ASTA: (("ASTA", 1.0),),
-    Variant.ECHO: (("ECHO", 1.0),),
+_DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
+    Variant.INF: ("HSRT", "INF"),
+    Variant.STUPA: ("STUPA",),
+    Variant.ASTA: ("ASTA",),
+    Variant.ECHO: ("ECHO",),
 }
 
 
-def default_logos(variant: Variant) -> tuple[tuple[str, float], ...]:
+def default_logo_names(variant: Variant) -> tuple[str, ...]:
     return _DEFAULT_LOGOS.get(variant, ())

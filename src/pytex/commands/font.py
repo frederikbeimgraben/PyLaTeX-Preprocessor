@@ -61,3 +61,53 @@ def Upshape() -> TeX:
 @Registry.add
 def Normalfont() -> TeX:
     return ControlSequence("normalfont", ())
+
+
+@Registry.add
+def Tiny() -> TeX:
+    return ControlSequence("tiny", ())
+
+
+@Registry.add
+def Scriptsize() -> TeX:
+    return ControlSequence("scriptsize", ())
+
+
+@Registry.add
+def Footnotesize() -> TeX:
+    return ControlSequence("footnotesize", ())
+
+
+@Registry.add
+def Small() -> TeX:
+    return ControlSequence("small", ())
+
+
+@Registry.add
+def Normalsize() -> TeX:
+    return ControlSequence("normalsize", ())
+
+
+@Registry.add
+def Large() -> TeX:
+    return ControlSequence("large", ())
+
+
+@Registry.add
+def LargeMid() -> TeX:
+    return ControlSequence("Large", ())
+
+
+@Registry.add
+def LargeBig() -> TeX:
+    return ControlSequence("LARGE", ())
+
+
+@Registry.add
+def Huge() -> TeX:
+    return ControlSequence("huge", ())
+
+
+@Registry.add
+def HugeBig() -> TeX:
+    return ControlSequence("Huge", ())

@@ -10,11 +10,11 @@ from pytex.commands.biblatex import (
 from pytex.commands.captions import Caption, Captionof, Captionsetup, Subcaption
 from pytex.commands.cleveref import Cref, Crefformat, Crefname, CrefnameUpper, CrefUpper
 from pytex.commands.colors import (
-    Color,
     Colorbox,
     Definecolor,
     Fcolorbox,
     Pagecolor,
+    SelectColor,
     Textcolor,
 )
 from pytex.commands.conditionals import (
@@ -171,7 +171,7 @@ def test_colors_render_and_require_xcolor():
     assert Definecolor("c", "rgb", "0,0,0").rendered == r"\definecolor{c}{rgb}{0,0,0}"
     assert XCOLOR in Definecolor("c", "rgb", "0,0,0").requires
     assert Textcolor("red", "x").rendered == r"\textcolor{red}{x}"
-    assert Color("red").rendered == r"\color{red}"
+    assert SelectColor("red").rendered == r"\color{red}"
     assert Colorbox("red", "x").rendered == r"\colorbox{red}{x}"
     assert Fcolorbox("red", "blue", "x").rendered == r"\fcolorbox{red}{blue}{x}"
     assert Pagecolor("white").rendered == r"\pagecolor{white}"

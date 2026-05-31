@@ -48,6 +48,31 @@ def Subparagraph(title: TeX | str) -> TeX:
 
 
 @Registry.add
+def PartStar(title: TeX | str) -> TeX:
+    return ControlSequence("part*", (Parameter(title),))
+
+
+@Registry.add
+def ChapterStar(title: TeX | str) -> TeX:
+    return ControlSequence("chapter*", (Parameter(title),))
+
+
+@Registry.add
+def SectionStar(title: TeX | str) -> TeX:
+    return ControlSequence("section*", (Parameter(title),))
+
+
+@Registry.add
+def SubsectionStar(title: TeX | str) -> TeX:
+    return ControlSequence("subsection*", (Parameter(title),))
+
+
+@Registry.add
+def SubsubsectionStar(title: TeX | str) -> TeX:
+    return ControlSequence("subsubsection*", (Parameter(title),))
+
+
+@Registry.add
 def Textbf(body: TeX | str) -> TeX:
     return ControlSequence("textbf", (Parameter(body),))
 
@@ -397,56 +422,81 @@ def Verb(body: str, delim: str = "|") -> TeX:
     return Raw(f"\\verb{delim}{body}{delim}")
 
 
-@Registry.add
-def Tiny(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("tiny", ()), Raw(" "), body)
-
-
-@Registry.add
-def Scriptsize(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("scriptsize", ()), Raw(" "), body)
-
-
-@Registry.add
-def Footnotesize(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("footnotesize", ()), Raw(" "), body)
-
-
-@Registry.add
-def Small(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("small", ()), Raw(" "), body)
-
-
-@Registry.add
-def Normalsize(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("normalsize", ()), Raw(" "), body)
-
-
-@Registry.add
-def Large(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("large", ()), Raw(" "), body)
-
-
-@Registry.add
-def LLarge(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("Large", ()), Raw(" "), body)
-
-
-@Registry.add
-def LLLarge(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("LARGE", ()), Raw(" "), body)
-
-
-@Registry.add
-def Huge(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("huge", ()), Raw(" "), body)
-
-
-@Registry.add
-def HHuge(body: TeX | str) -> TeX:
-    return Concat(ControlSequence("Huge", ()), Raw(" "), body)
+# Size switches moved to pytex/commands/font.py (zero-arg ControlSequence wrappers).
+# Compose with `Concat(Large(), " body")` for inline use.
 
 
 @Registry.add
 def Group(body: TeX | str) -> TeX:
     return Concat(Raw("{"), body, Raw("}"))
+
+
+@Registry.add
+def Rule(width: str, thickness: str) -> TeX:
+    return ControlSequence("rule", (Parameter(width), Parameter(thickness)))
+
+
+@Registry.add
+def Pagenumbering(scheme: str) -> TeX:
+    return ControlSequence("pagenumbering", (Parameter(scheme),))
+
+
+@Registry.add
+def Immediate(body: TeX | str) -> TeX:
+    return Concat(ControlSequence("immediate", ()), Raw(" "), body)
+
+
+@Registry.add
+def Write18(text: str) -> TeX:
+    return Raw("\\write18{" + text + "}")
+
+
+@Registry.add
+def Verbatiminput(path: str) -> TeX:
+    return ControlSequence("verbatiminput", (Parameter(path),))
+
+
+@Registry.add
+def Inputfile(path: str) -> TeX:
+    """Alias for `\\input{path}` — `Input` already defined above as Input(path)."""
+    return ControlSequence("input", (Parameter(path),))
+
+
+@Registry.add
+def Whiledo(condition: TeX | str, body: TeX | str) -> TeX:
+    return ControlSequence("whiledo", (Parameter(condition), Parameter(body)))
+
+
+@Registry.add
+def Foreach(var: str, values: str, body: TeX | str) -> TeX:
+    return Concat(
+        Raw(f"\\foreach {var} in {{{values}}}"),
+        Raw("{"),
+        body,
+        Raw("}"),
+    )
+
+
+@Registry.add
+def BeginAccSupp(options: dict[str, str]) -> TeX:
+    return ControlSequence("BeginAccSupp", (Parameter(options),))
+
+
+@Registry.add
+def EndAccSupp() -> TeX:
+    return ControlSequence("EndAccSupp", ())
+
+
+@Registry.add
+def Newglossarystyle(name: str, body: TeX | str) -> TeX:
+    return ControlSequence("newglossarystyle", (Parameter(name), Parameter(body)))
+
+
+@Registry.add
+def Blenderfont() -> TeX:
+    return ControlSequence("blenderfont", ())
+
+
+@Registry.add
+def Dinfont() -> TeX:
+    return ControlSequence("dinfont", ())

@@ -10,14 +10,16 @@ def _cmd(
     nargs: int | None,
     default: str | None,
     body: TeX | str,
+    star: bool,
 ) -> TeX:
+    full = name + ("*" if star else "")
     params: list[Parameter] = [Parameter(Raw(cs))]
     if nargs is not None:
         params.append(Parameter(str(nargs), optional=True))
         if default is not None:
             params.append(Parameter(default, optional=True))
     params.append(Parameter(body))
-    return ControlSequence(name, tuple(params))
+    return ControlSequence(full, tuple(params))
 
 
 @Registry.add
@@ -26,8 +28,9 @@ def Newcommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
+    star: bool = False,
 ) -> TeX:
-    return _cmd("newcommand", cs, nargs, default, body)
+    return _cmd("newcommand", cs, nargs, default, body, star)
 
 
 @Registry.add
@@ -36,8 +39,9 @@ def Renewcommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
+    star: bool = False,
 ) -> TeX:
-    return _cmd("renewcommand", cs, nargs, default, body)
+    return _cmd("renewcommand", cs, nargs, default, body, star)
 
 
 @Registry.add
@@ -46,8 +50,9 @@ def Providecommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
+    star: bool = False,
 ) -> TeX:
-    return _cmd("providecommand", cs, nargs, default, body)
+    return _cmd("providecommand", cs, nargs, default, body, star)
 
 
 @Registry.add
@@ -55,8 +60,9 @@ def DeclareRobustCommand(
     cs: str,
     body: TeX | str,
     nargs: int | None = None,
+    star: bool = False,
 ) -> TeX:
-    return _cmd("DeclareRobustCommand", cs, nargs, None, body)
+    return _cmd("DeclareRobustCommand", cs, nargs, None, body, star)
 
 
 @Registry.add

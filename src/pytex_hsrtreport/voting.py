@@ -1,14 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Final, override
 
+from pytex.commands.builtin import Textbf
+from pytex.commands.floats import Columnbreak, Multicols
 from pytex.commands.fontawesome import FaIcon
 from pytex.helpers.parenting import attach
 from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
-from pytex.model.control_sequence import Parameter
-from pytex.model.environment import Environment
-from pytex.model.raw import Raw
 from pytex.packages import FONTAWESOME5, MDFRAMED, XCOLOR
 from pytex.registry import Registry
 
@@ -56,27 +55,35 @@ class VotingResults(TeX):
     @property
     @override
     def rendered(self) -> str:
-        return _build(self).rendered
-
-
-def _build(vr: "VotingResults") -> TeX:
-    columns = Environment(
-        "multicols",
-        Concat(
-            CustomBox(Raw(f"\\textbf{{Ja:}} {vr.yes}"), "thumbs-up", "britishracinggreen"),
-            Raw("\\columnbreak"),
-            CustomBox(Raw(f"\\textbf{{Nein:}} {vr.no}"), "thumbs-down", "red"),
-            Raw("\\columnbreak"),
-            CustomBox(Raw(f"\\textbf{{Enthaltung:}} {vr.abstain}"), "question", "eggplant"),
-        ),
-        (Parameter("3"),),
-    )
-    inner = Concat(vr.body, columns)
-    return ColoredBox(
-        body=inner,
-        icon=FaIcon("vote-yea"),
-        icon_color=vr.color,
-        icon_size="24pt",
-        icon_offset_x="-0.2cm",
-        background_color=vr.color,
-    )
+        return ColoredBox(
+            body=Concat(
+                self.body,
+                Multicols(
+                    3,
+                    Concat(
+                        CustomBox(
+                            Concat(Textbf("Ja:"), " ", str(self.yes)),
+                            "thumbs-up",
+                            "britishracinggreen",
+                        ),
+                        Columnbreak(),
+                        CustomBox(
+                            Concat(Textbf("Nein:"), " ", str(self.no)),
+                            "thumbs-down",
+                            "red",
+                        ),
+                        Columnbreak(),
+                        CustomBox(
+                            Concat(Textbf("Enthaltung:"), " ", str(self.abstain)),
+                            "question",
+                            "eggplant",
+                        ),
+                    ),
+                ),
+            ),
+            icon=FaIcon("vote-yea"),
+            icon_color=self.color,
+            icon_size="24pt",
+            icon_offset_x="-0.2cm",
+            background_color=self.color,
+        ).rendered

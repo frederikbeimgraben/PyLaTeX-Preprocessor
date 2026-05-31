@@ -29,9 +29,15 @@ from .cleveref_names import GermanCrefNames  # noqa: F401
 from .colors import HSRT_PALETTE, HSRTColors  # noqa: F401
 from .document import HSRTReport  # noqa: F401
 from .glossary import AcrShortcut, HSRTGlossarySetup  # noqa: F401
-from .hyperref_config import HSRTHyperref  # noqa: F401
+from .hyperref_config import (  # noqa: F401
+    HSRT_CITE_COLOR,
+    HSRT_HYPER_OPTIONS,
+    HSRT_LINK_COLOR,
+    HSRT_URL_COLOR,
+    HSRTHyperref,
+)
 from .listings import HSRTListingStyles, style_options  # noqa: F401
-from .logos import Logo, LogoSet, logo_set_from_paths  # noqa: F401
+from .logos import DefaultLogos, Logo, LogoStrip, logo_path  # noqa: F401
 from .pagebreak import (  # noqa: F401
     Conditionalpagebreak,
     Critical,
@@ -40,7 +46,7 @@ from .pagebreak import (  # noqa: F401
     Smartsubsection,
 )
 from .titlepage import TitlePage, TitlePageDataLine  # noqa: F401
-from .variants import Variant, default_logos  # noqa: F401
+from .variants import Variant, default_logo_names  # noqa: F401
 from .voting import VotingResults  # noqa: F401
 from .watermark import DraftWatermark, WatermarkCounter  # noqa: F401
 from .wordcount import WordcountCommands  # noqa: F401
@@ -51,6 +57,7 @@ __all__ = [
     "Conditionalpagebreak",
     "Critical",
     "CustomBox",
+    "DefaultLogos",
     "DiscussionBox",
     "DraftWatermark",
     "Fcite",
@@ -60,12 +67,16 @@ __all__ = [
     "HSRTHyperref",
     "HSRTListingStyles",
     "HSRTReport",
+    "HSRT_CITE_COLOR",
+    "HSRT_HYPER_OPTIONS",
+    "HSRT_LINK_COLOR",
     "HSRT_PALETTE",
+    "HSRT_URL_COLOR",
     "ImportantBox",
     "InfoBox",
     "Keeptogether",
     "Logo",
-    "LogoSet",
+    "LogoStrip",
     "Smartsection",
     "Smartsubsection",
     "SuccessBox",
@@ -80,12 +91,12 @@ __all__ = [
     "citations",
     "cleveref_names",
     "colors",
-    "default_logos",
+    "default_logo_names",
     "document",
     "glossary",
     "hyperref_config",
     "listings",
-    "logo_set_from_paths",
+    "logo_path",
     "logos",
     "pagebreak",
     "style_options",

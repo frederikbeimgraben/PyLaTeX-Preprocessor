@@ -1,5 +1,6 @@
 from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
+from ..model.length import Length
 from ..model.raw import Raw
 from ..registry import Registry
 
@@ -10,15 +11,17 @@ def Newlength(name: str) -> TeX:
 
 
 @Registry.add
-def Setlength(name: str, value: str) -> TeX:
-    return ControlSequence("setlength", (Parameter(Raw(name)), Parameter(value)))
+def Setlength(name: str, value: Length | str) -> TeX:
+    expr = value.expr if isinstance(value, Length) else value
+    return ControlSequence("setlength", (Parameter(Raw(name)), Parameter(expr)))
 
 
 @Registry.add
-def Addtolength(name: str, value: str) -> TeX:
+def Addtolength(name: str, value: Length | str) -> TeX:
+    expr = value.expr if isinstance(value, Length) else value
     return ControlSequence(
         "addtolength",
-        (Parameter(Raw(name)), Parameter(value)),
+        (Parameter(Raw(name)), Parameter(expr)),
     )
 
 
@@ -44,3 +47,122 @@ def Settodepth(name: str, body: TeX | str) -> TeX:
         "settodepth",
         (Parameter(Raw(name)), Parameter(body)),
     )
+
+
+def _const(name: str) -> Length:
+    return Length(f"\\{name}")
+
+
+@Registry.add
+def Textwidth() -> Length:
+    return _const("textwidth")
+
+
+@Registry.add
+def Textheight() -> Length:
+    return _const("textheight")
+
+
+@Registry.add
+def Linewidth() -> Length:
+    return _const("linewidth")
+
+
+@Registry.add
+def Columnwidth() -> Length:
+    return _const("columnwidth")
+
+
+@Registry.add
+def Columnsep() -> Length:
+    return _const("columnsep")
+
+
+@Registry.add
+def Paperwidth() -> Length:
+    return _const("paperwidth")
+
+
+@Registry.add
+def Paperheight() -> Length:
+    return _const("paperheight")
+
+
+@Registry.add
+def Pagewidth() -> Length:
+    return _const("pagewidth")
+
+
+@Registry.add
+def Pageheight() -> Length:
+    return _const("pageheight")
+
+
+@Registry.add
+def Baselineskip() -> Length:
+    return _const("baselineskip")
+
+
+@Registry.add
+def Baselinestretch() -> Length:
+    return _const("baselinestretch")
+
+
+@Registry.add
+def Parindent() -> Length:
+    return _const("parindent")
+
+
+@Registry.add
+def Parskip() -> Length:
+    return _const("parskip")
+
+
+@Registry.add
+def Topmargin() -> Length:
+    return _const("topmargin")
+
+
+@Registry.add
+def Leftmargin() -> Length:
+    return _const("leftmargin")
+
+
+@Registry.add
+def Rightmargin() -> Length:
+    return _const("rightmargin")
+
+
+@Registry.add
+def Footskip() -> Length:
+    return _const("footskip")
+
+
+@Registry.add
+def Headheight() -> Length:
+    return _const("headheight")
+
+
+@Registry.add
+def Headsep() -> Length:
+    return _const("headsep")
+
+
+@Registry.add
+def Marginparwidth() -> Length:
+    return _const("marginparwidth")
+
+
+@Registry.add
+def Tabcolsep() -> Length:
+    return _const("tabcolsep")
+
+
+@Registry.add
+def Arraystretch_len() -> Length:
+    return _const("arraystretch")
+
+
+@Registry.add
+def Fill() -> Length:
+    return _const("fill")

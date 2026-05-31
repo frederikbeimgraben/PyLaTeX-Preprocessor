@@ -11,7 +11,6 @@ from pytex.commands.builtin import (
     Hfill,
     Itemize,
     Label,
-    Large,
     MakeTitle,
     Newline,
     Newpage,
@@ -24,6 +23,7 @@ from pytex.commands.builtin import (
     Texttt,
     Title,
 )
+from pytex.commands.font import Large
 from pytex.model.concat import Concat
 from pytex.model.document import Document
 from pytex.model.environment import Environment
@@ -140,7 +140,8 @@ math_section = Concat(
 
 formatting = Concat(
     Section("Formatting"),
-    Large("Large text. "),
+    Large(),
+    " Large text. ",
     "Normal. ",
     Bold(Italicized := Emph("bold-emph")),
     Hfill(),

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Final, override
 
 from pytex.commands.builtin import Hspace, Noindent, Vspace
-from pytex.commands.colors import Color
+from pytex.commands.colors import SelectColor
 from pytex.commands.fontawesome import FaIcon
 from pytex.commands.floats import Minipage
 from pytex.commands.font import Fontsize, Selectfont
@@ -75,56 +75,49 @@ class ColoredBox(TeX):
     @property
     @override
     def rendered(self) -> str:
-        return self._build().rendered
-
-    def _build(self) -> TeX:
-        bg = f"{self.background_color}!{self.background_opacity}"
-        ic = f"{self.icon_color}!{self.icon_opacity}"
-
-        icon_block = Put(
-            f"{self.icon_offset_x}-{self.icon_size}",
-            f"{self.icon_offset_y}-0.7cm",
-            Concat(
-                Fontsize(self.icon_size, self.icon_size),
-                Selectfont(),
-                Color(ic),
-                self.icon,
-            ),
-        )
-
-        inner_body = Minipage(
-            r"\linewidth-0.5cm",
-            Concat(
-                Vspace(r"0.5\baselineskip"),
-                self.body,
-                Vspace(r"0.5\baselineskip"),
-            ),
-        )
-
-        mdframed_body = Concat(
-            Picture(r"\textwidth", "0", icon_block),
-            Hspace("0.25cm", star=True),
-            inner_body,
-        )
-
-        framed = Mdframed(
-            mdframed_body,
-            options={
-                "backgroundcolor": "{" + bg + "}",
-                "hidealllines": "true",
-                "skipabove": r"0.7\baselineskip",
-                "skipbelow": r"0.7\baselineskip",
-                "splitbottomskip": "2pt",
-                "splittopskip": "4pt",
-                "roundcorner": "5pt",
-            },
-        )
-
         return Concat(
             Vspace(r"0.5\baselineskip", star=True),
             Noindent(),
-            Minipage(r"\linewidth", framed),
-        )
+            Minipage(
+                r"\linewidth",
+                Mdframed(
+                    Concat(
+                        Picture(
+                            r"\textwidth",
+                            "0",
+                            Put(
+                                f"{self.icon_offset_x}-{self.icon_size}",
+                                f"{self.icon_offset_y}-0.7cm",
+                                Concat(
+                                    Fontsize(self.icon_size, self.icon_size),
+                                    Selectfont(),
+                                    SelectColor(f"{self.icon_color}!{self.icon_opacity}"),
+                                    self.icon,
+                                ),
+                            ),
+                        ),
+                        Hspace("0.25cm", star=True),
+                        Minipage(
+                            r"\linewidth-0.5cm",
+                            Concat(
+                                Vspace(r"0.5\baselineskip"),
+                                self.body,
+                                Vspace(r"0.5\baselineskip"),
+                            ),
+                        ),
+                    ),
+                    options={
+                        "backgroundcolor": f"{self.background_color}!{self.background_opacity}",
+                        "hidealllines": "true",
+                        "skipabove": r"0.7\baselineskip",
+                        "skipbelow": r"0.7\baselineskip",
+                        "splitbottomskip": "2pt",
+                        "splittopskip": "4pt",
+                        "roundcorner": "5pt",
+                    },
+                ),
+            ),
+        ).rendered
 
 
 def _preset(

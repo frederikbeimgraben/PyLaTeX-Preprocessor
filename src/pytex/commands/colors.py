@@ -22,7 +22,8 @@ def Textcolor(color: str, body: TeX | str) -> TeX:
 
 @Registry.add
 @with_package(XCOLOR)
-def Color(color: str) -> TeX:
+def SelectColor(color: str) -> TeX:
+    """`\\color{name}` — switch current colour. Use `Color` (model) for typed colour identity."""
     return ControlSequence("color", (Parameter(color),))
 
 

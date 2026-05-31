@@ -1,12 +1,24 @@
 from typing import Final
 
+from pytex.commands.colors import SelectColor
+from pytex.commands.font import (
+    Bfseries,
+    Footnotesize,
+    Scriptsize,
+    Ttfamily,
+)
 from pytex.commands.listings import Lstdefinestyle, Lstset
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.registry import Registry
 
-_BASE: Final[dict[str, str]] = {
-    "basicstyle": r"\footnotesize\ttfamily",
+
+def _font(*parts: TeX) -> TeX:
+    return Concat(*parts)
+
+
+HSRT_LISTING_BASE: Final[dict[str, TeX | str]] = {
+    "basicstyle": _font(Footnotesize(), Ttfamily()),
     "breaklines": "true",
     "numbers": "left",
     "frame": "single",
@@ -14,50 +26,50 @@ _BASE: Final[dict[str, str]] = {
 }
 
 
-_STYLES: Final[dict[str, dict[str, str]]] = {
+HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
     "htmlCode": {
         "language": "html",
-        "basicstyle": r"\scriptsize\ttfamily",
-        "keywordstyle": r"\color{blue}\bfseries\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "phpCode": {
         "language": "php",
         "morekeywords": "{php}",
-        "basicstyle": r"\footnotesize\ttfamily",
-        "keywordstyle": r"\color{blue}\bfseries\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Footnotesize(), Ttfamily()),
+        "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "jsCode": {
         "language": "javascript",
-        "basicstyle": r"\scriptsize\ttfamily",
-        "keywordstyle": r"\color{blue}\bfseries\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "shellCodeNOPASSWD": {
         "language": "sh",
         "deletekeywords": "{for,kill,cat}",
         "morekeywords": "{sudo}",
-        "basicstyle": r"\scriptsize\ttfamily",
-        "keywordstyle": r"\color{blue}\bfseries\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
         "numbers": "none",
     },
     "shellCode": {
         "language": "sh",
         "morekeywords": "{sudo,chmod,chown,cp,su,rm,python}",
-        "basicstyle": r"\scriptsize\ttfamily",
-        "keywordstyle": r"\color{blue}\bfseries\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "URL": {
-        "basicstyle": r"\footnotesize\ttfamily",
-        "commentstyle": r"\color{gray}\ttfamily",
+        "basicstyle": _font(Footnotesize(), Ttfamily()),
+        "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
         "numbers": "none",
     },
@@ -66,13 +78,11 @@ _STYLES: Final[dict[str, dict[str, str]]] = {
 
 @Registry.add
 def HSRTListingStyles() -> TeX:
-    """All HSRT listing styles + global Lstset, emit once in preamble."""
     return Concat(
-        Lstset(_BASE),
-        *(Lstdefinestyle(name, opts) for name, opts in _STYLES.items()),
+        Lstset(HSRT_LISTING_BASE),
+        *(Lstdefinestyle(name, opts) for name, opts in HSRT_LISTING_STYLES.items()),
     )
 
 
-def style_options(name: str) -> dict[str, str]:
-    """Return raw option dict for a registered style (for adhoc rendering)."""
-    return dict(_STYLES[name])
+def style_options(name: str) -> dict[str, TeX | str]:
+    return dict(HSRT_LISTING_STYLES[name])

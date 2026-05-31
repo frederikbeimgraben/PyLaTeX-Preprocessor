@@ -62,3 +62,18 @@ def Newfloat(typ: str, placement: str, ext: str) -> TeX:
 @with_package(FLOATROW)
 def Floatsetup(options: dict[str, str]) -> TeX:
     return ControlSequence("floatsetup", (Parameter(options),))
+
+
+@Registry.add
+def Multicols(n: int, body: TeX | str) -> TeX:
+    return Environment("multicols", body, (Parameter(str(n)),))
+
+
+@Registry.add
+def Columnbreak() -> TeX:
+    return ControlSequence("columnbreak", ())
+
+
+@Registry.add
+def Titlepage(body: TeX | str) -> TeX:
+    return Environment("titlepage", body)

@@ -51,7 +51,10 @@ def test_glossary_setup_opt_in():
 def test_hyperref_with_brand_colors():
     out = HSRTReport(Section("Hi")).rendered
     assert "hypersetup" in out
-    assert "linkcolor=[rgb]{0.161" in out
+    assert "linkcolor=hsrtlink" in out
+    # color walker emits \definecolor for the named HSRT colours
+    assert "definecolor{hsrtlink}" in out
+    assert "definecolor{hsrtcite}" in out
 
 
 def test_geometry_default_a4():
@@ -65,8 +68,8 @@ def test_custom_main_font():
     assert "setmainfont{Times}" in out
 
 
-def test_variant_default_meti():
-    assert HSRTReport(Section("Hi")).variant is Variant.METI
+def test_variant_default_inf():
+    assert HSRTReport(Section("Hi")).variant is Variant.INF
 
 
 def test_extra_packages_include_required():
