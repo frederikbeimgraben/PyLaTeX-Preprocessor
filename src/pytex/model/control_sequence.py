@@ -7,7 +7,7 @@ from ..interface.tex import TeX
 from ..registry import Registry
 from .raw import Raw
 
-T = TypeVar("T", covariant=True, bound=ParameterType)
+T = TypeVar("T", covariant=True, bound=ParameterType, default=ParameterType)
 
 
 @Registry.add
