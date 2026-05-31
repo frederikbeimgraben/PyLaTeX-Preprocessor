@@ -1,6 +1,5 @@
 from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
-from ..model.environment import Environment
 from ..model.raw import Raw
 from ..registry import Registry
 
