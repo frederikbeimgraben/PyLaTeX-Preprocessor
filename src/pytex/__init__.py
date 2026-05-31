@@ -1,5 +1,27 @@
 from . import packages  # noqa: F401
-from .commands import builtin  # noqa: F401
+from .commands import (  # noqa: F401
+    biblatex,
+    builtin,
+    captions,
+    cleveref,
+    colors,
+    conditionals,
+    counters,
+    definitions,
+    floats,
+    fontawesome,
+    fontspec,
+    geometry,
+    glossaries,
+    graphics,
+    hooks,
+    hyperref,
+    lengths,
+    listings,
+    mdframed,
+    setspace,
+    tables,
+)
 from .helpers import coerce, with_package  # noqa: F401
 from .model import (  # noqa: F401
     concat,

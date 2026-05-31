@@ -90,6 +90,26 @@ CHANGEPAGE: Package = DefinePackage("changepage")
 EVERYPAGE: Package = DefinePackage("everypage")
 EVERYSHI: Package = DefinePackage("everyshi")
 TIKZ_LIB_POSITIONING: Package = DefinePackage("tikz-positioning", after={TIKZ})
+TIKZPAGENODES: Package = DefinePackage("tikzpagenodes", after={TIKZ})
+PGFFOR: Package = DefinePackage("pgffor")
+ARRAYJOBX: Package = DefinePackage("arrayjobx")
+BOPHOOK: Package = DefinePackage("bophook")
+ENVIRON: Package = DefinePackage("environ")
+EXPL3: Package = DefinePackage("expl3")
+L3KEYS2E: Package = DefinePackage("l3keys2e")
+PDFTEXCMDS: Package = DefinePackage("pdftexcmds")
+XFP: Package = DefinePackage("xfp")
+KEYVAL: Package = DefinePackage("keyval")
+PIFONT: Package = DefinePackage("pifont")
+FONTAWESOME5: Package = DefinePackage("fontawesome5")
+FLOATROW: Package = DefinePackage("floatrow")
+CHNGCNTR: Package = DefinePackage("chngcntr")
+ACCSUPP: Package = DefinePackage("accsupp")
+AFTERPAGE: Package = DefinePackage("afterpage")
+ARYDSHLN: Package = DefinePackage("arydshln")
+LMODERN: Package = DefinePackage("lmodern")
+HYPHENAT: Package = DefinePackage("hyphenat")
+FP: Package = DefinePackage("fp")
 
 
 class Packages(Enum):
@@ -177,3 +197,23 @@ class Packages(Enum):
     CHANGEPAGE = CHANGEPAGE
     EVERYPAGE = EVERYPAGE
     EVERYSHI = EVERYSHI
+    TIKZPAGENODES = TIKZPAGENODES
+    PGFFOR = PGFFOR
+    ARRAYJOBX = ARRAYJOBX
+    BOPHOOK = BOPHOOK
+    ENVIRON = ENVIRON
+    EXPL3 = EXPL3
+    L3KEYS2E = L3KEYS2E
+    PDFTEXCMDS = PDFTEXCMDS
+    XFP = XFP
+    KEYVAL = KEYVAL
+    PIFONT = PIFONT
+    FONTAWESOME5 = FONTAWESOME5
+    FLOATROW = FLOATROW
+    CHNGCNTR = CHNGCNTR
+    ACCSUPP = ACCSUPP
+    AFTERPAGE = AFTERPAGE
+    ARYDSHLN = ARYDSHLN
+    LMODERN = LMODERN
+    HYPHENAT = HYPHENAT
+    FP = FP
