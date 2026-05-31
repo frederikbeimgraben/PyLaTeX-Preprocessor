@@ -38,10 +38,11 @@ def _evaluate(content: str, extra: dict[str, object]) -> str:
 class Raw(TeX):
     content: str
     namespace: dict[str, object] | None = field(default=None)
+    allow_replacements: bool = True
 
     @property
     @override
     def rendered(self) -> str:
-        if "\\iffalse" not in self.content:
+        if not self.allow_replacements or "\\iffalse" not in self.content:
             return self.content
         return _evaluate(self.content, self.namespace or {})

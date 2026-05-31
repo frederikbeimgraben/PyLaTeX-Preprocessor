@@ -60,3 +60,19 @@ def test_no_iffalse_skip_eval():
 def test_namespace_default_none():
     r = Raw("hi")
     assert r.namespace is None
+
+
+def test_allow_replacements_default_true():
+    assert Raw("x").allow_replacements is True
+
+
+def test_allow_replacements_false_skips_eval():
+    content = r"\iffalse{ pytex(1+2) }\fi"
+    r = Raw(content, allow_replacements=False)
+    assert r.rendered == content
+
+
+def test_allow_replacements_false_with_namespace():
+    content = r"\iffalse{ pytex(v) }\fi"
+    r = Raw(content, namespace={"v": 99}, allow_replacements=False)
+    assert r.rendered == content

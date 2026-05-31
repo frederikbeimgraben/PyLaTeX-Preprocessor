@@ -8,6 +8,7 @@ from .model import (  # noqa: F401
     document_class,
     empty,
     environment,
+    include,
     math,
     package,
     raw,
