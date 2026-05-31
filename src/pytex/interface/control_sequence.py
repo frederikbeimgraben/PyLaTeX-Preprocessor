@@ -1,5 +1,6 @@
 from typing import Protocol, runtime_checkable
 
+from ..model.empty import EmptyTeX
 from .tex import TeX
 
 type ParameterType = TeX | str | dict[str, str]
@@ -14,7 +15,7 @@ class ParameterProtocol[T: ParameterType = ParameterType](TeX, Protocol):
     def value(self) -> T: ...
 
 
-type Parameters = tuple[ParameterProtocol, ...] | None
+type Parameters = tuple[ParameterProtocol | EmptyTeX, ...] | None
 
 
 @runtime_checkable

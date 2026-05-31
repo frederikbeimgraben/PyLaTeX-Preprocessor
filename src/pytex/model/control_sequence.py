@@ -1,7 +1,5 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Final, Generic, TypeVar, override
-
-from pydantic.dataclasses import dataclass
 
 from ..interface.control_sequence import Parameters, ParameterType
 from ..interface.package import PackageProtocol

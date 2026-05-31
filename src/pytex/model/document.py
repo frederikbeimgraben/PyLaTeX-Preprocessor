@@ -1,7 +1,5 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import override
-
-from pydantic.dataclasses import dataclass
 
 from ..helpers.coerce import coerce_tex
 from ..interface.package import PackageProtocol

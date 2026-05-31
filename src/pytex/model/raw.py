@@ -1,6 +1,5 @@
+from dataclasses import dataclass
 from typing import override
-
-from pydantic.dataclasses import dataclass
 
 from ..interface.tex import TeX
 

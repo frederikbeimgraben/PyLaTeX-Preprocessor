@@ -1,6 +1,5 @@
+from dataclasses import dataclass
 from typing import Final, TypeVarTuple, Unpack, override
-
-from pydantic.dataclasses import dataclass
 
 from ..interface.tex import TeX
 
@@ -22,4 +21,4 @@ class Concat[*C](TeX):
     @property
     @override
     def rendered(self) -> str:
-        return "\\relax ".join(str(e) for e in self.elements)
+        return "".join(str(e) for e in self.elements)
