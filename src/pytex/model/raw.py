@@ -20,12 +20,22 @@ _PATTERN = re.compile(
 )
 
 
-def _evaluate(content: str, extra: dict[str, object]) -> str:
-    namespace: dict[str, object] = {
+def pytex_namespace(extra: dict[str, object] | None = None) -> dict[str, object]:
+    """Namespace used to ``eval`` ``pytex(...)`` expressions.
+
+    Exposes Python builtins plus every Registry-registered factory, so the same
+    names work in both escape hatches: ``\\iffalse{pytex(...)}\\fi`` (TeX) and
+    ``[//]: # "..."`` (Markdown).
+    """
+    return {
         "__builtins__": __builtins__,
         **Registry.namespace(),
-        **extra,
+        **(extra or {}),
     }
+
+
+def _evaluate(content: str, extra: dict[str, object]) -> str:
+    namespace = pytex_namespace(extra)
 
     def _sub(match: re.Match[str]) -> str:
         return str(eval(match.group("expr"), namespace))  # noqa: S307

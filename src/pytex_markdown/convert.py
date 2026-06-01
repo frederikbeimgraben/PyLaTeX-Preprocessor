@@ -35,7 +35,7 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.model.empty import Empty
 from pytex.model.image import IncludeImage
-from pytex.model.raw import Raw
+from pytex.model.raw import Raw, pytex_namespace
 
 from pytex_hsrtreport.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
@@ -189,6 +189,22 @@ class MarkdownConverter:
     def _rule(self, _node: object) -> TeX:
         return Concat(Noindent(), Rule(r"\linewidth", "0.4pt"))
 
+    def _eval_comment(self, node: object) -> TeX:
+        """Evaluate a ``[//]: # "EXPR"`` Markdown comment as a pytex expression.
+
+        This mirrors the ``\\iffalse{pytex(EXPR)}\\fi`` escape hatch in raw TeX:
+        ``EXPR`` is evaluated with the Registry namespace. A ``TeX`` result is
+        spliced into the tree as-is; anything else is stringified into ``Raw``.
+        """
+        title = getattr(node, "title", None)
+        if not isinstance(title, str):
+            return Empty
+        expr = _strip_md_title(title)
+        if not expr:
+            return Empty
+        result = eval(expr, pytex_namespace())  # noqa: S307
+        return result if isinstance(result, TeX) else Raw(str(result))
+
     def block(self, node: object) -> TeX:
         kind = _kind(node)
         if kind == "Heading":
@@ -203,7 +219,13 @@ class MarkdownConverter:
             return self._code(node)
         if kind == "ThematicBreak":
             return self._rule(node)
-        if kind in ("BlankLine", "LinkRefDef"):
+        if kind == "LinkRefDef":
+            # `[//]: # "EXPR"` is the Markdown-comment escape hatch: evaluate it.
+            # Any other link reference definition renders to nothing.
+            if getattr(node, "label", None) == "//" and getattr(node, "dest", None) == "#":
+                return self._eval_comment(node)
+            return Empty
+        if kind == "BlankLine":
             return Empty
         # Container we do not special-case (e.g. nested Document).
         kids = _children(node)
@@ -212,6 +234,19 @@ class MarkdownConverter:
     def blocks(self, nodes: list[object]) -> TeX:
         out = [self.block(n) for n in nodes if _kind(n) not in ("BlankLine",)]
         return Concat(*_interleave(out))
+
+
+def _strip_md_title(title: str) -> str:
+    """Strip the delimiters marko keeps around a link-ref-def title.
+
+    Titles arrive quoted (``"..."``, ``'...'``) or parenthesised (``(...)``).
+    """
+    t = title.strip()
+    if len(t) >= 2 and (
+        (t[0] in "\"'" and t[-1] == t[0]) or (t[0] == "(" and t[-1] == ")")
+    ):
+        return t[1:-1].strip()
+    return t
 
 
 def _interleave(blocks: list[TeX]) -> list[TeX]:

@@ -101,7 +101,7 @@ class ColoredBox(TeX):
             icon_op = bg + _ICON_BOOST
             return Concat(
                 Vspace(r"0.5\baselineskip", star=True),
-                Raw("\\\\\n"),
+                Raw("~\\\\\n"),
                 Noindent(),
                 Minipage(
                     r"\linewidth",

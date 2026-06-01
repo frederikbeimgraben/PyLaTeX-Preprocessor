@@ -23,11 +23,18 @@ from pytex_hsrtreport import (
     Variant,
     WarningBox,
 )
+from pytex_hsrtreport.titlepage import TitlePageDataLine
 
 __pytex__ = HSRTReport(
     title_page=True,
     variant=Variant.INF,
     show_toc=True,
+    title="HSRT Report Example",
+    author="PyTeX",
+    abstract="Lorem ipsum dolor sit amet",
+    keywords="Example, TeX",
+    data_lines=(TitlePageDataLine("Test", "Test"),),
+    show_footer_logos=True,
     body=Concat(
         Chapter("Introduction"),
         "This document is generated with ",

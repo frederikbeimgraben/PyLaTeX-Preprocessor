@@ -11,7 +11,7 @@ class Variant(Enum):
 
 
 _DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
-    Variant.INF: ("HSRT", "INF"),
+    Variant.INF: ("INF",),
     Variant.STUPA: ("STUPA",),
     Variant.ASTA: ("ASTA",),
     Variant.ECHO: ("ECHO",),

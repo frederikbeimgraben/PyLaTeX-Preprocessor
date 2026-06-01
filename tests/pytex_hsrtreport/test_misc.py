@@ -87,7 +87,8 @@ def test_logo_path_lookup():
 
 def test_variants_default_logos_inf():
     from pytex_hsrtreport.variants import default_logo_names
-    assert default_logo_names(Variant.INF) == ("HSRT", "INF")
+
+    assert default_logo_names(Variant.INF) == ("INF",)
 
 
 def test_titlepage_basic_render():

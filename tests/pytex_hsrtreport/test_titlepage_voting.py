@@ -5,8 +5,10 @@ from pytex_hsrtreport.voting import VotingResults
 
 def test_titlepage_wraps_in_titlepage_env():
     out = TitlePage("Title").rendered
-    assert out.startswith(r"\begin{titlepage}")
-    assert out.endswith(r"\end{titlepage}")
+    # The env is bracketed by the HSRTTitlePage flag toggles so footer_logo_hook
+    # can suppress the footer logos on the title page only.
+    assert out.startswith(r"\HSRTTitlePagetrue\begin{titlepage}")
+    assert out.endswith(r"\end{titlepage}\HSRTTitlePagefalse")
 
 
 def test_titlepage_renders_section_star_for_abstract():

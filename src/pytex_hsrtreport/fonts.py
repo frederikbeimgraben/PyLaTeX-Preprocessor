@@ -1,18 +1,18 @@
-import base64
-from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
-from typing import Final, override
+from typing import Final
 
 from pytex.commands.fontspec import Newfontfamily, Setmainfont, Setsansfont
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
+from pytex.model.raw import Raw
 from pytex.registry import Registry
 
 _FONT_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/fonts")))
 
-# Output path prefix used in filecontents* targets and fontspec Path= options.
-# Fonts are decoded to <this>/<subfamily>/ relative to the .tex file.
+# Output dir for the bundled TTFs, relative to the .tex file. `HSRTReport`'s
+# `write_inline_fonts` copies the real font files here; fontspec's Path= option
+# (see `_font_opts`) loads them from <this>/<subfamily>/.
 FONT_OUTPUT_DIR: Final[str] = "fonts"
 
 
@@ -24,32 +24,6 @@ def all_font_paths() -> tuple[Path, ...]:
 def rel(font_path: Path) -> str:
     """Path of a font file relative to `_FONT_DIR`."""
     return font_path.relative_to(_FONT_DIR).as_posix()
-
-
-def filecontents_font_b64_block(font_path: Path) -> str:
-    """Emit a `\\filecontents*` block that writes `<rel>.b64` during TeX compilation."""
-    payload = base64.b64encode(font_path.read_bytes()).decode("ascii")
-    chunks = [payload[i : i + 76] for i in range(0, len(payload), 76)]
-    body = "\n".join(chunks)
-    target = f"{FONT_OUTPUT_DIR}/{rel(font_path)}.b64"
-    return (
-        f"\\begin{{filecontents*}}[overwrite,nosearch]{{{target}}}\n"
-        f"{body}\n"
-        "\\end{filecontents*}\n"
-    )
-
-
-@Registry.add
-@dataclass
-class HSRTInlineFonts(TeX):
-    """Emit `\\filecontents*` base64 blocks for every bundled HSRT font TTF."""
-
-    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
-
-    @property
-    @override
-    def rendered(self) -> str:
-        return "\n".join(filecontents_font_b64_block(p) for p in all_font_paths())
 
 
 def _font_opts(subfamily: str, upright: str, italic: str) -> dict[str, str]:
@@ -69,14 +43,16 @@ def HSRTFontSetup() -> TeX:
 
     Mirrors ``Config/Fonts.tex`` from the original template.  The font files
     are expected at ``fonts/DIN/`` and ``fonts/Blender/`` relative to the
-    output ``.tex`` file, which is where the build helper decodes the
-    ``filecontents*`` base64 blobs written by `HSRTInlineFonts`.
+    output ``.tex`` file, which is where ``HSRTReport.write_inline_fonts``
+    copies the bundled TTFs before the TeX run.
     """
     blender_opts = _font_opts("Blender", "*-Medium", "*-MediumItalic")
     din_opts = _font_opts("DIN", "*-Regular", "*-Italic")
     return Concat(
         Newfontfamily("\\BlenderFont", "Blender", options=blender_opts),
         Newfontfamily("\\DINFont", "DIN", options=din_opts),
+        Raw(r"\renewcommand{\blenderfont}{\BlenderFont}"),
+        Raw(r"\renewcommand{\dinfont}{\DINFont}"),
         Setsansfont("Blender", options=blender_opts),
         Setmainfont("DIN", options=din_opts),
     )
@@ -85,6 +61,6 @@ def HSRTFontSetup() -> TeX:
 __all__ = [
     "FONT_OUTPUT_DIR",
     "HSRTFontSetup",
-    "HSRTInlineFonts",
-    "filecontents_font_b64_block",
+    "all_font_paths",
+    "rel",
 ]

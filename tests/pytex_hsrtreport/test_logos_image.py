@@ -56,7 +56,7 @@ def test_logo_strip_empty_renders_empty():
 
 def test_default_logos_for_inf():
     out = DefaultLogos(Variant.INF, inline_base64=False).rendered
-    assert "HSRT.pdf" in out and "INF.pdf" in out
+    assert "INF.pdf" in out
 
 
 def test_default_logos_for_stupa():
@@ -66,7 +66,6 @@ def test_default_logos_for_stupa():
 
 def test_inline_logo_collected_by_document():
     from pytex.commands.builtin import Section
-
     from pytex_hsrtreport import HSRTReport
 
     body = Logo("HSRT", inline_base64=True)

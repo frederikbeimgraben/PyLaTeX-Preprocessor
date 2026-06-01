@@ -10,6 +10,7 @@ from . import (  # noqa: F401
     listings,
     logos,
     pagebreak,
+    pagesetup,
     titlepage,
     variants,
     voting,
@@ -29,7 +30,7 @@ from .citations import Fcite  # noqa: F401
 from .cleveref_names import GermanCrefNames  # noqa: F401
 from .colors import HSRT_PALETTE, HSRTColors  # noqa: F401
 from .document import HSRTReport  # noqa: F401
-from .fonts import HSRTFontSetup, HSRTInlineFonts  # noqa: F401
+from .fonts import HSRTFontSetup  # noqa: F401
 from .glossary import AcrShortcut, HSRTGlossarySetup  # noqa: F401
 from .hyperref_config import (  # noqa: F401
     HSRT_CITE_COLOR,
@@ -47,6 +48,7 @@ from .pagebreak import (  # noqa: F401
     Smartsection,
     Smartsubsection,
 )
+from .pagesetup import HSRTPageSetup  # noqa: F401
 from .titlepage import TitlePage, TitlePageDataLine  # noqa: F401
 from .variants import Variant, default_logo_names  # noqa: F401
 from .voting import VotingResults  # noqa: F401
@@ -68,8 +70,8 @@ __all__ = [
     "HSRTFontSetup",
     "HSRTGlossarySetup",
     "HSRTHyperref",
-    "HSRTInlineFonts",
     "HSRTListingStyles",
+    "HSRTPageSetup",
     "HSRTReport",
     "HSRT_CITE_COLOR",
     "HSRT_HYPER_OPTIONS",
@@ -104,6 +106,7 @@ __all__ = [
     "logo_path",
     "logos",
     "pagebreak",
+    "pagesetup",
     "style_options",
     "titlepage",
     "variants",

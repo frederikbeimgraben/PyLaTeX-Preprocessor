@@ -31,22 +31,24 @@ class Config:
     shell_escape: bool
 
 
-def _default_output(inp: Path) -> Path:
-    """Default rendered-output path beside the input.
+def _default_output(inp: Path, build_dir: Path) -> Path:
+    """Default rendered-output path inside the build directory.
 
     The driver extension is dropped, plus a trailing ``.tex`` if the source is
-    named after its target (the ``name.tex.py`` convention):
+    named after its target (the ``name.tex.py`` convention). The result lives in
+    ``build_dir`` so the ``.out.tex`` and its inline assets (fonts, logos,
+    images) stay out of the source tree:
 
-    * ``example.tex.py`` -> ``example.out.tex``
-    * ``report.py``      -> ``report.out.tex``
-    * ``paper.tex``      -> ``paper.out.tex``
+    * ``example.tex.py`` -> ``<build_dir>/example.out.tex``
+    * ``report.py``      -> ``<build_dir>/report.out.tex``
+    * ``paper.tex``      -> ``<build_dir>/paper.out.tex``
     """
     base = inp
     if base.suffix.lower() in {".py", ".tex"}:
         base = base.with_suffix("")
     if base.suffix.lower() == ".tex":
         base = base.with_suffix("")
-    return base.parent / f"{base.name}.out.tex"
+    return build_dir / f"{base.name}.out.tex"
 
 
 def _parse_args(argv: list[str]) -> Config:
@@ -67,7 +69,7 @@ def _parse_args(argv: list[str]) -> Config:
         "--output",
         type=Path,
         default=None,
-        help="rendered .tex output path (default: <input>.out.tex)",
+        help="rendered .tex output path (default: <build-dir>/<input>.out.tex)",
     )
     _ = parser.add_argument(
         "-b",
@@ -89,11 +91,12 @@ def _parse_args(argv: list[str]) -> Config:
     )
     ns = parser.parse_args(argv)
     inp = cast(Path, ns.input)
+    build_dir = cast(Path, ns.build_dir)
     return Config(
         input=inp,
-        output=cast("Path | None", ns.output) or _default_output(inp),
+        output=cast("Path | None", ns.output) or _default_output(inp, build_dir),
         build=cast(bool, ns.build),
-        build_dir=cast(Path, ns.build_dir),
+        build_dir=build_dir,
         shell_escape=cast(bool, ns.shell_escape),
     )
 
@@ -117,10 +120,13 @@ def _run(cfg: Config, console: Console) -> None:
 
     build_dir.mkdir(parents=True, exist_ok=True)
 
-    # Materialise inline assets (fonts, images) alongside the .tex so the
-    # TeX engine can locate them by the relative paths in the preamble.
+    # Materialise inline assets (fonts, logos, images) alongside the .tex (in
+    # the build dir by default) so the TeX engine can locate them by the
+    # relative paths in the preamble.
     if hasattr(tex_node, "write_inline_fonts"):
         cast(HSRTReport, tex_node).write_inline_fonts(str(output.parent))
+    if hasattr(tex_node, "write_inline_logos"):
+        cast(HSRTReport, tex_node).write_inline_logos(str(output.parent))
     if hasattr(tex_node, "write_inline_images"):
         cast(HSRTReport, tex_node).write_inline_images(str(output.parent))
 
