@@ -1,6 +1,7 @@
 from ..helpers.with_package import with_package
 from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
+from ..model.raw import Raw
 from ..packages import GLOSSARIES
 from ..registry import Registry
 
@@ -14,9 +15,12 @@ def Makeglossaries() -> TeX:
 @Registry.add
 @with_package(GLOSSARIES)
 def Newglossaryentry(label: str, fields: dict[str, str]) -> TeX:
+    # Brace each value so commas inside it (common in descriptions) are not
+    # parsed as key=value separators by the glossaries key-val list.
+    opts = ",".join(f"{key}={{{value}}}" for key, value in fields.items())
     return ControlSequence(
         "newglossaryentry",
-        (Parameter(label), Parameter(fields)),
+        (Parameter(label), Parameter(Raw(opts))),
     )
 
 

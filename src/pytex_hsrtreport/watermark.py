@@ -26,6 +26,10 @@ def _watermark_text(text: str) -> str:
 
 @Registry.add
 @with_package(DRAFTWATERMARK)
+@with_package(IFTHEN)
+@with_package(PGFFOR)
+@with_package(ACCSUPP)
+@with_package(XCOLOR)
 def DraftWatermark(
     text: str,
     scale: float = 0.08,

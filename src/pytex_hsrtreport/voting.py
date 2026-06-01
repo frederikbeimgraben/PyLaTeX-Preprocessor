@@ -8,10 +8,16 @@ from pytex.helpers.parenting import attach
 from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
+from pytex.model.package import DefinePackage
 from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
 from pytex.registry import Registry
 
 from .boxes import ColoredBox, CustomBox
+
+# `multicol` is not in pytex.packages; the multicols env needs it. Declared here
+# because VotingResults builds the Multicols node inside `.rendered`, so the
+# command's own requirements never reach the document's package collector.
+MULTICOL: Final = DefinePackage("multicol")
 
 
 def _vote_color(yes: int, no: int) -> str:
@@ -50,7 +56,7 @@ class VotingResults(TeX):
     @property
     @override
     def requires(self) -> frozenset[PackageProtocol]:
-        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME})
+        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME, MULTICOL})
 
     @property
     @override

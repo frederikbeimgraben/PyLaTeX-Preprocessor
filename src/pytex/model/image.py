@@ -120,10 +120,13 @@ def filecontents_b64_block(image: IncludeImage) -> str:
     payload = image.base64_payload()
     chunks = [payload[i : i + 76] for i in range(0, len(payload), 76)]
     body = "\n".join(chunks)
+    # Trailing newline is required: LaTeX ignores anything after
+    # \end{filecontents*} on the same line, so without it the next token
+    # (another block, or the preamble) would be silently dropped.
     return (
         f"\\begin{{filecontents*}}[overwrite,nosearch]{{{target}}}\n"
         f"{body}\n"
-        "\\end{filecontents*}"
+        "\\end{filecontents*}\n"
     )
 
 

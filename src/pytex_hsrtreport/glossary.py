@@ -24,8 +24,9 @@ def HSRTGlossarySetup() -> TeX:
             r"\newglossarystyle{manualfixedwidth}{"
             + r"\setglossarystyle{long3colheader}"
             + r"\renewenvironment{theglossary}{\begin{longtable}{@{}"
-            + r"L{0.30\textwidth-\tabcolsep} p{0.58\textwidth-\tabcolsep}"
-            + r" L{0.10\textwidth-\tabcolsep}@{}}}{\end{longtable}}"
+            + r"L{\dimexpr0.30\textwidth-\tabcolsep\relax}"
+            + r" p{\dimexpr0.58\textwidth-\tabcolsep\relax}"
+            + r" L{\dimexpr0.10\textwidth-\tabcolsep\relax}@{}}}{\end{longtable}}"
             + r"\renewcommand*{\glsgroupskip}{}"
             + r"\renewcommand{\arraystretch}{1.1}}"
         ),

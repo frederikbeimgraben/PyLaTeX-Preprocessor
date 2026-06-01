@@ -1,3 +1,4 @@
+# pyright: reportAny=false, reportExplicitAny=false
 """Convert a marko Markdown AST into native PyTeX ``TeX`` nodes.
 
 Block elements map to the standard pytex library (headings, lists, quotes,
@@ -9,26 +10,26 @@ this module depends on ``pytex_hsrtreport``.
 from __future__ import annotations
 
 import re
-from typing import Callable, Final, cast, final
+from typing import Any, Callable, Final, cast, final
 
 from pytex.commands.builtin import (
     Bold,
+    Chapter,
     Emph,
     Enumerate,
     Itemize,
     Newline,
+    Noindent,
+    Paragraph,
     Part,
-    Chapter,
+    Quote,
+    Rule,
     Section,
+    Subparagraph,
     Subsection,
     Subsubsection,
-    Paragraph,
-    Subparagraph,
-    Quote,
     Texttt,
     Verbatim,
-    Noindent,
-    Rule,
 )
 from pytex.commands.hyperref import Href
 from pytex.interface.tex import TeX
@@ -36,7 +37,6 @@ from pytex.model.concat import Concat
 from pytex.model.empty import Empty
 from pytex.model.image import IncludeImage
 from pytex.model.raw import Raw, pytex_namespace
-
 from pytex_hsrtreport.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
 from .escape import escape_latex
@@ -170,7 +170,7 @@ class MarkdownConverter:
         if box is None:
             return None
         # Rebuild the first paragraph with the marker stripped, keep the rest.
-        stripped = first_text[match.end():]
+        stripped = first_text[match.end() :]
         head = Concat(
             Raw(escape_latex(stripped)),
             *(self.inline(c) for c in inner[1:]),
@@ -202,7 +202,7 @@ class MarkdownConverter:
         expr = _strip_md_title(title)
         if not expr:
             return Empty
-        result = eval(expr, pytex_namespace())  # noqa: S307
+        result: Any = eval(expr, pytex_namespace())  # noqa: S307
         return result if isinstance(result, TeX) else Raw(str(result))
 
     def block(self, node: object) -> TeX:
@@ -222,7 +222,10 @@ class MarkdownConverter:
         if kind == "LinkRefDef":
             # `[//]: # "EXPR"` is the Markdown-comment escape hatch: evaluate it.
             # Any other link reference definition renders to nothing.
-            if getattr(node, "label", None) == "//" and getattr(node, "dest", None) == "#":
+            if (
+                getattr(node, "label", None) == "//"
+                and getattr(node, "dest", None) == "#"
+            ):
                 return self._eval_comment(node)
             return Empty
         if kind == "BlankLine":

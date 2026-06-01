@@ -15,6 +15,7 @@ from pytex.model.empty import Empty
 from pytex.model.environment import Environment
 from pytex.model.raw import Raw
 from pytex.packages import (
+    ARRAY,
     BIBLATEX,
     CLEVEREF,
     CSQUOTES,
@@ -26,7 +27,9 @@ from pytex.packages import (
     HYPERREF,
     LISTINGS,
     LMODERN,
+    LONGTABLE,
     MDFRAMED,
+    NEEDSPACE,
     PGF,
     PGFFOR,
     RAGGED2E,
@@ -75,6 +78,9 @@ _BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
         ETOOLBOX,
         SETSPACE,
         RAGGED2E,
+        ARRAY,
+        LONGTABLE,
+        NEEDSPACE,
     }
 )
 
@@ -230,16 +236,16 @@ class HSRTReport(KomaDocument):
         if self.show_glossary or self.show_acronyms or self.show_bibliography:
             parts.append(Raw(r"\newpage\appendix\backmatter\HSRTBackMattertrue"))
 
+        # \printglossary emits its own \chapter* heading, which starts a new
+        # page. A preceding \clearpage+\vspace would put glue on the fresh page,
+        # so the \chapter* then ships that (blank) page — leave the break to the
+        # heading itself.
         if self.show_glossary:
-            parts.append(
-                Raw(
-                    r"\renewcommand*{\entryname}{Wort}\clearpage\vspace*{-2.25em}\printglossary"
-                )
-            )
+            parts.append(Raw(r"\renewcommand*{\entryname}{Wort}\printglossary"))
         if self.show_acronyms:
             parts.append(
                 Raw(
-                    r"\renewcommand*{\entryname}{Abkürzung}\clearpage\vspace*{-2.25em}\printglossary[type=\acronymtype,title=Abkürzungen]"
+                    r"\renewcommand*{\entryname}{Abkürzung}\printglossary[type=\acronymtype,title=Abkürzungen]"
                 )
             )
         if self.show_bibliography:

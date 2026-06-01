@@ -8,6 +8,9 @@ _SETUP = r"""
 \def\@author{}
 \newif\ifHSRTBackMatter
 \newif\ifHSRTTitlePage
+% Minimum space \Smartsection/\Smartsubsection demand before breaking a page.
+\newlength{\sectionminspace}\setlength{\sectionminspace}{4\baselineskip}
+\newlength{\subsectionminspace}\setlength{\subsectionminspace}{3\baselineskip}
 \providecommand{\blenderfont}{\sffamily}
 \providecommand{\dinfont}{\rmfamily}
 \let\Chaptermark\chaptermark
@@ -27,6 +30,14 @@ _SETUP = r"""
 \pagestyle{scrheadings}
 \renewcommand*{\chapterpagestyle}{scrheadings}
 \setkomafont{disposition}{\blenderfont\bfseries}
+% ToC consistency: section/subsection entries default to the main font (DIN),
+% giving the ToC two different families. Force the whole ToC into \blenderfont
+% after its heading so every entry, leader and page number matches the headings.
+% \AfterTOCHead does not reach the chapter entry/page-number (KOMA reselects
+% their komafont), so set those explicitly too.
+\AfterTOCHead{\blenderfont}
+\setkomafont{chapterentry}{\blenderfont\bfseries}
+\setkomafont{chapterentrypagenumber}{\blenderfont\bfseries}
 \setkomafont{chapter}{\LARGE\blenderfont\bfseries}
 \setkomafont{section}{\Large\blenderfont\bfseries}
 \setkomafont{subsection}{\large\blenderfont\bfseries}
@@ -59,11 +70,12 @@ _SETUP = r"""
   \@mainmattertrue
   \pagenumbering{arabic}%
 }
-% \baselinestretch=1.5 changes \baselineskip *after* typearea computed the type
-% area for single spacing, leaving \textheight off the line grid (overfull \vbox
-% "while \output is active" on every page). Recompute the type area once the
-% stretched \baselineskip is live, at begin-document.
-\AtBeginDocument{\recalctypearea}
+% The running head is set in \blenderfont, which is taller than the default
+% 17pt \headheight; the surplus spilled into the body and triggered an overfull
+% \vbox "while \output is active" on every page. Enlarge \headheight to fit.
+% Done at begin-document so it survives geometry's deferred layout pass, and it
+% leaves the 2cm horizontal margins untouched.
+\AtBeginDocument{\setlength{\headheight}{22pt}}
 \makeatother
 """
 
