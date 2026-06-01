@@ -181,6 +181,8 @@ cython_debug/
 !src/**/*.pdf
 !examples/*.*
 
+/examples/fonts/
+
 **/*.out.*
 
 /tmp
