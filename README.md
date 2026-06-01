@@ -42,3 +42,27 @@ payloads at compile time. The build runs tectonic, then `makeindex` (for
 Output is minimal and color-tagged (`==>`, `note:`, `warning:`, `error:`),
 following tectonic's style; on failure it points at the likely cause and the
 log file. Set `NO_COLOR` to disable color.
+
+## Markdown
+
+`pytex_markdown` converts Markdown to native `TeX` nodes (via `marko`):
+
+```py
+from pytex_markdown import Markdown, IncludeMarkdown
+
+body = Markdown("# Title\n\nText with **bold**, `code`, [a link](https://x).")
+body = IncludeMarkdown("notes.md", base_level=-1)   # base_level=-1: # -> \chapter
+```
+
+Headings, emphasis, inline/fenced code, lists, links, images, block quotes and
+thematic breaks map to the standard pytex library; text is LaTeX-escaped.
+GitHub-style callouts become HSRT colored boxes (so the module depends on
+`pytex_hsrtreport`):
+
+```md
+> [!NOTE]      -> InfoBox        > [!IMPORTANT] -> ImportantBox
+> [!TIP]       -> SuccessBox     > [!WARNING]   -> WarningBox
+```
+
+Both factories are registered, so they are usable from `\iffalse pytex(...) \fi`
+replacements in `.tex` sources too.

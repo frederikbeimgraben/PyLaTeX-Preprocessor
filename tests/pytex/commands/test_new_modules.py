@@ -149,7 +149,7 @@ from pytex.packages import (
     CAPTION,
     CLEVEREF,
     ETOOLBOX,
-    FONTAWESOME5,
+    FONTAWESOME,
     FONTSPEC,
     GEOMETRY,
     GLOSSARIES,
@@ -344,8 +344,8 @@ def test_setspace_commands():
 
 def test_fontawesome_commands():
     i = FaIcon("home")
-    assert FONTAWESOME5 in i.requires
-    assert i.rendered == r"\faIcon{home}"
+    assert FONTAWESOME in i.requires
+    assert i.rendered == r"\faicon{home}"
     assert FaInfoCircle().rendered == r"\faInfoCircle"
     assert FaExclamationTriangle().rendered == r"\faExclamationTriangle"
     assert FaCheckCircle().rendered == r"\faCheckCircle"

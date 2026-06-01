@@ -1,4 +1,4 @@
-from pytex.packages import FONTAWESOME5, MDFRAMED, XCOLOR
+from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
 from pytex_hsrtreport.boxes import (
     ColoredBox,
     CustomBox,
@@ -56,7 +56,7 @@ def test_renders_with_computed_opacities():
 
 def test_requires_packages():
     req = InfoBox("x").requires
-    assert MDFRAMED in req and XCOLOR in req and FONTAWESOME5 in req
+    assert MDFRAMED in req and XCOLOR in req and FONTAWESOME in req
 
 
 def test_preset_colors():

@@ -101,7 +101,7 @@ PDFTEXCMDS: Package = DefinePackage("pdftexcmds")
 XFP: Package = DefinePackage("xfp")
 KEYVAL: Package = DefinePackage("keyval")
 PIFONT: Package = DefinePackage("pifont")
-FONTAWESOME5: Package = DefinePackage("fontawesome5")
+FONTAWESOME: Package = DefinePackage("fontawesome")
 FLOATROW: Package = DefinePackage("floatrow")
 CHNGCNTR: Package = DefinePackage("chngcntr")
 ACCSUPP: Package = DefinePackage("accsupp")
@@ -208,7 +208,7 @@ class Packages(Enum):
     XFP = XFP
     KEYVAL = KEYVAL
     PIFONT = PIFONT
-    FONTAWESOME5 = FONTAWESOME5
+    FONTAWESOME = FONTAWESOME
     FLOATROW = FLOATROW
     CHNGCNTR = CHNGCNTR
     ACCSUPP = ACCSUPP

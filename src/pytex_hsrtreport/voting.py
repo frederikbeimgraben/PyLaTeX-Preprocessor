@@ -8,7 +8,7 @@ from pytex.helpers.parenting import attach
 from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
-from pytex.packages import FONTAWESOME5, MDFRAMED, XCOLOR
+from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
 from pytex.registry import Registry
 
 from .boxes import ColoredBox, CustomBox
@@ -50,7 +50,7 @@ class VotingResults(TeX):
     @property
     @override
     def requires(self) -> frozenset[PackageProtocol]:
-        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME5})
+        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME})
 
     @property
     @override
