@@ -52,7 +52,8 @@ _SETUP = r"""
 \counterwithout{equation}{chapter}
 \renewcommand{\thefigure}{\thechapter.\arabic{figure}}
 \renewcommand{\thetable}{\thechapter.\arabic{table}}
-\renewcommand{\baselinestretch}{1.5}
+\renewcommand{\baselinestretch}{1}
+\renewcommand{\arraystretch}{1.5}
 \hyphenpenalty=500
 \exhyphenpenalty=500
 \tolerance=1000
@@ -60,7 +61,7 @@ _SETUP = r"""
 \widowpenalty=10000
 \clubpenalty=10000
 \raggedbottom
-\setlength{\parskip}{0.25em plus 0.1em minus 0.05em}
+\setlength{\parskip}{0.5em plus 0.2em minus 0.1em}
 \setlength{\parindent}{0pt}
 % Prevent \mainmatter from inserting a blank page via \cleardoublepage.
 % scrbook's \mainmatter calls \cleardoublepage to force chapters onto a
