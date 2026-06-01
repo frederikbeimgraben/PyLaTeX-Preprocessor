@@ -135,9 +135,9 @@ def render_protocol(text: str, *, base_level: int = 0) -> HSRTReport:
         title=_title(meta),
         data_lines=_data_lines(meta),
         # Agenda items are top-level `#` headings -> \section. In scrbook a
-        # chapterless section would number as "0.1"; flatten it to a plain
-        # arabic counter so TOPs read 1, 2, 3, ...
-        user_preamble=Raw(r"\renewcommand*{\thesection}{\arabic{section}}"),
+        # chapterless section would number as "0.1"; number them as agenda
+        # items instead, so headings read "TOP 1", "TOP 2", ...
+        user_preamble=Raw(r"\renewcommand*{\thesection}{TOP~\arabic{section}}"),
         body=Concat(converted, *tail),
     )
 

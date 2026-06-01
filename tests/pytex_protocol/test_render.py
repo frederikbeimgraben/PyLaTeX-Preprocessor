@@ -106,6 +106,6 @@ def test_data_lines_cover_metadata():
     assert labels == ["Datum", "Zeit", "Ort", "Sitzungsleitung", "Anwesend (3)"]
 
 
-def test_agenda_section_numbering_is_flattened():
+def test_agenda_items_numbered_as_tops():
     out = render_protocol("---\ngremium: STUPA\n---\n\n# TOP\n").rendered
-    assert r"\renewcommand*{\thesection}{\arabic{section}}" in out
+    assert r"\renewcommand*{\thesection}{TOP~\arabic{section}}" in out
