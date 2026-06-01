@@ -10,7 +10,7 @@ this module depends on ``pytex_hsrtreport``.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Final, cast, final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from pytex.commands.builtin import (
     Bold,
@@ -91,9 +91,12 @@ def _text(node: object) -> str | None:
     return ch if isinstance(ch, str) else None
 
 
-@final
 class MarkdownConverter:
-    """Walk a marko AST, producing a single ``TeX`` tree."""
+    """Walk a marko AST, producing a single ``TeX`` tree.
+
+    Subclass to add domain-specific blocks/inlines (see
+    ``pytex_protocol.convert.ProtocolConverter``).
+    """
 
     base_level: int
     callouts: bool
