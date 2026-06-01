@@ -72,11 +72,23 @@ def test_render_protocol_full_document():
     )
     out = render_protocol(md).rendered
     assert r"\documentclass" in out
-    assert "STUPA — Protokoll" in out  # title-page title
+    # Descriptive title with the German-formatted date.
+    assert "Protokoll der Sitzung des STUPA vom 15.06.2026" in out
     assert "Datum" in out and "2026-06-15" in out  # metadata as data lines
     assert "18:30" in out
     assert "Beschluss" in out
     assert r"\section{Begr" in out  # agenda item is a numbered section
+
+
+def test_title_is_descriptive_with_german_date():
+    from pytex_protocol.document import _title
+
+    assert (
+        _title({"gremium": "STUPA", "datum": "2026-06-15"})
+        == "Protokoll der Sitzung des STUPA vom 15.06.2026"
+    )
+    assert _title({"gremium": "AStA"}) == "Protokoll der Sitzung des AStA"
+    assert _title({}) == "Sitzungsprotokoll"
 
 
 def test_data_lines_cover_metadata():

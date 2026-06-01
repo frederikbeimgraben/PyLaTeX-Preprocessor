@@ -8,6 +8,7 @@ as HSRT callout boxes. An optional signature block closes the document.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -76,9 +77,20 @@ def _variant(meta: Mapping[str, FrontmatterValue]) -> Variant:
     return _VARIANTS.get(_scalar(meta, "gremium").lower(), Variant.STUPA)
 
 
+def _format_date(value: str) -> str:
+    """ISO ``YYYY-MM-DD`` -> German ``DD.MM.YYYY``; anything else is kept as-is."""
+    match = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", value)
+    return f"{match[3]}.{match[2]}.{match[1]}" if match else value
+
+
 def _title(meta: Mapping[str, FrontmatterValue]) -> str:
     gremium = _scalar(meta, "gremium")
-    return f"{gremium} — Protokoll" if gremium else "Protokoll"
+    datum = _format_date(_scalar(meta, "datum", "date"))
+    if gremium and datum:
+        return f"Protokoll der Sitzung des {gremium} vom {datum}"
+    if gremium:
+        return f"Protokoll der Sitzung des {gremium}"
+    return "Sitzungsprotokoll"
 
 
 def _data_lines(meta: Mapping[str, FrontmatterValue]) -> tuple[TitlePageDataLine, ...]:
