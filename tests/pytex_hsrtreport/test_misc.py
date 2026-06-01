@@ -129,7 +129,7 @@ def test_smartsubsection():
 
 def test_fcite_renders_hyperlink():
     out = Fcite("knuth1984").rendered
-    assert r"\hyperlink{cite.knuth1984}" in out
+    assert r"\hyperlink{cite.0@knuth1984}" in out
     assert "citeauthor{knuth1984}" in out
     assert "citeyear{knuth1984}" in out
 
