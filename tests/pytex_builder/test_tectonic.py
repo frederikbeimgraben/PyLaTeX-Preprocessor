@@ -16,6 +16,9 @@ from pytex_builder.tectonic import (
     BuildError,
     _biber_for_build,
     _biber_sf_path,
+    _biber_sources,
+    _download_to,
+    _mirror_asset,
     ensure_tectonic,
     run_makeindex,
 )
@@ -50,6 +53,73 @@ def test_biber_sf_path_unsupported_raises(monkeypatch):
     monkeypatch.setattr(tec.platform, "machine", lambda: "pdp11")
     with pytest.raises(BuildError, match="unsupported platform"):
         _biber_sf_path()
+
+
+def test_mirror_asset_inserts_version():
+    assert (
+        _mirror_asset("2.17", "biber-linux_x86_64.tar.gz")
+        == "biber-2.17-linux_x86_64.tar.gz"
+    )
+
+
+def test_biber_sources_mirror_first_with_known_sha(monkeypatch):
+    monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
+    sources = _biber_sources("2.17")
+    assert len(sources) == 2
+    (mirror_url, mirror_sha), (sf_url, sf_sha) = sources
+    assert "github.com" in mirror_url and "biber-2.17-linux_x86_64.tar.gz" in mirror_url
+    assert "sourceforge.net" in sf_url
+    # checksum is the same content regardless of source
+    assert mirror_sha == sf_sha == tec.BIBER_SHA256["biber-2.17-linux_x86_64.tar.gz"]
+
+
+def test_biber_sources_unknown_platform_has_no_sha(monkeypatch):
+    monkeypatch.setattr(tec.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(tec.platform, "machine", lambda: "arm64")
+    sources = _biber_sources("2.17")
+    assert all(sha is None for _, sha in sources)
+
+
+def test_download_to_rejects_checksum_mismatch(monkeypatch, tmp_path):
+    dest = tmp_path / "biber.download"
+
+    def fake_run(cmd, **kwargs):
+        dest.write_bytes(b"not the real binary")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tec.subprocess, "run", fake_run)
+    console = Console(StringIO())
+    ok = _download_to("https://example/biber.tar.gz", dest, "deadbeef", console)
+    assert ok is False
+    assert not dest.exists()
+    assert "checksum mismatch" in console.stream.getvalue()
+
+
+def test_download_to_accepts_matching_checksum(monkeypatch, tmp_path):
+    dest = tmp_path / "biber.download"
+    payload = b"hello biber"
+    import hashlib as _hl
+
+    sha = _hl.sha256(payload).hexdigest()
+
+    def fake_run(cmd, **kwargs):
+        dest.write_bytes(payload)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(tec.subprocess, "run", fake_run)
+    assert _download_to("https://example/b.tar.gz", dest, sha, _console()) is True
+    assert dest.exists()
+
+
+def test_download_to_curl_failure_returns_false(monkeypatch, tmp_path):
+    dest = tmp_path / "biber.download"
+    monkeypatch.setattr(
+        tec.subprocess,
+        "run",
+        lambda *a, **k: SimpleNamespace(returncode=22, stdout="", stderr="404"),
+    )
+    assert _download_to("https://example/b.tar.gz", dest, None, _console()) is False
 
 
 def test_ensure_tectonic_uses_path_binary(monkeypatch):
