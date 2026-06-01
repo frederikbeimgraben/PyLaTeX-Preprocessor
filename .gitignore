@@ -178,3 +178,4 @@ cython_debug/
 !example.tex
 
 !src/**/*.tex
+!src/**/*.pdf
