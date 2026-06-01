@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytex-preprocessor"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name="Frederik Beimgraben", email="frederik@beimgraben.net" },
 ]
