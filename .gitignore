@@ -187,3 +187,4 @@ cython_debug/
 
 /tmp
 tmp/*
+/bin-tmp
