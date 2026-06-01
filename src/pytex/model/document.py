@@ -30,7 +30,11 @@ class Document(TeX):
     @property
     def packages(self) -> frozenset[PackageProtocol]:
         def get_packages(obj: TeX, found: set[PackageProtocol]) -> None:
-            found |= obj.requires or set()
+            found |= {
+                after
+                for pkg in (obj.requires or set[PackageProtocol]())
+                for after in pkg.after | {pkg}
+            }
 
             for child in obj.children or tuple():
                 get_packages(child, found)
@@ -41,6 +45,33 @@ class Document(TeX):
         get_packages(coerce_tex(self.preamble), found)
 
         return frozenset(found | self.extra_packages)
+
+    def ordered_packages(self) -> tuple[PackageProtocol, ...]:
+        """Packages sorted so each is emitted after its `after` dependencies.
+
+        A frozenset has no stable order, but some packages must be loaded in a
+        fixed sequence (e.g. `cleveref` after `hyperref`). Resolve that with a
+        depth-first topological sort, breaking ties by name for reproducibility.
+        """
+        packages = self.packages
+        by_name = {p.name: p for p in packages}
+        state: dict[str, bool] = {}  # name -> finished?
+        out: list[PackageProtocol] = []
+
+        def visit(pkg: PackageProtocol) -> None:
+            if state.get(pkg.name) is not None:
+                return  # finished, or currently visiting (cycle guard)
+            state[pkg.name] = False
+            for dep in sorted(pkg.after or (), key=lambda d: d.name):
+                present = by_name.get(dep.name)
+                if present is not None:
+                    visit(present)
+            state[pkg.name] = True
+            out.append(pkg)
+
+        for pkg in sorted(packages, key=lambda p: p.name):
+            visit(pkg)
+        return tuple(out)
 
     @property
     def inline_images(self) -> tuple[IncludeImage, ...]:
@@ -80,7 +111,7 @@ class Document(TeX):
     def rendered(self) -> str:
         return Concat(
             DocumentClass(self.document_class, self.document_class_options),
-            *self.packages,
+            *self.ordered_packages(),
             self.inline_image_block,
             self.preamble,
             Environment("document", self.body),

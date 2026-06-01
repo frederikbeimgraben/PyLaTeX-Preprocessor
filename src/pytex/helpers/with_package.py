@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Callable, override
 
+from pytex.interface.package import PackageProtocol
+
 from ..interface.tex import TeX
 from ..model.package import Package
 from ..registry import Registry
@@ -39,8 +41,11 @@ class WithPackage[T: TeX](TeX):
 
     @property
     @override
-    def requires(self) -> frozenset[Package] | None:
-        return frozenset({coerce_package(self.package)})
+    def requires(self) -> frozenset[PackageProtocol] | None:
+        return frozenset(
+            {coerce_package(self.package)}
+            | (self.child.requires or set[PackageProtocol]())
+        )
 
 
 def with_package[C: Callable[..., TeX]](pkg: Package | str) -> Callable[[C], C]:

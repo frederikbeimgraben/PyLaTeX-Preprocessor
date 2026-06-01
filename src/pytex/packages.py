@@ -55,7 +55,7 @@ MAKEIDX: Package = DefinePackage("makeidx")
 APPENDIX: Package = DefinePackage("appendix")
 TITLING: Package = DefinePackage("titling")
 LASTPAGE: Package = DefinePackage("lastpage")
-CLEVEREF: Package = DefinePackage("cleveref", after={HYPERREF})
+CLEVEREF: Package = DefinePackage("cleveref", after={HYPERREF, AMSMATH})
 VARIOREF: Package = DefinePackage("varioref")
 FRAMED: Package = DefinePackage("framed")
 # framemethod=tikz must be set at load time (preamble) for mdframed's rounded
