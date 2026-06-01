@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pytex_builder.build import _default_output, _parse_args
+from pytex_builder.build import _default_output, _parse_args, _slug
 
 
 def test_default_output_lives_in_build_dir():
@@ -28,3 +28,17 @@ def test_parse_args_default_output_follows_custom_build_dir():
 def test_explicit_output_overrides_build_dir():
     cfg = _parse_args(["foo.tex.py", "-o", "custom/here.tex"])
     assert cfg.output == Path("custom/here.tex")
+
+
+def test_default_output_slugifies_spaces():
+    # Spaces in the stem would break the TeX jobname (biber/.bcf); collapse them.
+    out = _default_output(Path("Meetings/2026-06-15 STUPA.md"), Path("build"))
+    assert out == Path("build/2026-06-15_STUPA.md.out.tex")
+    assert " " not in out.name
+
+
+def test_slug_collapses_whitespace_and_drops_hostile_chars():
+    assert _slug("2026-06-15 STUPA") == "2026-06-15_STUPA"
+    assert _slug("a  b\tc") == "a_b_c"
+    assert _slug("wö!rd?:(x).md") == "wörd x.md".replace(" ", "")
+    assert _slug("   ") == "document"

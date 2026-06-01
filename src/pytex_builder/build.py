@@ -8,6 +8,7 @@ acronyms resolve.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,16 +43,28 @@ def _default_output(inp: Path, build_dir: Path) -> Path:
     ``build_dir`` so the ``.out.tex`` and its inline assets (fonts, logos,
     images) stay out of the source tree:
 
-    * ``example.tex.py`` -> ``<build_dir>/example.out.tex``
-    * ``report.py``      -> ``<build_dir>/report.out.tex``
-    * ``paper.tex``      -> ``<build_dir>/paper.out.tex``
+    The stem is also slugified (whitespace and shell/TeX-hostile characters
+    become ``_``) because it becomes the TeX ``\\jobname``; spaces there break
+    tectonic's biber/makeindex steps (the ``.bcf`` path cannot be opened):
+
+    * ``example.tex.py``        -> ``<build_dir>/example.out.tex``
+    * ``report.py``             -> ``<build_dir>/report.out.tex``
+    * ``2026-06-15 STUPA.md``   -> ``<build_dir>/2026-06-15_STUPA.md.out.tex``
     """
     base = inp
     if base.suffix.lower() in {".py", ".tex"}:
         base = base.with_suffix("")
     if base.suffix.lower() == ".tex":
         base = base.with_suffix("")
-    return build_dir / f"{base.name}.out.tex"
+    return build_dir / f"{_slug(base.name)}.out.tex"
+
+
+def _slug(name: str) -> str:
+    """Make `name` safe as a TeX jobname: collapse whitespace and drop
+    characters that confuse tectonic/biber/makeindex."""
+    name = re.sub(r"\s+", "_", name.strip())
+    name = re.sub(r"[^\w.\-]", "", name)
+    return name or "document"
 
 
 def _parse_args(argv: list[str]) -> Config:
