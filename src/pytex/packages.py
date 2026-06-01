@@ -58,7 +58,9 @@ LASTPAGE: Package = DefinePackage("lastpage")
 CLEVEREF: Package = DefinePackage("cleveref", after={HYPERREF})
 VARIOREF: Package = DefinePackage("varioref")
 FRAMED: Package = DefinePackage("framed")
-MDFRAMED: Package = DefinePackage("mdframed")
+# framemethod=tikz must be set at load time (preamble) for mdframed's rounded
+# backgrounds; it cannot be switched on per-environment mid-document.
+MDFRAMED: Package = DefinePackage("mdframed", options={("framemethod", "tikz")})
 PDFPAGES: Package = DefinePackage("pdfpages")
 FONTSPEC: Package = DefinePackage("fontspec")
 UNICODE_MATH: Package = DefinePackage("unicode-math")

@@ -3,21 +3,25 @@ from typing import Final, override
 
 from pytex.commands.builtin import Hspace, Noindent, Vspace
 from pytex.commands.colors import SelectColor
-from pytex.commands.fontawesome import FaIcon
 from pytex.commands.floats import Minipage
 from pytex.commands.font import Fontsize, Selectfont
+from pytex.commands.fontawesome import FaIcon
 from pytex.commands.mdframed import Mdframed
 from pytex.commands.picture import Picture, Put
 from pytex.helpers.parenting import attach
 from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
-from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
+from pytex.model.raw import Raw
+from pytex.packages import CALC, FONTAWESOME, MDFRAMED, TIKZ, XCOLOR
 from pytex.registry import Registry
 
 _BASE_OPACITY: Final[float] = 0.05
 _PER_LEVEL: Final[float] = 0.075
 _ICON_BOOST: Final[int] = 20
+
+# Render-time nesting depth, mirroring LaTeX's `coloredBoxLevel` counter.
+_render_depth: int = 0
 
 
 @Registry.add
@@ -37,9 +41,7 @@ class ColoredBox(TeX):
     icon_offset_x: Final[str] = "0pt"
     icon_offset_y: Final[str] = "0pt"
     background_color: Final[str] = "blue"
-    _parent: "TeX | None" = field(
-        default=None, init=False, compare=False, repr=False
-    )
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         attach(self, self.body, self.icon)
@@ -70,54 +72,86 @@ class ColoredBox(TeX):
     @property
     @override
     def requires(self) -> frozenset[PackageProtocol]:
-        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME})
+        # `calc` is required: the original env uses infix length arithmetic
+        # (`\linewidth-0.5cm`, `\put(x-size,...)`) which is only valid with it.
+        # `tikz` is mdframed's framemethod that actually rounds the filled
+        # background when the frame lines are hidden.
+        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME, CALC, TIKZ})
 
     @property
     @override
     def rendered(self) -> str:
-        return Concat(
-            Vspace(r"0.5\baselineskip", star=True),
-            Noindent(),
-            Minipage(
-                r"\linewidth",
-                Mdframed(
-                    Concat(
-                        Picture(
-                            r"\textwidth",
-                            "0",
-                            Put(
-                                f"{self.icon_offset_x}-{self.icon_size}",
-                                f"{self.icon_offset_y}-0.7cm",
-                                Concat(
-                                    Fontsize(self.icon_size, self.icon_size),
-                                    Selectfont(),
-                                    SelectColor(f"{self.icon_color}!{self.icon_opacity}"),
-                                    self.icon,
+        # Faithful port of the HSRTReport `ColoredBox` env: a zero-height
+        # picture overlays the icon at the top-left, and the body sits in a
+        # narrower minipage beside it. Requires `calc` for the infix length
+        # arithmetic (see `requires`).
+        #
+        # Nesting depth is tracked with a render-time counter (mirroring the
+        # LaTeX `coloredBoxLevel`) rather than the parent chain: building the
+        # wrapper nodes below re-`attach`es the body and would sever that chain
+        # before the inner box renders.
+        global _render_depth
+        _render_depth += 1
+        try:
+            # Prefer the render counter (correct for top-down rendering, where
+            # building wrappers severs the parent chain); fall back to the
+            # parent chain so an inner box rendered in isolation is still right.
+            level = max(_render_depth, self.nesting_level)
+            bg = round((_BASE_OPACITY + _PER_LEVEL * level) * 100)
+            icon_op = bg + _ICON_BOOST
+            return Concat(
+                Vspace(r"0.5\baselineskip", star=True),
+                Noindent(),
+                Minipage(
+                    r"\linewidth",
+                    Mdframed(
+                        Concat(
+                            # Zero-size overlay: the icon is drawn at its \put
+                            # coordinates without reserving width, so the body
+                            # minipage flows normally instead of overflowing.
+                            Picture(
+                                "0",
+                                "0",
+                                Put(
+                                    f"{self.icon_offset_x}+0.2cm-{self.icon_size}",
+                                    self.icon_offset_y,
+                                    # `\vcenter` centres each glyph's actual
+                                    # bounding box on the math axis, so circles,
+                                    # triangles and ticks all line up with the
+                                    # first text line regardless of metrics.
+                                    Concat(
+                                        Raw(r"$\vcenter{\hbox{"),
+                                        Fontsize(self.icon_size, self.icon_size),
+                                        Selectfont(),
+                                        SelectColor(f"{self.icon_color}!{icon_op}"),
+                                        self.icon,
+                                        Raw(r"}}$"),
+                                    ),
                                 ),
                             ),
-                        ),
-                        Hspace("0.25cm", star=True),
-                        Minipage(
-                            r"\linewidth-0.5cm",
-                            Concat(
-                                Vspace(r"0.5\baselineskip"),
+                            Hspace("0.25cm+2pt", star=True),
+                            Minipage(
+                                r"\linewidth-0.5cm-2pt",
                                 self.body,
-                                Vspace(r"0.5\baselineskip"),
+                                align="t",
                             ),
                         ),
+                        options={
+                            "backgroundcolor": f"{self.background_color}!{bg}",
+                            "hidealllines": "true",
+                            "skipabove": r"0.7\baselineskip",
+                            "skipbelow": r"0.7\baselineskip",
+                            "innertopmargin": "0.45cm",
+                            "innerbottommargin": "0.45cm",
+                            "splitbottomskip": "2pt",
+                            "splittopskip": "4pt",
+                            "roundcorner": "5pt",
+                        },
                     ),
-                    options={
-                        "backgroundcolor": f"{self.background_color}!{self.background_opacity}",
-                        "hidealllines": "true",
-                        "skipabove": r"0.7\baselineskip",
-                        "skipbelow": r"0.7\baselineskip",
-                        "splitbottomskip": "2pt",
-                        "splittopskip": "4pt",
-                        "roundcorner": "5pt",
-                    },
                 ),
-            ),
-        ).rendered
+            ).rendered
+        finally:
+            _render_depth -= 1
 
 
 def _preset(
@@ -125,7 +159,7 @@ def _preset(
     icon_name: str,
     color: str,
     icon_size: str = "24pt",
-    icon_offset_x: str = "0pt",
+    icon_offset_x: str = "1.5pt",
     icon_offset_y: str = "0pt",
 ) -> ColoredBox:
     return ColoredBox(
@@ -141,22 +175,28 @@ def _preset(
 
 @Registry.add
 def InfoBox(body: TeX | str) -> ColoredBox:
-    return _preset(body, "info-circle", "blue")
+    return _preset(body, "info-circle", "blue", icon_offset_y="2pt")
 
 
 @Registry.add
 def WarningBox(body: TeX | str) -> ColoredBox:
-    return _preset(body, "exclamation-triangle", "red")
+    return _preset(
+        body, "exclamation-triangle", "red", icon_offset_y="1pt", icon_offset_x="0.5pt"
+    )
 
 
 @Registry.add
 def SuccessBox(body: TeX | str) -> ColoredBox:
-    return _preset(body, "check-circle", "green", icon_offset_y="2pt")
+    return _preset(body, "check-circle", "green")
 
 
 @Registry.add
 def ImportantBox(body: TeX | str) -> ColoredBox:
-    return _preset(body, "exclamation-circle", "orange")
+    return _preset(
+        body,
+        "exclamation-circle",
+        "orange",
+    )
 
 
 @Registry.add
