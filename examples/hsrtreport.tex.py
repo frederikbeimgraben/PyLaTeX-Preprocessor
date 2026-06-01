@@ -15,7 +15,6 @@ selects the Blender/DIN brand fonts, which must be installed locally.
 from pytex.commands.builtin import Chapter, Enumerate, Section
 from pytex.model.concat import Concat
 from pytex.model.math import DisplayMath, Frac
-
 from pytex_hsrtreport import (
     HSRTReport,
     ImportantBox,
@@ -26,6 +25,7 @@ from pytex_hsrtreport import (
 )
 
 __pytex__ = HSRTReport(
+    title_page=True,
     variant=Variant.INF,
     show_toc=True,
     body=Concat(

@@ -58,16 +58,21 @@ def _render_markdown(path: Path) -> TeX:
     return Document(IncludeMarkdown(path))
 
 
-def render_input(path: Path) -> str:
-    """Render ``path`` to a LaTeX source string."""
+def get_tex_node(path: Path) -> TeX:
+    """Load ``path`` and return the TeX node without rendering."""
     suffix = path.suffix.lower()
     if suffix == ".tex":
-        return IncludeTeX(path).rendered
+        return IncludeTeX(path)
     if suffix == ".py":
-        return _render_python(path).rendered
+        return _render_python(path)
     if suffix in (".md", ".markdown"):
-        return _render_markdown(path).rendered
+        return _render_markdown(path)
     raise BuildError(
         f"unsupported input type '{suffix or path.name}'; "
         + "expected .tex, .py or .md"
     )
+
+
+def render_input(path: Path) -> str:
+    """Render ``path`` to a LaTeX source string."""
+    return get_tex_node(path).rendered

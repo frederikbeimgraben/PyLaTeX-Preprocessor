@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Final, override
 
 from pytex.commands.colors import Definecolor
@@ -36,6 +37,7 @@ from pytex_koma.document import KomaDocument
 
 from .cleveref_names import GermanCrefNames
 from .colors import HSRTColors
+from .fonts import HSRTFontSetup, HSRTInlineFonts
 from .glossary import AcrShortcut, HSRTGlossarySetup
 from .hyperref_config import (
     HSRT_CITE_COLOR,
@@ -49,9 +51,25 @@ from .variants import Variant
 
 _BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
     {
-        LMODERN, GEOMETRY, GRAPHICX, XCOLOR, TIKZ, PGF, PGFFOR, LISTINGS, HYPERREF,
-        CLEVEREF, BIBLATEX, CSQUOTES, GLOSSARIES, MDFRAMED, FONTAWESOME,
-        SCRLAYER_SCRPAGE, ETOOLBOX, SETSPACE, RAGGED2E,
+        LMODERN,
+        GEOMETRY,
+        GRAPHICX,
+        XCOLOR,
+        TIKZ,
+        PGF,
+        PGFFOR,
+        LISTINGS,
+        HYPERREF,
+        CLEVEREF,
+        BIBLATEX,
+        CSQUOTES,
+        GLOSSARIES,
+        MDFRAMED,
+        FONTAWESOME,
+        SCRLAYER_SCRPAGE,
+        ETOOLBOX,
+        SETSPACE,
+        RAGGED2E,
     }
 )
 
@@ -79,6 +97,7 @@ class HSRTReport(KomaDocument):
     show_footer_logos: bool = False
 
     inline_logos: bool = True
+    inline_fonts: bool = True
     main_font: str | None = None
     sans_font: str | None = None
     geometry_options: dict[str, str] = field(
@@ -133,6 +152,8 @@ class HSRTReport(KomaDocument):
             HSRTListingStyles(),
             AcrShortcut(),
         ]
+        if self.inline_fonts:
+            parts.append(HSRTFontSetup())
         if self.main_font is not None:
             parts.append(Setmainfont(self.main_font))
         if self.sans_font is not None:
@@ -141,8 +162,50 @@ class HSRTReport(KomaDocument):
             parts.append(self.user_preamble)
         return Concat(*parts)
 
+    def write_inline_fonts(self, target_dir: str = ".") -> tuple[str, ...]:
+        """Write bundled font TTF files to ``<target_dir>/fonts/`` for compilation.
+
+        Call this before the TeX run so fontspec can resolve the font paths
+        embedded in the preamble by `HSRTFontSetup`.
+        """
+        if not self.inline_fonts:
+            return ()
+        from .fonts import (
+            FONT_OUTPUT_DIR,
+            all_font_paths,
+            rel,
+        )
+
+        base = Path(target_dir)
+        written: list[str] = []
+        for font_path in all_font_paths():
+            dest = base / FONT_OUTPUT_DIR / rel(font_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(font_path.read_bytes())
+            written.append(dest.as_posix())
+        return tuple(written)
+
     def default_logos(self) -> TeX:
         return DefaultLogos(self.variant, inline_base64=self.inline_logos)
+
+    @property
+    def inline_font_block(self) -> TeX:
+        """filecontents* base64 blocks for all bundled fonts, or Empty."""
+        if not self.inline_fonts:
+            return Empty
+        return HSRTInlineFonts()
+
+    @property
+    @override
+    def inline_image_block(self) -> TeX:
+        """Prepend font blocks to the image blocks emitted by the base class."""
+        base = super().inline_image_block
+        font_block = self.inline_font_block
+        if font_block is Empty:
+            return base
+        if base is Empty:
+            return font_block
+        return Concat(font_block, base)
 
     @property
     @override

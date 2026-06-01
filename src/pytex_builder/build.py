@@ -13,8 +13,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
+from pytex_hsrtreport.document import HSRTReport
+
 from .console import Console
-from .render import render_input
+from .render import get_tex_node
 from .tectonic import BuildError, ensure_tectonic, run_makeindex, run_tectonic
 
 _MAX_PASSES = 3
@@ -104,7 +106,8 @@ def _run(cfg: Config, console: Console) -> None:
     build_dir = cfg.build_dir
 
     console.step(f"Rendering {cfg.input.name}")
-    source = render_input(cfg.input)
+    tex_node = get_tex_node(cfg.input)
+    source = tex_node.rendered
     output.parent.mkdir(parents=True, exist_ok=True)
     _ = output.write_text(source)
     console.detail(f"wrote {output} ({len(source):,} bytes)")
@@ -113,6 +116,14 @@ def _run(cfg: Config, console: Console) -> None:
         return
 
     build_dir.mkdir(parents=True, exist_ok=True)
+
+    # Materialise inline assets (fonts, images) alongside the .tex so the
+    # TeX engine can locate them by the relative paths in the preamble.
+    if hasattr(tex_node, "write_inline_fonts"):
+        cast(HSRTReport, tex_node).write_inline_fonts(str(output.parent))
+    if hasattr(tex_node, "write_inline_images"):
+        cast(HSRTReport, tex_node).write_inline_images(str(output.parent))
+
     binary = ensure_tectonic(console)
 
     job = output.stem

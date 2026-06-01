@@ -4,6 +4,7 @@ from . import (  # noqa: F401
     cleveref_names,
     colors,
     document,
+    fonts,
     glossary,
     hyperref_config,
     listings,
@@ -28,6 +29,7 @@ from .citations import Fcite  # noqa: F401
 from .cleveref_names import GermanCrefNames  # noqa: F401
 from .colors import HSRT_PALETTE, HSRTColors  # noqa: F401
 from .document import HSRTReport  # noqa: F401
+from .fonts import HSRTFontSetup, HSRTInlineFonts  # noqa: F401
 from .glossary import AcrShortcut, HSRTGlossarySetup  # noqa: F401
 from .hyperref_config import (  # noqa: F401
     HSRT_CITE_COLOR,
@@ -63,8 +65,10 @@ __all__ = [
     "Fcite",
     "GermanCrefNames",
     "HSRTColors",
+    "HSRTFontSetup",
     "HSRTGlossarySetup",
     "HSRTHyperref",
+    "HSRTInlineFonts",
     "HSRTListingStyles",
     "HSRTReport",
     "HSRT_CITE_COLOR",
@@ -93,6 +97,7 @@ __all__ = [
     "colors",
     "default_logo_names",
     "document",
+    "fonts",
     "glossary",
     "hyperref_config",
     "listings",
