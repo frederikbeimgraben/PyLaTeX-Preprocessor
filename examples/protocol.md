@@ -12,7 +12,7 @@ entschuldigt:
 abwesend: [G. Fehlend]
 gäste: [H. Gast]
 vorstand: A. Muster
-unterschriften: [Sitzungsleitung, Schriftführung, Vorstand]
+unterschriften: [Schriftführung, Vorstand]
 ---
 
 # Begrüßung und Beschlussfähigkeit

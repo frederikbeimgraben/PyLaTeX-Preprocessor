@@ -54,7 +54,7 @@ def test_render_protocol_returns_hsrtreport():
     doc = render_protocol(md)
     assert isinstance(doc, HSRTReport)
     assert doc.variant is Variant.STUPA
-    assert doc.show_titlepage is False
+    assert doc.show_titlepage is True  # full HSRT title page carries the metadata
 
 
 def test_render_protocol_variant_mapping():
@@ -72,10 +72,26 @@ def test_render_protocol_full_document():
     )
     out = render_protocol(md).rendered
     assert r"\documentclass" in out
-    assert "STUPA — Protokoll" in out  # header block
+    assert "STUPA — Protokoll" in out  # title-page title
+    assert "Datum" in out and "2026-06-15" in out  # metadata as data lines
     assert "18:30" in out
     assert "Beschluss" in out
     assert r"\section{Begr" in out  # agenda item is a numbered section
+
+
+def test_data_lines_cover_metadata():
+    from pytex_protocol.document import _data_lines
+
+    meta = {
+        "datum": "2026-06-15",
+        "beginn": "18:30",
+        "ende": "20:00",
+        "ort": "Aula",
+        "sitzungsleitung": "A. Muster",
+        "anwesend": ["A", "B", "C"],
+    }
+    labels = [line.label for line in _data_lines(meta)]
+    assert labels == ["Datum", "Zeit", "Ort", "Sitzungsleitung", "Anwesend (3)"]
 
 
 def test_agenda_section_numbering_is_flattened():
