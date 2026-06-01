@@ -4,6 +4,15 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import XCOLOR
 from ..registry import Registry
 
+__all__ = [
+    "Colorbox",
+    "Definecolor",
+    "Fcolorbox",
+    "Pagecolor",
+    "SelectColor",
+    "Textcolor",
+]
+
 
 @Registry.add
 @with_package(XCOLOR)
@@ -23,7 +32,10 @@ def Textcolor(color: str, body: TeX | str) -> TeX:
 @Registry.add
 @with_package(XCOLOR)
 def SelectColor(color: str) -> TeX:
-    """`\\color{name}` — switch current colour. Use `Color` (model) for typed colour identity."""
+    """`\\color{name}` — switch current colour.
+
+    Use `Color` (model) for typed colour identity.
+    """
     return ControlSequence("color", (Parameter(color),))
 
 

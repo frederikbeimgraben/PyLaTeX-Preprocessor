@@ -4,6 +4,8 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.registry import Registry
 
+__all__ = ["Fcite"]
+
 
 @Registry.add
 def Fcite(key: str) -> TeX:

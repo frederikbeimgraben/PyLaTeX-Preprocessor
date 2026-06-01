@@ -2,6 +2,8 @@ from enum import Enum
 
 from pytex.model.package import DefinePackage, Package
 
+__all__ = ["Packages"]
+
 AMSMATH: Package = DefinePackage("amsmath")
 AMSSYMB: Package = DefinePackage("amssymb")
 AMSFONTS: Package = DefinePackage("amsfonts")

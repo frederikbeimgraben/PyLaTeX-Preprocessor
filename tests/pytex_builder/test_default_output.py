@@ -9,7 +9,9 @@ def test_default_output_lives_in_build_dir():
 
 
 def test_default_output_strips_double_extension():
-    assert _default_output(Path("a/b/paper.tex"), Path("out")) == Path("out/paper.out.tex")
+    assert _default_output(Path("a/b/paper.tex"), Path("out")) == Path(
+        "out/paper.out.tex"
+    )
     assert _default_output(Path("x.py"), Path("out")) == Path("out/x.out.tex")
 
 

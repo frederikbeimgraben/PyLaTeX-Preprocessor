@@ -12,15 +12,19 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from pytex.interface.tex import TeX
 from pytex.model.include import IncludeTeX
 
 from .tectonic import BuildError
 
-_PYTEX_VAR = "__pytex__"
+__all__ = ["get_tex_node", "render_input"]
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+PYTEX_VAR = "__pytex__"
 
 
 def _render_python(path: Path) -> TeX:
@@ -33,18 +37,18 @@ def _render_python(path: Path) -> TeX:
     sys.path.insert(0, str(path.resolve().parent))
     try:
         spec.loader.exec_module(module)
-    except Exception as exc:  # noqa: BLE001 - surface any import-time failure
+    except Exception as exc:
         raise BuildError(f"error while importing {path.name}: {exc}") from exc
     finally:
         sys.path.pop(0)
 
-    if not hasattr(module, _PYTEX_VAR):
-        raise BuildError(f"{path.name} defines no '{_PYTEX_VAR}' variable to render")
+    if not hasattr(module, PYTEX_VAR):
+        raise BuildError(f"{path.name} defines no '{PYTEX_VAR}' variable to render")
 
-    value = cast(object, getattr(module, _PYTEX_VAR))
+    value = cast("object", getattr(module, PYTEX_VAR))
     if not isinstance(value, TeX):
         raise BuildError(
-            f"'{_PYTEX_VAR}' in {path.name} is {type(value).__name__};"
+            f"'{PYTEX_VAR}' in {path.name} is {type(value).__name__};"
             + " expected a TeX node (with a '.rendered' property)"
         )
     return value

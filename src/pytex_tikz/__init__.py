@@ -1,5 +1,5 @@
-from . import tikz  # noqa: F401
-from .tikz import (  # noqa: F401
+from . import tikz
+from .tikz import (
     Circle,
     Coordinate,
     Draw,

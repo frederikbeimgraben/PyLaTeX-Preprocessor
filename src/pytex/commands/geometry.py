@@ -4,6 +4,8 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import GEOMETRY
 from ..registry import Registry
 
+__all__ = ["Geometry", "Newgeometry", "Restoregeometry"]
+
 
 @Registry.add
 @with_package(GEOMETRY)

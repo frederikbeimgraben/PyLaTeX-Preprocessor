@@ -3,6 +3,8 @@ from ..model.concat import Concat
 from ..model.raw import Raw
 from ..registry import Registry
 
+__all__ = ["Picture", "Put"]
+
 
 @Registry.add
 def Picture(

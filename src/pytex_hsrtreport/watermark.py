@@ -8,6 +8,8 @@ from pytex.model.raw import Raw
 from pytex.packages import ACCSUPP, IFTHEN, PGFFOR, XCOLOR
 from pytex.registry import Registry
 
+__all__ = ["DraftWatermark", "WatermarkCounter", "WatermarkPackages"]
+
 DRAFTWATERMARK: Final = DefinePackage("draftwatermark")
 
 

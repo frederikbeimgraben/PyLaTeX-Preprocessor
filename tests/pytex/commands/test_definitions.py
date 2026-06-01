@@ -7,16 +7,12 @@ from pytex.commands.definitions import (
 
 
 def test_newcommand_star():
-    assert (
-        Newcommand(r"\foo", "hi", star=True).rendered
-        == r"\newcommand*{\foo}{hi}"
-    )
+    assert Newcommand(r"\foo", "hi", star=True).rendered == r"\newcommand*{\foo}{hi}"
 
 
 def test_renewcommand_star():
     assert (
-        Renewcommand(r"\foo", "hi", star=True).rendered
-        == r"\renewcommand*{\foo}{hi}"
+        Renewcommand(r"\foo", "hi", star=True).rendered == r"\renewcommand*{\foo}{hi}"
     )
 
 

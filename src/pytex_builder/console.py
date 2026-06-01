@@ -10,6 +10,8 @@ import os
 import sys
 from typing import Final, TextIO
 
+__all__ = ["Console"]
+
 
 def _color_enabled(stream: TextIO) -> bool:
     if os.environ.get("NO_COLOR"):

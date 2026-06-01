@@ -10,7 +10,9 @@ from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
 from ..registry import Registry
 
-_PDF_COMPAT = {".pdf", ".png", ".jpg", ".jpeg", ".eps"}
+__all__ = ["IncludeImage", "collect_inline_images", "filecontents_b64_block"]
+
+PDF_COMPAT = {".pdf", ".png", ".jpg", ".jpeg", ".eps"}
 
 
 def _convert_to_pdf(src: Path, dst: Path) -> None:
@@ -54,7 +56,7 @@ class IncludeImage(TeX):
     def resolved_path(self) -> Path:
         """Path that `\\includegraphics` references. SVG → PDF in build/."""
         src = self.source_path
-        if src.suffix.lower() in _PDF_COMPAT:
+        if src.suffix.lower() in PDF_COMPAT:
             return src
         if src.suffix.lower() == ".svg":
             digest = hashlib.sha1(src.resolve().as_posix().encode()).hexdigest()[:10]
@@ -95,6 +97,7 @@ class IncludeImage(TeX):
     @override
     def requires(self) -> frozenset[PackageProtocol]:
         from ..packages import GRAPHICX
+
         return frozenset({GRAPHICX})
 
 

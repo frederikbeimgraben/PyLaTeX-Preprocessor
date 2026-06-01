@@ -24,7 +24,4 @@ def test_environment_with_params():
 
 
 def test_environment_empty_body():
-    assert (
-        Environment("center", "").rendered
-        == r"\begin{center}\end{center}"
-    )
+    assert Environment("center", "").rendered == r"\begin{center}\end{center}"

@@ -1,4 +1,4 @@
-from . import (  # noqa: F401
+from . import (
     boxes,
     citations,
     cleveref_names,
@@ -17,7 +17,7 @@ from . import (  # noqa: F401
     watermark,
     wordcount,
 )
-from .boxes import (  # noqa: F401
+from .boxes import (
     ColoredBox,
     CustomBox,
     DiscussionBox,
@@ -26,36 +26,41 @@ from .boxes import (  # noqa: F401
     SuccessBox,
     WarningBox,
 )
-from .citations import Fcite  # noqa: F401
-from .cleveref_names import GermanCrefNames  # noqa: F401
-from .colors import HSRT_PALETTE, HSRTColors  # noqa: F401
-from .document import HSRTReport  # noqa: F401
-from .fonts import HSRTFontSetup  # noqa: F401
-from .glossary import AcrShortcut, HSRTGlossarySetup  # noqa: F401
-from .hyperref_config import (  # noqa: F401
+from .citations import Fcite
+from .cleveref_names import GermanCrefNames
+from .colors import HSRT_PALETTE, HSRTColors
+from .document import HSRTReport
+from .fonts import HSRTFontSetup
+from .glossary import AcrShortcut, HSRTGlossarySetup
+from .hyperref_config import (
     HSRT_CITE_COLOR,
     HSRT_HYPER_OPTIONS,
     HSRT_LINK_COLOR,
     HSRT_URL_COLOR,
     HSRTHyperref,
 )
-from .listings import HSRTListingStyles, style_options  # noqa: F401
-from .logos import DefaultLogos, Logo, LogoStrip, logo_path  # noqa: F401
-from .pagebreak import (  # noqa: F401
+from .listings import HSRTListingStyles, style_options
+from .logos import DefaultLogos, Logo, LogoStrip, logo_path
+from .pagebreak import (
     Conditionalpagebreak,
     Critical,
     Keeptogether,
     Smartsection,
     Smartsubsection,
 )
-from .pagesetup import HSRTPageSetup  # noqa: F401
-from .titlepage import TitlePage, TitlePageDataLine  # noqa: F401
-from .variants import Variant, default_logo_names  # noqa: F401
-from .voting import VotingResults  # noqa: F401
-from .watermark import DraftWatermark, WatermarkCounter  # noqa: F401
-from .wordcount import WordcountCommands  # noqa: F401
+from .pagesetup import HSRTPageSetup
+from .titlepage import TitlePage, TitlePageDataLine
+from .variants import Variant, default_logo_names
+from .voting import VotingResults
+from .watermark import DraftWatermark, WatermarkCounter
+from .wordcount import WordcountCommands
 
 __all__ = [
+    "HSRT_CITE_COLOR",
+    "HSRT_HYPER_OPTIONS",
+    "HSRT_LINK_COLOR",
+    "HSRT_PALETTE",
+    "HSRT_URL_COLOR",
     "AcrShortcut",
     "ColoredBox",
     "Conditionalpagebreak",
@@ -73,11 +78,6 @@ __all__ = [
     "HSRTListingStyles",
     "HSRTPageSetup",
     "HSRTReport",
-    "HSRT_CITE_COLOR",
-    "HSRT_HYPER_OPTIONS",
-    "HSRT_LINK_COLOR",
-    "HSRT_PALETTE",
-    "HSRT_URL_COLOR",
     "ImportantBox",
     "InfoBox",
     "Keeptogether",

@@ -41,9 +41,7 @@ def test_eval_extra_namespace():
 
 
 def test_extra_namespace_shadows_registry():
-    out = Raw(
-        r"\iffalse{ pytex(Frac) }\fi", namespace={"Frac": "OVERRIDE"}
-    ).rendered
+    out = Raw(r"\iffalse{ pytex(Frac) }\fi", namespace={"Frac": "OVERRIDE"}).rendered
     assert out == "OVERRIDE"
 
 

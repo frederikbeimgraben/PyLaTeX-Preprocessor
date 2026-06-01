@@ -1,5 +1,7 @@
 from enum import Enum
 
+__all__ = ["Variant", "default_logo_names"]
+
 
 class Variant(Enum):
     """HSRT report variant — picks default logo set on the title page."""
@@ -10,7 +12,7 @@ class Variant(Enum):
     ECHO = "echo"
 
 
-_DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
+DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
     Variant.INF: ("INF",),
     Variant.STUPA: ("STUPA",),
     Variant.ASTA: ("ASTA",),
@@ -19,4 +21,4 @@ _DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
 
 
 def default_logo_names(variant: Variant) -> tuple[str, ...]:
-    return _DEFAULT_LOGOS.get(variant, ())
+    return DEFAULT_LOGOS.get(variant, ())

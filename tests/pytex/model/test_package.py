@@ -15,7 +15,7 @@ def test_package_with_flag_options():
 
 def test_package_with_kv_options():
     p = Package("babel_test", options={("main", "english")})
-    assert r"\usepackage[main=english]{babel_test}" == p.rendered
+    assert p.rendered == r"\usepackage[main=english]{babel_test}"
 
 
 def test_define_package_caches():

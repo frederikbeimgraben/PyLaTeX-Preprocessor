@@ -3,6 +3,21 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..model.raw import Raw
 from ..registry import Registry
 
+__all__ = [
+    "Addtocounter",
+    "Alph",
+    "AlphUpper",
+    "Arabic",
+    "Newcounter",
+    "Refstepcounter",
+    "RomanCounter",
+    "RomanCounterUpper",
+    "Setcounter",
+    "Stepcounter",
+    "UseCounter",
+    "Value",
+]
+
 
 @Registry.add
 def Newcounter(name: str, within: str | None = None) -> TeX:
@@ -21,9 +36,7 @@ def Setcounter(name: str, value: int | str) -> TeX:
 
 @Registry.add
 def Addtocounter(name: str, value: int | str) -> TeX:
-    return ControlSequence(
-        "addtocounter", (Parameter(name), Parameter(str(value)))
-    )
+    return ControlSequence("addtocounter", (Parameter(name), Parameter(str(value))))
 
 
 @Registry.add

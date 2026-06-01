@@ -4,6 +4,8 @@ from pathlib import Path
 from ..registry import Registry
 from .raw import Raw
 
+__all__ = ["IncludeTeX"]
+
 
 @Registry.add
 def IncludeTeX(

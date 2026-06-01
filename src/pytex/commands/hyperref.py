@@ -4,6 +4,16 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import HYPERREF
 from ..registry import Registry
 
+__all__ = [
+    "Autoref",
+    "Href",
+    "Hyperlink",
+    "Hypersetup",
+    "Hypertarget",
+    "Nolinkurl",
+    "Url",
+]
+
 
 @Registry.add
 @with_package(HYPERREF)

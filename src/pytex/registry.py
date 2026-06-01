@@ -1,7 +1,10 @@
+from collections.abc import Callable
 from logging import Logger
-from typing import Callable, ClassVar, Self
+from typing import ClassVar, Self
 
 from pytex.interface.tex import TeX
+
+__all__ = ["Registry"]
 
 type TeXFactory = Callable[..., TeX]
 
@@ -9,12 +12,12 @@ type RegistryType = type[TeX] | TeXFactory
 
 
 class Registry:
-    types: ClassVar[dict[str, RegistryType]] = dict()
+    types: ClassVar[dict[str, RegistryType]] = {}
     instance: ClassVar[Self | None] = None
 
     def __new__(cls) -> Self:
         if cls.instance is None:
-            cls.instance = super(Registry, cls).__new__(cls)
+            cls.instance = super().__new__(cls)
 
         return cls.instance
 

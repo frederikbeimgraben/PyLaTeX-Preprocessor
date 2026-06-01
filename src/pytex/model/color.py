@@ -5,20 +5,44 @@ from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
 from ..registry import Registry
 
-_NAMED_COLORS: set[str] = {
-    "black", "white", "red", "green", "blue", "cyan", "magenta", "yellow",
-    "gray", "lightgray", "darkgray",
-    "orange", "violet", "purple", "brown", "pink", "olive", "lime", "teal",
+__all__ = [
+    "Color",
+    "ColorSpec",
+    "collect_colors",
+    "is_known_color_name",
+    "register_named_color",
+]
+
+NAMED_COLORS: set[str] = {
+    "black",
+    "white",
+    "red",
+    "green",
+    "blue",
+    "cyan",
+    "magenta",
+    "yellow",
+    "gray",
+    "lightgray",
+    "darkgray",
+    "orange",
+    "violet",
+    "purple",
+    "brown",
+    "pink",
+    "olive",
+    "lime",
+    "teal",
 }
 
 
 def register_named_color(name: str) -> None:
     """Whitelist a name so `Color.named(name)` accepts it."""
-    _NAMED_COLORS.add(name)
+    NAMED_COLORS.add(name)
 
 
 def is_known_color_name(name: str) -> bool:
-    return name in _NAMED_COLORS
+    return name in NAMED_COLORS
 
 
 @dataclass(frozen=True)
@@ -116,7 +140,11 @@ class Color(TeX):
 
     @override
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Color) and self.name == other.name and self.spec == other.spec
+        return (
+            isinstance(other, Color)
+            and self.name == other.name
+            and self.spec == other.spec
+        )
 
     @override
     def __hash__(self) -> int:
@@ -135,6 +163,7 @@ class Color(TeX):
     @override
     def requires(self) -> frozenset[PackageProtocol]:
         from ..packages import XCOLOR
+
         return frozenset({XCOLOR})
 
 

@@ -6,6 +6,8 @@ from ..helpers.parenting import attach
 from ..interface.tex import TeX
 from ..registry import Registry
 
+__all__ = ["Concat"]
+
 
 @Registry.add
 @dataclass(frozen=True, init=False)

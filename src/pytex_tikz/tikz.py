@@ -7,6 +7,18 @@ from pytex.interface.tex import TeX
 from pytex.packages import PGF, TIKZ
 from pytex.registry import Registry
 
+__all__ = [
+    "Circle",
+    "Coordinate",
+    "Draw",
+    "Fill",
+    "Node",
+    "Rectangle",
+    "Scope",
+    "TikzLibrary",
+    "TikzPicture",
+]
+
 type TikzOption = str | tuple[str, str]
 type TikzCoord = str | tuple[float, float] | "Coordinate" | "Node"
 

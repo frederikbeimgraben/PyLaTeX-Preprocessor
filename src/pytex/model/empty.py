@@ -3,6 +3,8 @@ from typing import override
 from ..interface.tex import TeX
 from ..registry import Registry
 
+__all__ = ["EmptyTeX"]
+
 
 @Registry.add
 class EmptyTeX(TeX):

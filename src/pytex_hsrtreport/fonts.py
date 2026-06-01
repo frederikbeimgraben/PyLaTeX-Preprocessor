@@ -8,7 +8,7 @@ from pytex.model.concat import Concat
 from pytex.model.raw import Raw
 from pytex.registry import Registry
 
-_FONT_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/fonts")))
+FONT_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/fonts")))
 
 # Output dir for the bundled TTFs, relative to the .tex file. `HSRTReport`'s
 # `write_inline_fonts` copies the real font files here; fontspec's Path= option
@@ -18,12 +18,12 @@ FONT_OUTPUT_DIR: Final[str] = "fonts"
 
 def all_font_paths() -> tuple[Path, ...]:
     """Return all bundled TTF paths, sorted for reproducible output."""
-    return tuple(sorted(_FONT_DIR.rglob("*.ttf")))
+    return tuple(sorted(FONT_DIR.rglob("*.ttf")))
 
 
 def rel(font_path: Path) -> str:
-    """Path of a font file relative to `_FONT_DIR`."""
-    return font_path.relative_to(_FONT_DIR).as_posix()
+    """Path of a font file relative to `FONT_DIR`."""
+    return font_path.relative_to(FONT_DIR).as_posix()
 
 
 def _font_opts(subfamily: str, upright: str, italic: str) -> dict[str, str]:

@@ -91,7 +91,7 @@ def test_mix():
 
 def test_or_operator_aliases_mix():
     c = Color.named("red") | Color.named("blue")
-    assert "red!50!blue" == c.name
+    assert c.name == "red!50!blue"
 
 
 def test_register_named_color():

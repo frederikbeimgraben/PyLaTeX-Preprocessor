@@ -4,6 +4,8 @@ from pytex.model.concat import Concat
 from pytex.model.raw import Raw
 from pytex.registry import Registry
 
+__all__ = ["WordcountCommands"]
+
 
 @Registry.add
 def WordcountCommands() -> TeX:
@@ -15,7 +17,7 @@ def WordcountCommands() -> TeX:
         Newcommand(
             r"\quickwordcount",
             Raw(
-                r"\immediate\write18{texcount -1 -sum -merge -q #1.tex > Build/words.sum }"
+                r"\immediate\write18{texcount -1 -sum -merge -q #1.tex > Build/words.sum }"  # noqa: E501
                 + r"\input{Build/words.sum} words"
             ),
             nargs=1,

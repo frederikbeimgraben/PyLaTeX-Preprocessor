@@ -5,6 +5,8 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.registry import Registry
 
+__all__ = ["HSRTColors"]
+
 HSRT_PALETTE: Final[dict[str, tuple[float, float, float]]] = {
     "britishracinggreen": (0.0, 0.26, 0.15),
     "eggplant": (0.38, 0.25, 0.32),

@@ -11,20 +11,24 @@ so this package depends on ``pytex_hsrtreport``.
 
 from __future__ import annotations
 
-from os import PathLike
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import marko
 
-from pytex.interface.tex import TeX
 from pytex.registry import Registry
 
 from .convert import MarkdownConverter
 from .escape import escape_latex
 
-__all__ = ["Markdown", "IncludeMarkdown", "MarkdownConverter", "escape_latex"]
+if TYPE_CHECKING:
+    from os import PathLike
 
-_PARSER = marko.Markdown()
+    from pytex.interface.tex import TeX
+
+__all__ = ["IncludeMarkdown", "Markdown", "MarkdownConverter", "escape_latex"]
+
+PARSER = marko.Markdown()
 
 
 @Registry.add
@@ -40,7 +44,7 @@ def Markdown(
     default), ``-1`` maps it to ``\\chapter``. ``callouts`` toggles converting
     ``> [!NOTE]`` blocks into HSRT colored boxes.
     """
-    ast = _PARSER.parse(content)
+    ast = PARSER.parse(content)
     converter = MarkdownConverter(base_level=base_level, callouts=callouts)
     return converter.block(ast)
 

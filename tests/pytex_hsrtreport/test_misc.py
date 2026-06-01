@@ -108,7 +108,7 @@ def test_titlepage_basic_render():
 
 def test_pagebreak_keeptogether():
     out = Keeptogether("body").rendered
-    assert r"\begin{minipage}{\linewidth}body\end{minipage}" == out
+    assert out == r"\begin{minipage}{\linewidth}body\end{minipage}"
 
 
 def test_conditional_pagebreak_default():

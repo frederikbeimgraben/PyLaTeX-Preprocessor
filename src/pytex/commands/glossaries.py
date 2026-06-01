@@ -5,6 +5,23 @@ from ..model.raw import Raw
 from ..packages import GLOSSARIES
 from ..registry import Registry
 
+__all__ = [
+    "Acrfull",
+    "Acrlong",
+    "Acrshort",
+    "Gls",
+    "Glsenablehyper",
+    "Glspl",
+    "Glsplupper",
+    "Glsupper",
+    "Makeglossaries",
+    "Newacronym",
+    "Newglossaryentry",
+    "Printacronyms",
+    "Printglossary",
+    "Setglossarystyle",
+]
+
 
 @Registry.add
 @with_package(GLOSSARIES)

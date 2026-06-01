@@ -1,18 +1,21 @@
 # pyright: reportAny=false
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from pytex.interface.package import PackageOption
 from pytex.model.document import Document
 from pytex.registry import Registry
 
+__all__ = ["KomaDocument"]
+
 KOMA_CLASSES: frozenset[str] = frozenset(
     {"scrartcl", "scrreprt", "scrbook", "scrlttr2"}
 )
 
-_PAPER_FLAGS: frozenset[str] = frozenset(
+PAPER_FLAGS: frozenset[str] = frozenset(
     {"a4paper", "a5paper", "b5paper", "letterpaper", "executivepaper", "legalpaper"}
 )
-_FONTSIZE_FLAGS: frozenset[str] = frozenset({"10pt", "11pt", "12pt"})
+FONTSIZE_FLAGS: frozenset[str] = frozenset({"10pt", "11pt", "12pt"})
 
 
 def _on_off(value: bool, on: str, off: str) -> str:
@@ -65,69 +68,71 @@ class KomaDocument(Document):
                 f"Unknown KOMA-Script class {self.document_class!r}; "
                 + f"expected one of {sorted(KOMA_CLASSES)}"
             )
-
-        opts: set[PackageOption] = set(self.document_class_options) | set(
-            self.extra_class_options
+        self.document_class_options: set[PackageOption] = (
+            set(self.document_class_options)
+            | set(self.extra_class_options)
+            | set(self._class_option_flags())
         )
 
+    def _class_option_flags(self) -> Iterator[PackageOption]:
+        """Translate the typed KOMA fields into raw class options."""
+        # Value-bearing options: a known keyword flag, otherwise a key=value pair.
         if self.paper is not None:
-            opts.add(
-                self.paper if self.paper in _PAPER_FLAGS else ("paper", self.paper)
-            )
+            yield self.paper if self.paper in PAPER_FLAGS else ("paper", self.paper)
         if self.fontsize is not None:
-            opts.add(
+            yield (
                 self.fontsize
-                if self.fontsize in _FONTSIZE_FLAGS
+                if self.fontsize in FONTSIZE_FLAGS
                 else ("fontsize", self.fontsize)
             )
         if self.bcor is not None:
-            opts.add(("BCOR", self.bcor))
+            yield ("BCOR", self.bcor)
         if self.div is not None:
-            opts.add(("DIV", str(self.div)))
+            yield ("DIV", str(self.div))
         if self.pagesize is not None:
-            opts.add(("pagesize", self.pagesize))
+            yield ("pagesize", self.pagesize)
 
+        # Boolean toggles mapped to their on/off keywords.
         if self.two_side is not None:
-            opts.add(_on_off(self.two_side, "twoside", "oneside"))
+            yield _on_off(self.two_side, "twoside", "oneside")
         if self.two_column is not None:
-            opts.add(_on_off(self.two_column, "twocolumn", "onecolumn"))
+            yield _on_off(self.two_column, "twocolumn", "onecolumn")
         if self.landscape is True:
-            opts.add("landscape")
+            yield "landscape"
         if self.title_page is not None:
-            opts.add(_on_off(self.title_page, "titlepage", "notitlepage"))
+            yield _on_off(self.title_page, "titlepage", "notitlepage")
         if self.draft is not None:
-            opts.add(_on_off(self.draft, "draft", "final"))
+            yield _on_off(self.draft, "draft", "final")
 
         if self.open_at is not None:
-            opts.add(("open", self.open_at))
+            yield ("open", self.open_at)
         if self.chapter_prefix is not None:
-            opts.add(("chapterprefix", _on_off(self.chapter_prefix, "true", "false")))
+            yield ("chapterprefix", _on_off(self.chapter_prefix, "true", "false"))
         if self.appendix_prefix is not None:
-            opts.add(("appendixprefix", _on_off(self.appendix_prefix, "true", "false")))
+            yield ("appendixprefix", _on_off(self.appendix_prefix, "true", "false"))
 
-        for attr, key in (
-            ("headings", "headings"),
-            ("parskip", "parskip"),
-            ("numbers", "numbers"),
-            ("captions", "captions"),
-            ("toc", "toc"),
-            ("listof", "listof"),
-            ("bibliography", "bibliography"),
-            ("index", "index"),
-            ("footnotes", "footnotes"),
+        # Plain key=value options taken verbatim from same-named fields.
+        for key in (
+            "headings",
+            "parskip",
+            "numbers",
+            "captions",
+            "toc",
+            "listof",
+            "bibliography",
+            "index",
+            "footnotes",
         ):
-            value = getattr(self, attr)
+            value = getattr(self, key)
             if value is not None:
-                opts.add((key, value))
+                yield (key, value)
 
         if self.head_include is not None:
-            opts.add("headinclude" if self.head_include else "headexclude")
+            yield "headinclude" if self.head_include else "headexclude"
         if self.foot_include is not None:
-            opts.add("footinclude" if self.foot_include else "footexclude")
+            yield "footinclude" if self.foot_include else "footexclude"
         if self.mp_include is not None:
-            opts.add("mpinclude" if self.mp_include else "mpexclude")
+            yield "mpinclude" if self.mp_include else "mpexclude"
 
         if self.use_geometry is not None:
-            opts.add("usegeometry" if self.use_geometry else "nogeometry")
-
-        self.document_class_options: set[PackageOption] = opts
+            yield "usegeometry" if self.use_geometry else "nogeometry"

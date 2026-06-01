@@ -5,6 +5,8 @@ from ..model.raw import Raw
 from ..packages import GRAPHICX
 from ..registry import Registry
 
+__all__ = ["Graphicspath", "Includegraphics", "Resizebox", "Rotatebox", "Scalebox"]
+
 
 @Registry.add
 @with_package(GRAPHICX)
@@ -17,24 +19,24 @@ def Includegraphics(
     keepaspectratio: bool = False,
     extra_options: dict[str, str] | None = None,
 ) -> TeX:
-    opts: list[str] = []
-    if width is not None:
-        opts.append(f"width={width}")
-    if height is not None:
-        opts.append(f"height={height}")
-    if scale is not None:
-        opts.append(f"scale={scale}")
-    if angle is not None:
-        opts.append(f"angle={angle}")
-    if keepaspectratio:
-        opts.append("keepaspectratio")
-    if extra_options:
-        opts.extend(f"{k}={v}" for k, v in extra_options.items())
-    params: tuple[Parameter, ...]
-    if opts:
-        params = (Parameter(Raw(",".join(opts)), optional=True), Parameter(path))
-    else:
-        params = (Parameter(path),)
+    sized = (
+        f"{key}={value}"
+        for key, value in (
+            ("width", width),
+            ("height", height),
+            ("scale", scale),
+            ("angle", angle),
+        )
+        if value is not None
+    )
+    flags = ("keepaspectratio",) if keepaspectratio else ()
+    extra = (f"{k}={v}" for k, v in (extra_options or {}).items())
+    opts = [*sized, *flags, *extra]
+    params = (
+        (Parameter(Raw(",".join(opts)), optional=True), Parameter(path))
+        if opts
+        else (Parameter(path),)
+    )
     return ControlSequence("includegraphics", params)
 
 

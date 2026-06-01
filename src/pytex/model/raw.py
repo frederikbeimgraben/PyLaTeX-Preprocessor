@@ -6,6 +6,8 @@ from typing import override
 from ..interface.tex import TeX
 from ..registry import Registry
 
+__all__ = ["Raw", "pytex_namespace"]
+
 
 def _nested_inner(depth: int) -> str:
     inner = r"[^()]*"
@@ -14,7 +16,7 @@ def _nested_inner(depth: int) -> str:
     return inner
 
 
-_PATTERN = re.compile(
+PATTERN = re.compile(
     rf"\\iffalse\s*\{{\s*pytex\s*\((?P<expr>{_nested_inner(8)})\)\s*\}}\s*\\fi",
     re.DOTALL,
 )
@@ -38,9 +40,9 @@ def _evaluate(content: str, extra: dict[str, object]) -> str:
     namespace = pytex_namespace(extra)
 
     def _sub(match: re.Match[str]) -> str:
-        return str(eval(match.group("expr"), namespace))  # noqa: S307
+        return str(eval(match.group("expr"), namespace))
 
-    return _PATTERN.sub(_sub, content)
+    return PATTERN.sub(_sub, content)
 
 
 @Registry.add

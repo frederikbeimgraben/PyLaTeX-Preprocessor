@@ -5,6 +5,23 @@ from ..model.environment import Environment
 from ..packages import BOOKTABS, LONGTABLE, MULTIROW, TABULARX
 from ..registry import Registry
 
+__all__ = [
+    "Arraybackslash",
+    "Arraystretch",
+    "Bottomrule",
+    "Cline",
+    "Cmidrule",
+    "Hline",
+    "Longtable",
+    "Midrule",
+    "Multicolumn",
+    "Multirow",
+    "Newcolumntype",
+    "Tabular",
+    "Tabularx",
+    "Toprule",
+]
+
 
 @Registry.add
 def Tabular(spec: str, body: TeX | str) -> TeX:

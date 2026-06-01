@@ -5,6 +5,98 @@ from ..model.environment import Environment
 from ..model.raw import Raw
 from ..registry import Registry
 
+__all__ = [
+    "Author",
+    "BeginAccSupp",
+    "Bigskip",
+    "Blenderfont",
+    "Bold",
+    "Center",
+    "Centering",
+    "Chapter",
+    "ChapterStar",
+    "Cite",
+    "Cleardoublepage",
+    "Clearpage",
+    "Date",
+    "Description",
+    "Dinfont",
+    "Emph",
+    "EndAccSupp",
+    "Enumerate",
+    "FlushLeft",
+    "FlushRight",
+    "Footnote",
+    "Footnotemark",
+    "Footnotetext",
+    "Foreach",
+    "Group",
+    "Hfill",
+    "Hspace",
+    "Immediate",
+    "Include",
+    "IncludeOnly",
+    "Indent",
+    "Input",
+    "Inputfile",
+    "Italic",
+    "Item",
+    "Itemize",
+    "Label",
+    "Linebreak",
+    "ListOfFigures",
+    "ListOfTables",
+    "MakeTitle",
+    "Medskip",
+    "Nameref",
+    "Newglossarystyle",
+    "Newline",
+    "Newpage",
+    "Noindent",
+    "Pagebreak",
+    "Pagenumbering",
+    "Pageref",
+    "Paragraph",
+    "Part",
+    "PartStar",
+    "Quotation",
+    "Quote",
+    "Raggedleft",
+    "Raggedright",
+    "Ref",
+    "Rule",
+    "Section",
+    "SectionStar",
+    "Smallskip",
+    "Subparagraph",
+    "Subsection",
+    "SubsectionStar",
+    "Subsubsection",
+    "SubsubsectionStar",
+    "TableOfContents",
+    "Textbf",
+    "Textit",
+    "Textmd",
+    "Textrm",
+    "Textsc",
+    "Textsf",
+    "Textsl",
+    "Texttt",
+    "Textup",
+    "Thanks",
+    "Title",
+    "Today",
+    "Underline",
+    "Verb",
+    "Verbatim",
+    "Verbatiminput",
+    "Verse",
+    "Vfill",
+    "Vspace",
+    "Whiledo",
+    "Write18",
+]
+
 
 def _section_like(name: str, title: TeX | str, short: TeX | str | None) -> TeX:
     if short is None:
@@ -246,16 +338,20 @@ def Enumerate(*items: TeX | str) -> TeX:
     )
 
 
+def _describe_item(item: tuple[TeX | str, TeX | str] | TeX) -> TeX | str:
+    """A `(term, description)` pair becomes a labelled `\\item`; nodes pass through."""
+    if isinstance(item, tuple):
+        term, desc = item
+        return Item(desc, label=term)
+    return item
+
+
 @Registry.add
 def Description(*items: tuple[TeX | str, TeX | str] | TeX) -> TeX:
-    body_parts: list[TeX] = []
-    for it in items:
-        if isinstance(it, tuple):
-            term, desc = it
-            body_parts.append(Item(desc, label=term))
-        else:
-            body_parts.append(it)
-    return Environment("description", Concat(*body_parts))
+    return Environment(
+        "description",
+        Concat(*(_describe_item(it) for it in items)),
+    )
 
 
 def _is_item(node: TeX | str) -> bool:

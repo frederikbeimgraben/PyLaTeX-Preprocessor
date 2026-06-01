@@ -6,6 +6,19 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import FONTAWESOME
 from ..registry import Registry
 
+__all__ = [
+    "FaBookmark",
+    "FaCheckCircle",
+    "FaCog",
+    "FaExclamationCircle",
+    "FaExclamationTriangle",
+    "FaGithub",
+    "FaIcon",
+    "FaInfoCircle",
+    "FaQuestionCircle",
+    "FaVoteYea",
+]
+
 
 @Registry.add
 @with_package(FONTAWESOME)

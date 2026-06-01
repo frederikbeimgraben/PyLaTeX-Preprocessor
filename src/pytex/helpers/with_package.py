@@ -1,7 +1,7 @@
-# pyright: reportAny=false, reportExplicitAny=false
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from typing import Any, Callable, override
+from typing import override
 
 from pytex.interface.package import PackageProtocol
 
@@ -9,6 +9,8 @@ from ..interface.tex import TeX
 from ..model.package import Package
 from ..registry import Registry
 from .parenting import attach
+
+__all__ = ["WithPackage", "coerce_package", "with_package"]
 
 
 @Registry.add
@@ -51,7 +53,7 @@ class WithPackage[T: TeX](TeX):
 def with_package[C: Callable[..., TeX]](pkg: Package | str) -> Callable[[C], C]:
     def decorator(func: C) -> C:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> TeX:
+        def wrapper(*args: object, **kwargs: object) -> TeX:
             return WithPackage(func(*args, **kwargs), pkg)
 
         return wrapper  # pyright: ignore[reportReturnType]

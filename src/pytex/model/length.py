@@ -4,6 +4,8 @@ from typing import Final, override
 from ..interface.tex import TeX
 from ..registry import Registry
 
+__all__ = ["Length"]
+
 
 def _expr(value: "Length | int | float | str") -> str:
     if isinstance(value, Length):

@@ -5,7 +5,9 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.registry import Registry
 
-_GERMAN_NAMES: Final[dict[str, tuple[str, str]]] = {
+__all__ = ["GermanCrefNames"]
+
+GERMAN_NAMES: Final[dict[str, tuple[str, str]]] = {
     "figure": ("Abbildung", "Abbildungen"),
     "table": ("Tabelle", "Tabellen"),
     "equation": ("Gleichung", "Gleichungen"),
@@ -36,8 +38,10 @@ _GERMAN_NAMES: Final[dict[str, tuple[str, str]]] = {
 @Registry.add
 def GermanCrefNames() -> TeX:
     """All Cref/crefname pairs for German typesetting. Emit once in preamble."""
-    parts: list[TeX] = []
-    for typ, (sg, pl) in _GERMAN_NAMES.items():
-        parts.append(Crefname(typ, sg, pl))
-        parts.append(CrefnameUpper(typ, sg, pl))
-    return Concat(*parts)
+    return Concat(
+        *(
+            make_name(typ, sg, pl)
+            for typ, (sg, pl) in GERMAN_NAMES.items()
+            for make_name in (Crefname, CrefnameUpper)
+        )
+    )

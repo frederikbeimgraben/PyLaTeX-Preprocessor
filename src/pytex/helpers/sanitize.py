@@ -11,15 +11,19 @@ Two independent concerns:
 
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-from ..interface.tex import TeX
 from ..model.raw import Raw
 from ..registry import Registry
 
+__all__ = ["Sanitize", "escape_latex"]
+
+if TYPE_CHECKING:
+    from ..interface.tex import TeX
+
 # Build the result char-by-char so braces introduced by a replacement are
 # never themselves re-escaped.
-_ESCAPES: Final[dict[str, str]] = {
+ESCAPES: Final[dict[str, str]] = {
     "\\": r"\textbackslash{}",
     "&": r"\&",
     "%": r"\%",
@@ -35,7 +39,7 @@ _ESCAPES: Final[dict[str, str]] = {
 
 def escape_latex(text: str) -> str:
     """Return ``text`` with LaTeX-special characters escaped."""
-    return "".join(_ESCAPES.get(ch, ch) for ch in text)
+    return "".join(ESCAPES.get(ch, ch) for ch in text)
 
 
 @Registry.add

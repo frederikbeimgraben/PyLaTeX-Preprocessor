@@ -30,7 +30,8 @@ def test_chain_mixed_ops():
 
 
 def test_double_neg():
-    assert (-(-Parindent())).rendered == r"--\parindent"
+    negated = -Parindent()
+    assert (-negated).rendered == r"--\parindent"
 
 
 def test_baselineskip_arithmetic():

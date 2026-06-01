@@ -1,5 +1,5 @@
-from . import commands  # noqa: F401
-from .commands import (  # noqa: F401
+from . import commands
+from .commands import (
     Addchap,
     Addmargin,
     Addpart,
@@ -41,10 +41,10 @@ from .commands import (  # noqa: F401
     Uppertitleback,
     Usekomafont,
 )
-from .document import KOMA_CLASSES, KomaDocument  # noqa: F401
+from .document import KOMA_CLASSES, KomaDocument
 
 __all__ = [
-    "commands",
+    "KOMA_CLASSES",
     "Addchap",
     "Addmargin",
     "Addpart",
@@ -68,6 +68,7 @@ __all__ = [
     "Ihead",
     "KOMAoption",
     "KOMAoptions",
+    "KomaDocument",
     "Labeling",
     "Lowertitleback",
     "Mainmatter",
@@ -85,6 +86,5 @@ __all__ = [
     "Typearea",
     "Uppertitleback",
     "Usekomafont",
-    "KOMA_CLASSES",
-    "KomaDocument",
+    "commands",
 ]

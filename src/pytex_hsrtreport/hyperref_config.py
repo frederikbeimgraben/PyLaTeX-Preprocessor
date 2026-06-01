@@ -6,6 +6,8 @@ from pytex.model.control_sequence import ControlSequence, Parameter
 from pytex.model.raw import Raw
 from pytex.registry import Registry
 
+__all__ = ["HSRTHyperref"]
+
 type HyperOption = bool | int | str | TeX
 
 HSRT_CITE_COLOR: Final[Color] = Color.rgb(0.286, 0.427, 0.537, name="hsrtcite")

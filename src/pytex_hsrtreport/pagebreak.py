@@ -4,6 +4,14 @@ from pytex.model.environment import Environment
 from pytex.model.raw import Raw
 from pytex.registry import Registry
 
+__all__ = [
+    "Conditionalpagebreak",
+    "Critical",
+    "Keeptogether",
+    "Smartsection",
+    "Smartsubsection",
+]
+
 
 @Registry.add
 def Keeptogether(body: TeX | str) -> TeX:
@@ -40,8 +48,7 @@ def Smartsection(title: TeX | str, short: TeX | str | None = None) -> TeX:
         )
     )
     return Raw(
-        r"\vfil\penalty-9999\vfilneg\needspace{\sectionminspace}"
-        + head.rendered
+        r"\vfil\penalty-9999\vfilneg\needspace{\sectionminspace}" + head.rendered
     )
 
 
@@ -56,6 +63,5 @@ def Smartsubsection(title: TeX | str, short: TeX | str | None = None) -> TeX:
         )
     )
     return Raw(
-        r"\vfil\penalty-9999\vfilneg\needspace{\subsectionminspace}"
-        + head.rendered
+        r"\vfil\penalty-9999\vfilneg\needspace{\subsectionminspace}" + head.rendered
     )

@@ -65,7 +65,6 @@ def test_default_logos_for_stupa():
 
 
 def test_inline_logo_collected_by_document():
-    from pytex.commands.builtin import Section
     from pytex_hsrtreport import HSRTReport
 
     body = Logo("HSRT", inline_base64=True)

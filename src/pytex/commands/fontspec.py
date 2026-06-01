@@ -5,11 +5,17 @@ from ..model.raw import Raw
 from ..packages import FONTSPEC
 from ..registry import Registry
 
+__all__ = [
+    "Newfontfamily",
+    "Setfontfamilies",
+    "Setmainfont",
+    "Setmonofont",
+    "Setsansfont",
+]
+
 
 def _opts_to_str(opts: dict[str, str]) -> str:
-    return ",".join(
-        k if v == "" else f"{k}={v}" for k, v in opts.items()
-    )
+    return ",".join(k if v == "" else f"{k}={v}" for k, v in opts.items())
 
 
 @Registry.add
@@ -47,9 +53,7 @@ def Setmonofont(font: str, options: dict[str, str] | None = None) -> TeX:
 
 @Registry.add
 @with_package(FONTSPEC)
-def Newfontfamily(
-    cmd: str, font: str, options: dict[str, str] | None = None
-) -> TeX:
+def Newfontfamily(cmd: str, font: str, options: dict[str, str] | None = None) -> TeX:
     if options is None:
         return ControlSequence(
             "newfontfamily",

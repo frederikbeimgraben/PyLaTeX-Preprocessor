@@ -42,7 +42,9 @@ def test_preamble_has_listing_styles():
 
 
 def test_glossary_setup_opt_in():
-    out_off = HSRTReport(Section("Hi"), show_glossary=False, show_acronyms=False).rendered
+    out_off = HSRTReport(
+        Section("Hi"), show_glossary=False, show_acronyms=False
+    ).rendered
     out_on = HSRTReport(Section("Hi"), show_glossary=True).rendered
     assert "makeglossaries" not in out_off
     assert "makeglossaries" in out_on
@@ -74,6 +76,7 @@ def test_variant_default_inf():
 
 def test_extra_packages_include_required():
     from pytex.packages import BIBLATEX, CLEVEREF, GLOSSARIES, HYPERREF
+
     doc = HSRTReport(Section("Hi"))
     pkgs = doc.packages
     for p in (HYPERREF, CLEVEREF, BIBLATEX, GLOSSARIES):

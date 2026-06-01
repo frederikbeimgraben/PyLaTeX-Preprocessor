@@ -6,11 +6,11 @@ from ..model.raw import Raw
 from ..packages import MDFRAMED
 from ..registry import Registry
 
+__all__ = ["Mdfdefinestyle", "Mdframed", "Newmdenv"]
+
 
 def _opts_to_str(opts: dict[str, str]) -> str:
-    return ",".join(
-        k if v == "" else f"{k}={v}" for k, v in opts.items()
-    )
+    return ",".join(k if v == "" else f"{k}={v}" for k, v in opts.items())
 
 
 @Registry.add

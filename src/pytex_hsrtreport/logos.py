@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -11,10 +12,10 @@ from pytex.registry import Registry
 
 from .variants import Variant
 
-_LOGO_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/logos")))
+LOGO_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/logos")))
 
 
-_KNOWN_LOGOS: Final[dict[str, str]] = {
+KNOWN_LOGOS: Final[dict[str, str]] = {
     "HSRT": "HSRT.pdf",
     "INF": "INF.pdf",
     "ASTA": "ASTA.svg",
@@ -25,9 +26,9 @@ _KNOWN_LOGOS: Final[dict[str, str]] = {
 
 
 def logo_path(name: str) -> Path:
-    if name not in _KNOWN_LOGOS:
-        raise ValueError(f"unknown HSRT logo {name!r}; known: {sorted(_KNOWN_LOGOS)}")
-    return _LOGO_DIR / _KNOWN_LOGOS[name]
+    if name not in KNOWN_LOGOS:
+        raise ValueError(f"unknown HSRT logo {name!r}; known: {sorted(KNOWN_LOGOS)}")
+    return LOGO_DIR / KNOWN_LOGOS[name]
 
 
 # Output dir for logos referenced by the tikz overlays, relative to the .tex
@@ -83,14 +84,19 @@ def LogoStrip(
         from pytex.model.empty import Empty
 
         return Empty
-    pieces: list[TeX] = []
-    for i, name in enumerate(names):
-        if i > 0:
-            pieces.append(_sep(separator))
-        pieces.append(
-            Logo(name, scale=scale, height=height, inline_base64=inline_base64)
+    logos = (
+        Logo(name, scale=scale, height=height, inline_base64=inline_base64)
+        for name in names
+    )
+    sep = _sep(separator)
+    # Interleave a separator before every logo except the first.
+    return Concat(
+        *(
+            piece
+            for i, logo in enumerate(logos)
+            for piece in ((sep, logo) if i else (logo,))
         )
-    return Concat(*pieces)
+    )
 
 
 def _sep(text: str) -> TeX:
@@ -131,23 +137,26 @@ def titlepage_logo_overlay(
     """
     if not names:
         return ""
-    lines = [r"\begin{tikzpicture}[overlay, remember picture]"]
-    # Invisible dummy anchor at the top-left page corner — serves as the
-    # chain start (logo0), mirroring the DUMMY_FOOT node in the original.
-    lines.append(
-        "  \\node[anchor=north west, inner sep=0pt, "
-        + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
-        + f"at (current page.north west) {{\\rule{{0pt}}{{{logo_height}}}}};"
-    )
-    for i, name in enumerate(names, 1):
-        path = logo_output_rel(name)
-        lines.append(
-            f"  \\node[anchor=west, inner sep=0pt, xshift={node_sep}] ({prefix}{i}) "
-            + f"at ({prefix}{i - 1}.east) "
-            + f"{{\\includegraphics[height={logo_height}]{{{path}}}}};"
+
+    def lines() -> Iterator[str]:
+        yield r"\begin{tikzpicture}[overlay, remember picture]"
+        # Invisible dummy anchor at the top-left page corner — the chain
+        # start (logo0), mirroring the DUMMY_FOOT node in the original.
+        yield (
+            "  \\node[anchor=north west, inner sep=0pt, "
+            + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
+            + f"at (current page.north west) {{\\rule{{0pt}}{{{logo_height}}}}};"
         )
-    lines.append(r"\end{tikzpicture}")
-    return "\n".join(lines)
+        for i, name in enumerate(names, 1):
+            path = logo_output_rel(name)
+            yield (
+                f"  \\node[anchor=west, inner sep=0pt, xshift={node_sep}] "
+                + f"({prefix}{i}) at ({prefix}{i - 1}.east) "
+                + f"{{\\includegraphics[height={logo_height}]{{{path}}}}};"
+            )
+        yield r"\end{tikzpicture}"
+
+    return "\n".join(lines())
 
 
 def footer_logo_hook(
@@ -173,50 +182,53 @@ def footer_logo_hook(
     """
     if not names and not skyline:
         return ""
-    lines = [r"\AddToHook{shipout/background}{%"]
-    lines.append(r"  \begin{tikzpicture}[overlay, remember picture]")
-    if names:
-        # Suppress footer logos on the title page.
-        lines.append(r"  \ifHSRTTitlePage\else")
-        # Invisible dummy anchor at the bottom-right page corner.
-        lines.append(
-            "  \\node[anchor=south east, inner sep=0pt, "
-            + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
-            + f"at (current page.south east) {{\\rule{{0pt}}{{{logo_height}}}}};"
-        )
-        # Chain logos from right to left (anchor=east, stepping west).
-        for i, name in enumerate(names, 1):
-            path = logo_output_rel(name)
-            lines.append(
-                "  \\node[anchor=east, inner sep=0pt, "
-                + f"xshift={node_sep}, yshift=2pt] ({prefix}{i}) "
-                + f"at ({prefix}{i - 1}.west) "
-                + f"{{\\includegraphics[height={logo_height}]{{{path}}}}};"
+
+    def lines() -> Iterator[str]:
+        yield r"\AddToHook{shipout/background}{%"
+        yield r"  \begin{tikzpicture}[overlay, remember picture]"
+        if names:
+            # Suppress footer logos on the title page.
+            yield r"  \ifHSRTTitlePage\else"
+            # Invisible dummy anchor at the bottom-right page corner.
+            yield (
+                "  \\node[anchor=south east, inner sep=0pt, "
+                + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
+                + f"at (current page.south east) {{\\rule{{0pt}}{{{logo_height}}}}};"
             )
-        lines.append(r"  \fi")
-    if skyline:
-        skyline_path = logo_output_rel("Skyline")
-        lines.append(
-            "  \\node[anchor=south west, inner sep=0pt, yshift=0em] "
-            + "at (current page.south west) "
-            + f"{{\\includegraphics[width=1.5\\paperwidth]{{{skyline_path}}}}};"
-        )
-    lines.append(r"  \end{tikzpicture}%")
-    lines.append(r"}")
-    return "\n".join(lines)
+            # Chain logos from right to left (anchor=east, stepping west).
+            for i, name in enumerate(names, 1):
+                path = logo_output_rel(name)
+                yield (
+                    "  \\node[anchor=east, inner sep=0pt, "
+                    + f"xshift={node_sep}, yshift=2pt] ({prefix}{i}) "
+                    + f"at ({prefix}{i - 1}.west) "
+                    + f"{{\\includegraphics[height={logo_height}]{{{path}}}}};"
+                )
+            yield r"  \fi"
+        if skyline:
+            skyline_path = logo_output_rel("Skyline")
+            yield (
+                "  \\node[anchor=south west, inner sep=0pt, yshift=0em] "
+                + "at (current page.south west) "
+                + f"{{\\includegraphics[width=1.5\\paperwidth]{{{skyline_path}}}}};"
+            )
+        yield r"  \end{tikzpicture}%"
+        yield r"}"
+
+    return "\n".join(lines())
 
 
 # Keep SelectColor import alive for callers that previously imported via this module
 __all__ = [
+    "LOGO_OUTPUT_DIR",
+    "DefaultLogos",
+    "Includegraphics",
     "Logo",
     "LogoStrip",
-    "DefaultLogos",
-    "logo_path",
+    "SelectColor",
+    "footer_logo_hook",
     "logo_output_name",
     "logo_output_rel",
-    "LOGO_OUTPUT_DIR",
+    "logo_path",
     "titlepage_logo_overlay",
-    "footer_logo_hook",
-    "SelectColor",
-    "Includegraphics",
 ]

@@ -14,6 +14,8 @@ from pytex.registry import Registry
 
 from .boxes import ColoredBox, CustomBox
 
+__all__ = ["VotingResults"]
+
 # `multicol` is not in pytex.packages; the multicols env needs it. Declared here
 # because VotingResults builds the Multicols node inside `.rendered`, so the
 # command's own requirements never reach the document's package collector.

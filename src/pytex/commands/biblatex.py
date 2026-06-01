@@ -4,6 +4,20 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import BIBLATEX
 from ..registry import Registry
 
+__all__ = [
+    "Addbibresource",
+    "Autocite",
+    "Citeauthor",
+    "Citetitle",
+    "Citeyear",
+    "ExecuteBibliographyOptions",
+    "Footcite",
+    "Nocite",
+    "Parencite",
+    "Printbibliography",
+    "Textcite",
+]
+
 
 @Registry.add
 @with_package(BIBLATEX)
@@ -17,11 +31,11 @@ def Printbibliography(
     heading: str | None = None,
     title: str | None = None,
 ) -> TeX:
-    opts: list[str] = []
-    if heading is not None:
-        opts.append(f"heading={heading}")
-    if title is not None:
-        opts.append(f"title={title}")
+    opts = [
+        f"{key}={value}"
+        for key, value in (("heading", heading), ("title", title))
+        if value is not None
+    ]
     if not opts:
         return ControlSequence("printbibliography", ())
     return ControlSequence(

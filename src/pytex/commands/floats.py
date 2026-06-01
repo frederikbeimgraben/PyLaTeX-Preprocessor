@@ -5,6 +5,20 @@ from ..model.environment import Environment
 from ..packages import FLOAT, FLOATROW
 from ..registry import Registry
 
+__all__ = [
+    "Columnbreak",
+    "Figure",
+    "FigureStar",
+    "Floatsetup",
+    "Minipage",
+    "Multicols",
+    "Newfloat",
+    "Restylefloat",
+    "Table",
+    "TableStar",
+    "Titlepage",
+]
+
 
 def _placed(name: str, body: TeX | str, placement: str | None) -> TeX:
     if placement is None:

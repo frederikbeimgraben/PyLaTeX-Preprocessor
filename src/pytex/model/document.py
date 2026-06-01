@@ -13,6 +13,8 @@ from .environment import Environment
 from .image import IncludeImage, collect_inline_images, filecontents_b64_block
 from .raw import Raw
 
+__all__ = ["Document"]
+
 
 @Registry.add
 @dataclass
@@ -36,7 +38,7 @@ class Document(TeX):
                 for after in pkg.after | {pkg}
             }
 
-            for child in obj.children or tuple():
+            for child in obj.children or ():
                 get_packages(child, found)
 
         found = set[PackageProtocol]()

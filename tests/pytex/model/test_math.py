@@ -40,10 +40,7 @@ def test_display_math():
 
 
 def test_equation():
-    assert (
-        Equation("E=mc^2").rendered
-        == r"\begin{equation}E=mc^2\end{equation}"
-    )
+    assert Equation("E=mc^2").rendered == r"\begin{equation}E=mc^2\end{equation}"
 
 
 def test_align_requires_amsmath():

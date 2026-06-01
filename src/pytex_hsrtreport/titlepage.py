@@ -26,6 +26,8 @@ from pytex.registry import Registry
 
 from .logos import titlepage_logo_overlay
 
+__all__ = ["TitlePage", "TitlePageDataLine"]
+
 
 @dataclass(frozen=True)
 class TitlePageDataLine:
@@ -65,14 +67,13 @@ class TitlePage(TeX):
     @property
     @override
     def children(self) -> tuple[TeX, ...]:
-        out: list[TeX] = []
-        for v in (self.title, self.abstract, self.keywords):
-            if isinstance(v, TeX):
-                out.append(v)
-        for line in self.data_lines:
-            if isinstance(line.value, TeX):
-                out.append(line.value)
-        return tuple(out)
+        candidates = (
+            self.title,
+            self.abstract,
+            self.keywords,
+            *(line.value for line in self.data_lines),
+        )
+        return tuple(v for v in candidates if isinstance(v, TeX))
 
     @property
     @override

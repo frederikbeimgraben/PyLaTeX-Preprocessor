@@ -12,6 +12,8 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.registry import Registry
 
+__all__ = ["HSRTListingStyles", "style_options"]
+
 
 def _font(*parts: TeX) -> TeX:
     return Concat(*parts)

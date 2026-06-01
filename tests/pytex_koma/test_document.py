@@ -4,9 +4,7 @@ from pytex_koma import KOMA_CLASSES, KomaDocument
 
 
 def test_koma_classes_set():
-    assert KOMA_CLASSES == frozenset(
-        {"scrartcl", "scrreprt", "scrbook", "scrlttr2"}
-    )
+    assert frozenset({"scrartcl", "scrreprt", "scrbook", "scrlttr2"}) == KOMA_CLASSES
 
 
 def test_default_class_valid():
@@ -17,10 +15,7 @@ def test_default_class_valid():
 @pytest.mark.parametrize("cls", sorted(KOMA_CLASSES))
 def test_accepts_each_koma_class(cls):
     doc = KomaDocument("x", document_class=cls)
-    assert (
-        f"\\documentclass{{{cls}}}" in doc.rendered
-        or f"]{{{cls}}}" in doc.rendered
-    )
+    assert f"\\documentclass{{{cls}}}" in doc.rendered or f"]{{{cls}}}" in doc.rendered
 
 
 @pytest.mark.parametrize("bad", ["article", "report", "book", "letter", ""])
@@ -108,9 +103,7 @@ def test_parskip():
 
 
 def test_bibliography():
-    assert "bibliography=totoc" in KomaDocument(
-        "x", bibliography="totoc"
-    ).rendered
+    assert "bibliography=totoc" in KomaDocument("x", bibliography="totoc").rendered
 
 
 def test_extra_class_options_merged():

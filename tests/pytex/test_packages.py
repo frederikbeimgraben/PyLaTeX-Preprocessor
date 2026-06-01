@@ -13,7 +13,16 @@ from pytex.packages import (
 
 
 def test_constants_are_packages():
-    for p in (AMSMATH, AMSFONTS, GRAPHICX, HYPERREF, TIKZ, PGF, TYPEAREA, SCRLAYER_SCRPAGE):
+    for p in (
+        AMSMATH,
+        AMSFONTS,
+        GRAPHICX,
+        HYPERREF,
+        TIKZ,
+        PGF,
+        TYPEAREA,
+        SCRLAYER_SCRPAGE,
+    ):
         assert isinstance(p, Package)
 
 

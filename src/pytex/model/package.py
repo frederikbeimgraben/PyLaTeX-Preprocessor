@@ -5,7 +5,9 @@ from ..interface.package import PackageProtocol
 from ..interface.tex import TeX
 from ..registry import Registry
 
-_PACKAGES = dict[str, "Package"]()
+__all__ = ["DefinePackage", "Package"]
+
+PACKAGES = dict[str, "Package"]()
 
 type PackageOption = str | tuple[str, str]
 
@@ -23,7 +25,7 @@ class Package(PackageProtocol, TeX):
         after: set[Self] | frozenset[Self] | None = None,
         incompatible: set[Self] | frozenset[Self] | None = None,
         options: set[PackageOption] | frozenset[PackageOption] | None = None,
-    ):
+    ) -> None:
         self._name, self._after, self._incompatible, self._options = (
             name,
             set(after or set()),
@@ -55,15 +57,15 @@ class Package(PackageProtocol, TeX):
         self,
         after: set[Self] | frozenset[Self] | None = None,
         incompatible: set[Self] | frozenset[Self] | None = None,
-    ):
+    ) -> None:
         if after is not None:
             self._after |= after
         if incompatible is not None:
             self._incompatible |= incompatible
 
     def __post_init__(self) -> None:
-        if self.name not in _PACKAGES:
-            _PACKAGES[self.name] = self
+        if self.name not in PACKAGES:
+            PACKAGES[self.name] = self
         else:
             Logger(self.__class__.__name__).warning(
                 f"Multiple Instances of {self.name} in circulation!"
@@ -116,9 +118,9 @@ def DefinePackage(
         incompatible or set(),
         options or set(),
     )
-    if name in _PACKAGES:
-        _PACKAGES[name].amend(after=after, incompatible=incompatible)
-        return _PACKAGES[name]
+    if name in PACKAGES:
+        PACKAGES[name].amend(after=after, incompatible=incompatible)
+        return PACKAGES[name]
 
     pkg = Package(
         name=name,
@@ -126,5 +128,5 @@ def DefinePackage(
         incompatible=incompatible,
         options=options,
     )
-    _PACKAGES[name] = pkg
+    PACKAGES[name] = pkg
     return pkg

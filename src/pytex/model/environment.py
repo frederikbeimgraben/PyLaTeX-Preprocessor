@@ -5,19 +5,19 @@ from .concat import Concat
 from .control_sequence import ControlSequence, Parameter
 from .raw import Raw
 
+__all__ = ["Begin", "End", "Environment"]
+
 
 @Registry.add
-def Begin(name: str, params: Parameters = None):
-    _params = params or ()
-
+def Begin(name: str, params: Parameters = None) -> TeX:
     return ControlSequence(
         "begin",
-        (Parameter(Raw(name)), *_params),
+        (Parameter(Raw(name)), *(params or ())),
     )
 
 
 @Registry.add
-def End(name: str):
+def End(name: str) -> TeX:
     return ControlSequence("end", (Parameter(Raw(name)),))
 
 

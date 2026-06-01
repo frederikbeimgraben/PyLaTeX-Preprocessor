@@ -2,6 +2,8 @@ from typing import Protocol, override, runtime_checkable
 
 from .package import PackageProtocol
 
+__all__ = ["TeX"]
+
 
 @runtime_checkable
 class TeX(Protocol):

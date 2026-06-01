@@ -4,6 +4,16 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import ETOOLBOX
 from ..registry import Registry
 
+__all__ = [
+    "AtBeginDocument",
+    "AtBeginEnvironment",
+    "AtBeginPage",
+    "AtEndDocument",
+    "AtEndEnvironment",
+    "AtEndOfClass",
+    "AtEndOfPackage",
+]
+
 
 @Registry.add
 def AtBeginDocument(body: TeX | str) -> TeX:

@@ -15,15 +15,19 @@ import tarfile
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .console import Console
+__all__ = ["BuildError", "ensure_tectonic", "run_makeindex", "run_tectonic"]
 
-_INSTALL_URL = "https://drop-sh.fullyjustified.net"
-_CACHE_DIR = Path(tempfile.gettempdir()) / "pytex-tectonic"
+if TYPE_CHECKING:
+    from .console import Console
+
+INSTALL_URL = "https://drop-sh.fullyjustified.net"
+CACHE_DIR = Path(tempfile.gettempdir()) / "pytex-tectonic"
 
 # BCF control-file format version -> compatible biber release.
 # Pattern: BCF minor = biber minor - 9  (holds for biber 2.14+)
-_BCF_TO_BIBER: dict[str, str] = {
+BCF_TO_BIBER: dict[str, str] = {
     "3.5": "2.14",
     "3.6": "2.15",
     "3.7": "2.16",
@@ -34,7 +38,7 @@ _BCF_TO_BIBER: dict[str, str] = {
     "3.12": "2.21",
 }
 
-_BIBER_RELEASE_URL = (
+BIBER_RELEASE_URL = (
     "https://sourceforge.net/projects/biblatex-biber/files/"
     "biblatex-biber/{version}/binaries/{sf_dir}/{filename}/download"
 )
@@ -45,7 +49,7 @@ class BuildError(RuntimeError):
 
 
 def _cached_binary() -> Path:
-    return _CACHE_DIR / "tectonic"
+    return CACHE_DIR / "tectonic"
 
 
 def ensure_tectonic(console: Console) -> Path:
@@ -66,11 +70,11 @@ def ensure_tectonic(console: Console) -> Path:
 
     console.step("Downloading tectonic")
     console.detail(f"target: {cached}")
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
-        f"curl --proto '=https' --tlsv1.2 -fsSL {_INSTALL_URL} | sh",
+        f"curl --proto '=https' --tlsv1.2 -fsSL {INSTALL_URL} | sh",
         shell=True,
-        cwd=_CACHE_DIR,
+        cwd=CACHE_DIR,
         capture_output=True,
         text=True,
     )
@@ -102,7 +106,7 @@ def _biber_sf_path() -> tuple[str, str]:
 
 
 def _biber_cached(version: str) -> Path:
-    return _CACHE_DIR / "biber" / version / "biber"
+    return CACHE_DIR / "biber" / version / "biber"
 
 
 def _ensure_biber(version: str, console: Console) -> Path:
@@ -112,7 +116,7 @@ def _ensure_biber(version: str, console: Console) -> Path:
         return cached
 
     sf_dir, filename = _biber_sf_path()
-    url = _BIBER_RELEASE_URL.format(version=version, sf_dir=sf_dir, filename=filename)
+    url = BIBER_RELEASE_URL.format(version=version, sf_dir=sf_dir, filename=filename)
     console.step(f"Downloading biber {version}")
     console.detail(f"source: {url}")
 
@@ -172,7 +176,7 @@ def _biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None
         return None
     if bcf_ver is None:
         return None
-    biber_ver = _BCF_TO_BIBER.get(bcf_ver)
+    biber_ver = BCF_TO_BIBER.get(bcf_ver)
     if biber_ver is None:
         console.warn(f"unknown BCF version {bcf_ver!r}; using system biber")
         return None

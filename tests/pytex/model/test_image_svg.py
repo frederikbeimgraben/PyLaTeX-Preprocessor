@@ -55,8 +55,10 @@ def test_ensure_converted_invokes_inkscape(monkeypatch, tmp_path):
     def fake_run(cmd, check, capture_output):
         calls.append(cmd)
         Path(cmd[-1].split("=", 1)[1]).write_bytes(b"%PDF-mock")
-        class R:  # noqa: D401 - sentinel
+
+        class R:
             returncode = 0
+
         return R()
 
     monkeypatch.setattr(subprocess, "run", fake_run)

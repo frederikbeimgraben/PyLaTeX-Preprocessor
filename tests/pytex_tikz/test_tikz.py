@@ -49,6 +49,7 @@ def test_node_requires_tikz():
 
 def test_node_children_when_tex_label():
     from pytex.model.raw import Raw
+
     label = Raw("inner")
     n = Node(label=label)
     assert n.children == (label,)
@@ -84,7 +85,7 @@ def test_draw_uses_named_node():
 def test_node_without_name_as_position_raises():
     n = Node(label="x")
     with pytest.raises(ValueError):
-        Draw(((0, 0), n)).rendered
+        _ = Draw(((0, 0), n)).rendered
 
 
 def test_fill():

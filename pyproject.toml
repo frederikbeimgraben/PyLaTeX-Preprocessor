@@ -3,18 +3,18 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pytex"
+name = "pytex-preprocessor"
 version = "0.1.0"
 authors = [
   { name="Frederik Beimgraben", email="frederik@beimgraben.net" },
 ]
 description = "Type-safe LaTeX document generation with Python"
-# readme = "README.md"
+readme = "README.md"
 requires-python = ">=3.13"
 dependencies = ["pydantic", "marko"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff", "basedpyright"]
 
 [project.scripts]
 pytex = "pytex_builder.build:main"
@@ -23,7 +23,7 @@ pytex = "pytex_builder.build:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-pytex_hsrtreport = ["assets/**/*"]
+pytex_hsrtreport = ["assets/**/*", "tex/**/*"]
 
 [tool.pyright]
 extraPaths = ["src"]
@@ -31,3 +31,47 @@ extraPaths = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "SIM",  # flake8-simplify
+  "RET",  # flake8-return
+  "PIE",  # flake8-pie
+  "TC",   # flake8-type-checking
+  "ANN",  # flake8-annotations
+  "RUF",  # ruff-specific
+]
+# N802 (non-lowercase function names) is intentional: the public API mirrors
+# LaTeX control sequences as PascalCase factories (`Bfseries`, `Author`,
+# `Align`, ...). Renaming would break every document and downstream package.
+ignore = ["N802"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests favour readability over full annotation coverage.
+"tests/**" = ["ANN"]
+# These modules embed raw LaTeX templates whose German typography uses
+# non-ASCII glyphs on purpose (EN DASH separators, MULTIPLICATION SIGN). An
+# inline `noqa` is impossible since it would land inside the template string.
+# pagesetup is one large raw LaTeX template string; its lines cannot be
+# reflowed (a source break would alter the emitted LaTeX).
+"src/pytex_hsrtreport/pagesetup.py" = ["RUF001", "E501"]
+"src/pytex_hsrtreport/watermark.py" = ["RUF002"]
+# glossary holds raw LaTeX template constants (column types, style, labels)
+# that exceed the line length and cannot be reflowed.
+"src/pytex_hsrtreport/glossary.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pytex", "pytex_builder", "pytex_koma", "pytex_tikz", "pytex_hsrtreport", "pytex_markdown"]

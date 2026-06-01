@@ -179,8 +179,13 @@ def test_colors_render_and_require_xcolor():
 
 def test_includegraphics_options():
     out = Includegraphics(
-        "f.png", width="5cm", height="3cm", scale="0.5", angle="30",
-        keepaspectratio=True, extra_options={"trim": "0 0 0 0"},
+        "f.png",
+        width="5cm",
+        height="3cm",
+        scale="0.5",
+        angle="30",
+        keepaspectratio=True,
+        extra_options={"trim": "0 0 0 0"},
     ).rendered
     assert "width=5cm" in out and "height=3cm" in out
     assert "scale=0.5" in out and "angle=30" in out
@@ -221,8 +226,7 @@ def test_cleveref_commands():
     assert c.rendered == r"\cref{eq:1,eq:2}"
     assert CrefUpper("x").rendered == r"\Cref{x}"
     assert (
-        Crefname("figure", "Abb", "Abben").rendered
-        == r"\crefname{figure}{Abb}{Abben}"
+        Crefname("figure", "Abb", "Abben").rendered == r"\crefname{figure}{Abb}{Abben}"
     )
     assert (
         CrefnameUpper("figure", "Abb", "Abben").rendered
@@ -248,10 +252,9 @@ def test_glossaries_commands():
     m = Makeglossaries()
     assert GLOSSARIES in m.requires
     assert m.rendered == r"\makeglossaries"
-    assert (
-        Newglossaryentry("g1", {"name": "x", "description": "y"}).rendered
-        .startswith(r"\newglossaryentry{g1}{")
-    )
+    assert Newglossaryentry(
+        "g1", {"name": "x", "description": "y"}
+    ).rendered.startswith(r"\newglossaryentry{g1}{")
     assert (
         Newacronym("h", "HTML", "HyperText").rendered
         == r"\newacronym{h}{HTML}{HyperText}"
@@ -304,7 +307,9 @@ def test_floats():
     )
     assert Restylefloat("table").rendered == r"\restylefloat{table}"
     assert Newfloat("foo", "tbp", "lof").rendered == r"\newfloat{foo}{tbp}{lof}"
-    assert Floatsetup({"capposition": "top"}).rendered == r"\floatsetup{capposition=top}"
+    assert (
+        Floatsetup({"capposition": "top"}).rendered == r"\floatsetup{capposition=top}"
+    )
 
 
 def test_tables_commands():
@@ -440,7 +445,10 @@ def test_definitions_commands():
     )
     assert Renewcommand(r"\foo", "hi").rendered == r"\renewcommand{\foo}{hi}"
     assert Providecommand(r"\foo", "hi").rendered == r"\providecommand{\foo}{hi}"
-    assert DeclareRobustCommand(r"\foo", "hi").rendered == r"\DeclareRobustCommand{\foo}{hi}"
+    assert (
+        DeclareRobustCommand(r"\foo", "hi").rendered
+        == r"\DeclareRobustCommand{\foo}{hi}"
+    )
     assert Newenvironment("foo", "B", "E").rendered == r"\newenvironment{foo}{B}{E}"
     assert (
         Newenvironment("foo", "B", "E", nargs=2).rendered

@@ -3,6 +3,16 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..model.raw import Raw
 from ..registry import Registry
 
+__all__ = [
+    "DeclareRobustCommand",
+    "Def",
+    "Newcommand",
+    "Newenvironment",
+    "Providecommand",
+    "Renewcommand",
+    "Renewenvironment",
+]
+
 
 def _cmd(
     name: str,

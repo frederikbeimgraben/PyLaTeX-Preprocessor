@@ -5,6 +5,8 @@ from ..model.environment import Environment
 from ..packages import SETSPACE
 from ..registry import Registry
 
+__all__ = ["Doublespacing", "Onehalfspacing", "Setstretch", "Singlespacing", "Spacing"]
+
 
 @Registry.add
 @with_package(SETSPACE)

@@ -5,6 +5,49 @@ from pytex.model.environment import Environment
 from pytex.packages import SCRLAYER_SCRPAGE, TYPEAREA
 from pytex.registry import Registry
 
+__all__ = [
+    "Addchap",
+    "Addmargin",
+    "Addpart",
+    "Addsec",
+    "Addtokomafont",
+    "Appendix",
+    "Areaset",
+    "Automark",
+    "Backmatter",
+    "Captionabove",
+    "Captionbelow",
+    "Cfoot",
+    "Chead",
+    "Clearpairofpagestyles",
+    "Clearscrheadfoot",
+    "Dedication",
+    "Dictum",
+    "Extratitle",
+    "Frontmatter",
+    "Ifoot",
+    "Ihead",
+    "KOMAoption",
+    "KOMAoptions",
+    "Labeling",
+    "Lowertitleback",
+    "Mainmatter",
+    "Marginline",
+    "Minisec",
+    "Ofoot",
+    "Ohead",
+    "Pagestyle",
+    "Publishers",
+    "Recalctypearea",
+    "Setkomafont",
+    "Subject",
+    "Subtitle",
+    "Titlehead",
+    "Typearea",
+    "Uppertitleback",
+    "Usekomafont",
+]
+
 
 def _sectioning(name: str, title: TeX | str, short: TeX | str | None) -> TeX:
     if short is None:
@@ -155,11 +198,7 @@ def Addmargin(body: TeX | str, amount: str) -> TeX:
 
 @Registry.add
 def Labeling(body: TeX | str, sep: str = "") -> TeX:
-    params: tuple[Parameter, ...]
-    if sep:
-        params = (Parameter(sep, optional=True),)
-    else:
-        params = ()
+    params = (Parameter(sep, optional=True),) if sep else ()
     return Environment("labeling", body, params)
 
 

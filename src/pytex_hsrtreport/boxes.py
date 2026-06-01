@@ -16,9 +16,19 @@ from pytex.model.raw import Raw
 from pytex.packages import CALC, FONTAWESOME, MDFRAMED, TIKZ, XCOLOR
 from pytex.registry import Registry
 
-_BASE_OPACITY: Final[float] = 0.05
-_PER_LEVEL: Final[float] = 0.075
-_ICON_BOOST: Final[int] = 20
+__all__ = [
+    "ColoredBox",
+    "CustomBox",
+    "DiscussionBox",
+    "ImportantBox",
+    "InfoBox",
+    "SuccessBox",
+    "WarningBox",
+]
+
+BASE_OPACITY: Final[float] = 0.05
+PER_LEVEL: Final[float] = 0.075
+ICON_BOOST: Final[int] = 20
 
 # Render-time nesting depth, mirroring LaTeX's `coloredBoxLevel` counter.
 _render_depth: int = 0
@@ -53,21 +63,16 @@ class ColoredBox(TeX):
 
     @property
     def background_opacity(self) -> int:
-        return round((_BASE_OPACITY + _PER_LEVEL * self.nesting_level) * 100)
+        return round((BASE_OPACITY + PER_LEVEL * self.nesting_level) * 100)
 
     @property
     def icon_opacity(self) -> int:
-        return self.background_opacity + _ICON_BOOST
+        return self.background_opacity + ICON_BOOST
 
     @property
     @override
     def children(self) -> tuple[TeX, ...]:
-        out: list[TeX] = []
-        if isinstance(self.body, TeX):
-            out.append(self.body)
-        if isinstance(self.icon, TeX):
-            out.append(self.icon)
-        return tuple(out)
+        return tuple(v for v in (self.body, self.icon) if isinstance(v, TeX))
 
     @property
     @override
@@ -97,11 +102,11 @@ class ColoredBox(TeX):
             # building wrappers severs the parent chain); fall back to the
             # parent chain so an inner box rendered in isolation is still right.
             level = max(_render_depth, self.nesting_level)
-            bg = round((_BASE_OPACITY + _PER_LEVEL * level) * 100)
-            icon_op = bg + _ICON_BOOST
+            bg = round((BASE_OPACITY + PER_LEVEL * level) * 100)
+            icon_op = bg + ICON_BOOST
             return Concat(
                 Vspace(r"0.5\baselineskip", star=True),
-                Raw("~\\\\\n"),
+                Raw("~\\\\"),
                 Noindent(),
                 Minipage(
                     r"\linewidth",

@@ -11,15 +11,18 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
-
-from pytex_hsrtreport.document import HSRTReport
+from typing import TYPE_CHECKING, cast
 
 from .console import Console
 from .render import get_tex_node
 from .tectonic import BuildError, ensure_tectonic, run_makeindex, run_tectonic
 
-_MAX_PASSES = 3
+__all__ = ["Config", "main"]
+
+if TYPE_CHECKING:
+    from pytex_hsrtreport.document import HSRTReport
+
+MAX_PASSES = 3
 
 
 @dataclass(frozen=True)
@@ -90,14 +93,14 @@ def _parse_args(argv: list[str]) -> Config:
         help="disable shell-escape (on by default; needed for inline images)",
     )
     ns = parser.parse_args(argv)
-    inp = cast(Path, ns.input)
-    build_dir = cast(Path, ns.build_dir)
+    inp = cast("Path", ns.input)
+    build_dir = cast("Path", ns.build_dir)
     return Config(
         input=inp,
         output=cast("Path | None", ns.output) or _default_output(inp, build_dir),
-        build=cast(bool, ns.build),
+        build=cast("bool", ns.build),
         build_dir=build_dir,
-        shell_escape=cast(bool, ns.shell_escape),
+        shell_escape=cast("bool", ns.shell_escape),
     )
 
 
@@ -124,16 +127,16 @@ def _run(cfg: Config, console: Console) -> None:
     # the build dir by default) so the TeX engine can locate them by the
     # relative paths in the preamble.
     if hasattr(tex_node, "write_inline_fonts"):
-        cast(HSRTReport, tex_node).write_inline_fonts(str(output.parent))
+        cast("HSRTReport", tex_node).write_inline_fonts(str(output.parent))
     if hasattr(tex_node, "write_inline_logos"):
-        cast(HSRTReport, tex_node).write_inline_logos(str(output.parent))
+        cast("HSRTReport", tex_node).write_inline_logos(str(output.parent))
     if hasattr(tex_node, "write_inline_images"):
-        cast(HSRTReport, tex_node).write_inline_images(str(output.parent))
+        cast("HSRTReport", tex_node).write_inline_images(str(output.parent))
 
     binary = ensure_tectonic(console)
 
     job = output.stem
-    for pass_no in range(1, _MAX_PASSES + 1):
+    for pass_no in range(1, MAX_PASSES + 1):
         console.step(f"Compiling (pass {pass_no})")
         run_tectonic(
             binary, output, build_dir, shell_escape=cfg.shell_escape, console=console

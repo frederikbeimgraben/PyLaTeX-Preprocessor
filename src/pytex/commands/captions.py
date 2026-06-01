@@ -4,6 +4,15 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import CAPTION, SUBCAPTION
 from ..registry import Registry
 
+__all__ = [
+    "Caption",
+    "Captionof",
+    "Captionsetup",
+    "Subcaption",
+    "Subcaptionbox",
+    "Subref",
+]
+
 
 @Registry.add
 def Caption(text: TeX | str, short: TeX | str | None = None) -> TeX:

@@ -4,6 +4,8 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import ETOOLBOX, IFTHEN
 from ..registry import Registry
 
+__all__ = ["Apptocmd", "Equal", "Ifdefstring", "Ifstrequal", "Ifthenelse", "Pretocmd"]
+
 
 @Registry.add
 @with_package(IFTHEN)
@@ -22,7 +24,9 @@ def Equal(a: TeX | str, b: TeX | str) -> TeX:
 
 @Registry.add
 @with_package(ETOOLBOX)
-def Ifstrequal(a: TeX | str, b: TeX | str, then: TeX | str, otherwise: TeX | str) -> TeX:
+def Ifstrequal(
+    a: TeX | str, b: TeX | str, then: TeX | str, otherwise: TeX | str
+) -> TeX:
     return ControlSequence(
         "ifstrequal",
         (Parameter(a), Parameter(b), Parameter(then), Parameter(otherwise)),
@@ -31,7 +35,9 @@ def Ifstrequal(a: TeX | str, b: TeX | str, then: TeX | str, otherwise: TeX | str
 
 @Registry.add
 @with_package(ETOOLBOX)
-def Ifdefstring(cmd: str, target: TeX | str, then: TeX | str, otherwise: TeX | str) -> TeX:
+def Ifdefstring(
+    cmd: str, target: TeX | str, then: TeX | str, otherwise: TeX | str
+) -> TeX:
     return ControlSequence(
         "ifdefstring",
         (Parameter(cmd), Parameter(target), Parameter(then), Parameter(otherwise)),

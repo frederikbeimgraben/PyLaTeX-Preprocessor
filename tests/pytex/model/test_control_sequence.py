@@ -48,7 +48,5 @@ def test_required_packages_default_empty():
 
 
 def test_required_packages_attached():
-    cs = ControlSequence(
-        "x", (), required_packages=frozenset({AMSMATH})
-    )
+    cs = ControlSequence("x", (), required_packages=frozenset({AMSMATH}))
     assert cs.requires == frozenset({AMSMATH})

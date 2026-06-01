@@ -1,5 +1,5 @@
-from . import packages  # noqa: F401
-from .commands import (  # noqa: F401
+from . import packages
+from .commands import (
     biblatex,
     builtin,
     captions,
@@ -24,8 +24,8 @@ from .commands import (  # noqa: F401
     setspace,
     tables,
 )
-from .helpers import coerce, sanitize, with_package  # noqa: F401
-from .model import (  # noqa: F401
+from .helpers import coerce, sanitize, with_package
+from .model import (
     color,
     concat,
     control_sequence,
@@ -40,21 +40,26 @@ from .model import (  # noqa: F401
     package,
     raw,
 )
-from .registry import Registry  # noqa: F401
+from .registry import Registry
 
 __all__ = [
-    "packages",
-    "coerce",
-    "sanitize",
-    "with_package",
+    "Registry",
     "biblatex",
     "builtin",
     "captions",
     "cleveref",
+    "coerce",
+    "color",
     "colors",
+    "concat",
     "conditionals",
+    "control_sequence",
     "counters",
     "definitions",
+    "document",
+    "document_class",
+    "empty",
+    "environment",
     "floats",
     "font",
     "fontawesome",
@@ -64,24 +69,19 @@ __all__ = [
     "graphics",
     "hooks",
     "hyperref",
-    "lengths",
-    "listings",
-    "mdframed",
-    "picture",
-    "setspace",
-    "tables",
-    "color",
-    "concat",
-    "control_sequence",
-    "document",
-    "document_class",
-    "empty",
-    "environment",
     "image",
     "include",
     "length",
+    "lengths",
+    "listings",
     "math",
+    "mdframed",
     "package",
+    "packages",
+    "picture",
     "raw",
-    "Registry",
+    "sanitize",
+    "setspace",
+    "tables",
+    "with_package",
 ]

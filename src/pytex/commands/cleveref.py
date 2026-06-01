@@ -4,6 +4,8 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..packages import CLEVEREF
 from ..registry import Registry
 
+__all__ = ["Cref", "CrefUpper", "Crefformat", "Crefname", "CrefnameUpper"]
+
 
 @Registry.add
 @with_package(CLEVEREF)

@@ -10,7 +10,7 @@ this module depends on ``pytex_hsrtreport``.
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Final, cast, final
+from typing import TYPE_CHECKING, Any, Final, cast, final
 
 from pytex.commands.builtin import (
     Bold,
@@ -41,9 +41,14 @@ from pytex_hsrtreport.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
 from .escape import escape_latex
 
+__all__ = ["MarkdownConverter"]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 # Heading commands ordered from the broadest division downward. The default
 # `base_level` of 0 maps Markdown ``#`` (level 1) to ``Section``.
-_HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
+HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
     Part,
     Chapter,
     Section,
@@ -52,10 +57,10 @@ _HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
     Paragraph,
     Subparagraph,
 )
-_SECTION_INDEX: Final[int] = 2  # index of Section in _HEADINGS
+SECTION_INDEX: Final[int] = 2  # index of Section in HEADINGS
 
-_CALLOUT_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[!(\w+)\]\s*", re.IGNORECASE)
-_CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
+CALLOUT_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[!(\w+)\]\s*", re.IGNORECASE)
+CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "NOTE": InfoBox,
     "INFO": InfoBox,
     "TIP": SuccessBox,
@@ -68,7 +73,7 @@ _CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "ERROR": WarningBox,
 }
 
-_PARBREAK: Final[TeX] = Raw("\n\n")
+PARBREAK: Final[TeX] = Raw("\n\n")
 
 
 def _kind(node: object) -> str:
@@ -133,9 +138,9 @@ class MarkdownConverter:
 
     def _heading(self, node: object) -> TeX:
         level = int(getattr(node, "level", 1))
-        idx = _SECTION_INDEX + (level - 1) + self.base_level
-        idx = max(0, min(idx, len(_HEADINGS) - 1))
-        return _HEADINGS[idx](self.inlines(node))
+        idx = SECTION_INDEX + (level - 1) + self.base_level
+        idx = max(0, min(idx, len(HEADINGS) - 1))
+        return HEADINGS[idx](self.inlines(node))
 
     def _list(self, node: object) -> TeX:
         items = [self._list_item(c) for c in _children(node) if _kind(c) == "ListItem"]
@@ -163,10 +168,10 @@ class MarkdownConverter:
         first_text = _text(inner[0]) if inner else None
         if first_text is None:
             return None
-        match = _CALLOUT_RE.match(first_text)
+        match = CALLOUT_RE.match(first_text)
         if match is None:
             return None
-        box = _CALLOUTS.get(match.group(1).upper())
+        box = CALLOUTS.get(match.group(1).upper())
         if box is None:
             return None
         # Rebuild the first paragraph with the marker stripped, keep the rest.
@@ -202,7 +207,7 @@ class MarkdownConverter:
         expr = _strip_md_title(title)
         if not expr:
             return Empty
-        result: Any = eval(expr, pytex_namespace())  # noqa: S307
+        result: Any = eval(expr, pytex_namespace())
         return result if isinstance(result, TeX) else Raw(str(result))
 
     def block(self, node: object) -> TeX:
@@ -258,6 +263,6 @@ def _interleave(blocks: list[TeX]) -> list[TeX]:
     joined: list[TeX] = []
     for i, b in enumerate(kept):
         if i:
-            joined.append(_PARBREAK)
+            joined.append(PARBREAK)
         joined.append(b)
     return joined

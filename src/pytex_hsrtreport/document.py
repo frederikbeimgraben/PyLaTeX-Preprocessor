@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final, override
@@ -58,7 +59,9 @@ from .pagesetup import HSRTPageSetup
 from .titlepage import TitlePage, TitlePageDataLine
 from .variants import Variant, default_logo_names
 
-_BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
+__all__ = ["HSRTReport"]
+
+BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
     {
         LMODERN,
         GEOMETRY,
@@ -86,13 +89,27 @@ _BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
     }
 )
 
-_DEFAULT_GEOMETRY: Final[dict[str, str]] = {
+DEFAULT_GEOMETRY: Final[dict[str, str]] = {
     "a4paper": "",
     "top": "2cm",
     "bottom": "2cm",
     "left": "2cm",
     "right": "2cm",
 }
+
+# Back-matter print commands. \printglossary/\printbibliography emit their own
+# \chapter* heading (and page break), so no manual \clearpage precedes them.
+BACKMATTER_HEADER = r"\newpage\appendix\backmatter\HSRTBackMattertrue"
+GLOSSARY_PRINT = r"\renewcommand*{\entryname}{Wort}\printglossary"
+ACRONYM_PRINT = r"\renewcommand*{\entryname}{Abkürzung}\printglossary[type=\acronymtype,title=Abkürzungen]"  # noqa: E501
+BIBLIOGRAPHY_PRINT = r"\clearpage\chapter*{Literaturverzeichnis}\label{chap:bibliography}\printbibliography[heading=none,title={}]"  # noqa: E501
+
+
+def _emit(dest: Path, data: bytes) -> str:
+    """Write `data` to `dest` (creating parent dirs) and return its posix path."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return dest.as_posix()
 
 
 @Registry.add
@@ -121,7 +138,7 @@ class HSRTReport(KomaDocument):
     main_font: str | None = None
     sans_font: str | None = None
     geometry_options: dict[str, str] = field(
-        default_factory=lambda: dict(_DEFAULT_GEOMETRY)
+        default_factory=lambda: dict(DEFAULT_GEOMETRY)
     )
     user_preamble: TeX | str = Empty
 
@@ -129,10 +146,11 @@ class HSRTReport(KomaDocument):
         super().__post_init__()
         if self.document_class != "scrbook":
             raise ValueError(
-                f"HSRTReport requires document_class='scrbook', got {self.document_class!r}"
+                "HSRTReport requires document_class='scrbook', "
+                + f"got {self.document_class!r}"
             )
         self.extra_packages: frozenset[PackageProtocol] = (
-            frozenset(self.extra_packages) | _BASE_PACKAGES
+            frozenset(self.extra_packages) | BASE_PACKAGES
         )
         self.preamble: TeX | str = self._build_preamble()
 
@@ -160,104 +178,73 @@ class HSRTReport(KomaDocument):
         )
 
     def _build_preamble(self) -> TeX:
-        parts: list[TeX | str] = [
-            Raw(r"\KOMAoptions{open=any,twoside=false}"),
-            Geometry(self.geometry_options),
-            HSRTColors(),
-            self._color_definitions(),
-            HSRTHyperref(),
-            GermanCrefNames(),
-            HSRTGlossarySetup()
-            if (self.show_glossary or self.show_acronyms)
-            else Empty,
-            HSRTListingStyles(),
-            AcrShortcut(),
-        ]
+        return Concat(*self._preamble_parts())
+
+    def _preamble_parts(self) -> Iterator[TeX | str]:
+        yield Raw(r"\KOMAoptions{open=any,twoside=false}")
+        yield Geometry(self.geometry_options)
+        yield HSRTColors()
+        yield self._color_definitions()
+        yield HSRTHyperref()
+        yield GermanCrefNames()
+        if self.show_glossary or self.show_acronyms:
+            yield HSRTGlossarySetup()
+        yield HSRTListingStyles()
+        yield AcrShortcut()
         # Page setup first — provides \providecommand{\blenderfont} fallback
         # that HSRTFontSetup's \renewcommand{\blenderfont} requires.
-        parts.append(HSRTPageSetup())
-        if self.show_footer_logos:
-            parts.append(
-                Raw(
-                    footer_logo_hook(default_logo_names(self.variant)),
-                    allow_replacements=False,
-                )
-            )
-        else:  # skyline on every page even without footer logos
-            parts.append(
-                Raw(
-                    footer_logo_hook((), skyline=True),
-                    allow_replacements=False,
-                )
-            )
+        yield HSRTPageSetup()
+        # The skyline is drawn on every page; footer logos only when requested.
+        logo_names = default_logo_names(self.variant) if self.show_footer_logos else ()
+        yield Raw(footer_logo_hook(logo_names), allow_replacements=False)
         if self.inline_fonts:
-            parts.append(HSRTFontSetup())
+            yield HSRTFontSetup()
         if self.main_font is not None:
-            parts.append(Setmainfont(self.main_font))
+            yield Setmainfont(self.main_font)
         if self.sans_font is not None:
-            parts.append(Setsansfont(self.sans_font))
+            yield Setsansfont(self.sans_font)
         # \title / \author for running headers
         if self.title is not None:
-            parts.append(Raw(f"\\title{{{coerce_tex(self.title).rendered}}}"))
+            yield Raw(f"\\title{{{coerce_tex(self.title).rendered}}}")
         if self.author is not None:
-            parts.append(Raw(f"\\author{{{coerce_tex(self.author).rendered}}}"))
+            yield Raw(f"\\author{{{coerce_tex(self.author).rendered}}}")
         if self.user_preamble is not Empty:
-            parts.append(self.user_preamble)
-        return Concat(*parts)
+            yield self.user_preamble
 
     def _build_full_body(self) -> TeX:
         """Wrap user body with front/main/back matter, ToC, glossary, bibliography."""
-        parts: list[TeX | str] = []
+        return Concat(*self._body_parts())
 
+    def _body_parts(self) -> Iterator[TeX | str]:
         # -- Front matter --
-        parts.append(Raw(r"\frontmatter"))
-
-        # Title page
+        yield Raw(r"\frontmatter")
         if self.show_titlepage and self.title is not None:
-            parts.append(
-                TitlePage(
-                    title=self.title,
-                    abstract=self.abstract or "",
-                    keywords=self.keywords or "",
-                    data_lines=self.data_lines,
-                    logo_names=default_logo_names(self.variant),
-                )
+            yield TitlePage(
+                title=self.title,
+                abstract=self.abstract or "",
+                keywords=self.keywords or "",
+                data_lines=self.data_lines,
+                logo_names=default_logo_names(self.variant),
             )
-
-        # Table of contents
         if self.show_toc:
-            parts.append(Raw(r"\newpage\tableofcontents"))
+            yield Raw(r"\newpage\tableofcontents")
 
         # -- Main matter --
-        parts.append(Raw(r"\mainmatter"))
-        parts.append(coerce_tex(self.body))
+        yield Raw(r"\mainmatter")
+        yield coerce_tex(self.body)
 
-        # Back matter header is only emitted when there is actual back-matter content.
-        # \backmatter calls hyperref's \bookmarksetup which fires \@ in vertical mode
-        # and crashes — skip it entirely when there is nothing to show.
+        # -- Back matter --
+        # The header is only emitted when there is actual back-matter content:
+        # \backmatter calls hyperref's \bookmarksetup which fires \@ in vertical
+        # mode and crashes, so skip it entirely when there is nothing to show.
         if self.show_glossary or self.show_acronyms or self.show_bibliography:
-            parts.append(Raw(r"\newpage\appendix\backmatter\HSRTBackMattertrue"))
-
-        # \printglossary emits its own \chapter* heading, which starts a new
-        # page. A preceding \clearpage+\vspace would put glue on the fresh page,
-        # so the \chapter* then ships that (blank) page — leave the break to the
-        # heading itself.
+            yield Raw(BACKMATTER_HEADER)
         if self.show_glossary:
-            parts.append(Raw(r"\renewcommand*{\entryname}{Wort}\printglossary"))
+            yield Raw(GLOSSARY_PRINT)
         if self.show_acronyms:
-            parts.append(
-                Raw(
-                    r"\renewcommand*{\entryname}{Abkürzung}\printglossary[type=\acronymtype,title=Abkürzungen]"
-                )
-            )
+            yield Raw(ACRONYM_PRINT)
         if self.show_bibliography:
-            parts.append(
-                Raw(
-                    r"\clearpage\chapter*{Literaturverzeichnis}\label{chap:bibliography}\printbibliography[heading=none,title={}]"
-                )
-            )
-
-        return Concat(*parts)
+            yield Raw(BIBLIOGRAPHY_PRINT)
 
     def write_inline_fonts(self, target_dir: str = ".") -> tuple[str, ...]:
         """Write bundled font TTF files to ``<target_dir>/fonts/`` for compilation.
@@ -270,13 +257,10 @@ class HSRTReport(KomaDocument):
         from .fonts import FONT_OUTPUT_DIR, all_font_paths, rel
 
         base = Path(target_dir)
-        written: list[str] = []
-        for font_path in all_font_paths():
-            dest = base / FONT_OUTPUT_DIR / rel(font_path)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(font_path.read_bytes())
-            written.append(dest.as_posix())
-        return tuple(written)
+        return tuple(
+            _emit(base / FONT_OUTPUT_DIR / rel(font_path), font_path.read_bytes())
+            for font_path in all_font_paths()
+        )
 
     def write_inline_logos(self, target_dir: str = ".") -> tuple[str, ...]:
         """Write the logos used by the tikz overlays to ``<target_dir>/logos/``.
@@ -292,16 +276,16 @@ class HSRTReport(KomaDocument):
 
         # Titlepage overlay + footer hook use the variant defaults; the footer
         # skyline is emitted on every page regardless of show_footer_logos.
-        names = set(default_logo_names(self.variant)) | {"Skyline"}
+        names = sorted(set(default_logo_names(self.variant)) | {"Skyline"})
         base = Path(target_dir)
-        written: list[str] = []
-        for name in sorted(names):
-            img = IncludeImage(path=logo_path(name), inline_base64=False)
-            dest = base / LOGO_OUTPUT_DIR / logo_output_name(name)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(img.read_bytes())  # converts svg -> pdf
-            written.append(dest.as_posix())
-        return tuple(written)
+        return tuple(
+            # IncludeImage.read_bytes converts svg -> pdf on the fly.
+            _emit(
+                base / LOGO_OUTPUT_DIR / logo_output_name(name),
+                IncludeImage(path=logo_path(name), inline_base64=False).read_bytes(),
+            )
+            for name in names
+        )
 
     def default_logos(self) -> TeX:
         return DefaultLogos(self.variant, inline_base64=self.inline_logos)

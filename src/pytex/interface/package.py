@@ -1,5 +1,7 @@
 from typing import Protocol, Self, override, runtime_checkable
 
+__all__ = ["PackageProtocol"]
+
 type PackageOption = str | tuple[str, str]
 
 

@@ -3,6 +3,8 @@ from typing import Protocol, runtime_checkable
 from ..model.empty import EmptyTeX
 from .tex import TeX
 
+__all__ = ["ControlSequenceProtocol", "ParameterProtocol"]
+
 type ParameterType = TeX | str | dict[str, str]
 
 

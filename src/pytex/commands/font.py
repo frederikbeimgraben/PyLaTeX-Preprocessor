@@ -2,6 +2,31 @@ from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
 from ..registry import Registry
 
+__all__ = [
+    "Bfseries",
+    "Fontsize",
+    "Footnotesize",
+    "Huge",
+    "HugeBig",
+    "Itshape",
+    "Large",
+    "LargeBig",
+    "LargeMid",
+    "Mdseries",
+    "Normalfont",
+    "Normalsize",
+    "Rmfamily",
+    "Scriptsize",
+    "Scshape",
+    "Selectfont",
+    "Sffamily",
+    "Slshape",
+    "Small",
+    "Tiny",
+    "Ttfamily",
+    "Upshape",
+]
+
 
 @Registry.add
 def Fontsize(size: str, baseline: str) -> TeX:
