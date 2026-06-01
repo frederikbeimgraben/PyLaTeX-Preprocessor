@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pylatex"
+name = "pytex"
 version = "0.1.0"
 authors = [
   { name="Frederik Beimgraben", email="frederik@beimgraben.net" },
@@ -17,7 +17,7 @@ dependencies = ["pydantic", "marko"]
 dev = ["pytest"]
 
 [project.scripts]
-build-pytex = "pytex.scripts.build_pytex:main"
+pytex = "pytex_builder.build:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
