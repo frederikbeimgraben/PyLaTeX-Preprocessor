@@ -21,7 +21,7 @@ _SETUP = r"""
 \clearpairofpagestyles
 \setkomafont{pageheadfoot}{\color{gray}\blenderfont}
 \setkomafont{pagenumber}{\color{gray}\blenderfont}
-\setlength{\footskip}{35pt}
+\setlength{\footskip}{20pt}
 \ohead*{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\Roman{\thechapter}~–~\Chaptername\fi\fi}
 \ifoot{\@author}
 \cfoot{\ifHSRTBackMatter\else Seite~\thepage\if@mainmatter\@ifundefined{@lastpage}{}{~von~\@lastpage}\fi\fi}
@@ -60,7 +60,7 @@ _SETUP = r"""
 \widowpenalty=10000
 \clubpenalty=10000
 \raggedbottom
-\setlength{\parskip}{0.5em plus 0.2em minus 0.1em}
+\setlength{\parskip}{0.25em plus 0.1em minus 0.05em}
 \setlength{\parindent}{0pt}
 % Prevent \mainmatter from inserting a blank page via \cleardoublepage.
 % scrbook's \mainmatter calls \cleardoublepage to force chapters onto a

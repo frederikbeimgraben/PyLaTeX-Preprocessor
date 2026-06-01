@@ -16,6 +16,7 @@ from pytex.model.environment import Environment
 from pytex.model.raw import Raw
 from pytex.packages import (
     ARRAY,
+    BABEL,
     BIBLATEX,
     CLEVEREF,
     CSQUOTES,
@@ -81,6 +82,7 @@ _BASE_PACKAGES: Final[frozenset[PackageProtocol]] = frozenset(
         ARRAY,
         LONGTABLE,
         NEEDSPACE,
+        BABEL,
     }
 )
 

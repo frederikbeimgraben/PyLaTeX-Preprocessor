@@ -13,7 +13,7 @@ XCOLOR: Package = DefinePackage("xcolor")
 GEOMETRY: Package = DefinePackage("geometry")
 FONTENC: Package = DefinePackage("fontenc")
 INPUTENC: Package = DefinePackage("inputenc")
-BABEL: Package = DefinePackage("babel")
+BABEL: Package = DefinePackage("babel", options={"ngerman"})
 MICROTYPE: Package = DefinePackage("microtype")
 CSQUOTES: Package = DefinePackage("csquotes")
 BOOKTABS: Package = DefinePackage("booktabs")
@@ -33,7 +33,6 @@ TIKZ: Package = DefinePackage("tikz")
 PGFPLOTS: Package = DefinePackage("pgfplots")
 TCOLORBOX: Package = DefinePackage("tcolorbox")
 SIUNITX: Package = DefinePackage("siunitx")
-BIBLATEX: Package = DefinePackage("biblatex")
 GLOSSARIES: Package = DefinePackage("glossaries")
 SVG: Package = DefinePackage("svg")
 SOUL: Package = DefinePackage("soul")
@@ -64,7 +63,7 @@ MDFRAMED: Package = DefinePackage("mdframed", options={("framemethod", "tikz")})
 PDFPAGES: Package = DefinePackage("pdfpages")
 FONTSPEC: Package = DefinePackage("fontspec")
 UNICODE_MATH: Package = DefinePackage("unicode-math")
-POLYGLOSSIA: Package = DefinePackage("polyglossia")
+BIBLATEX: Package = DefinePackage("biblatex")
 TOCLOFT: Package = DefinePackage("tocloft")
 NOTOCCITE: Package = DefinePackage("notoccite")
 NATBIB: Package = DefinePackage("natbib")
@@ -174,7 +173,6 @@ class Packages(Enum):
     PDFPAGES = PDFPAGES
     FONTSPEC = FONTSPEC
     UNICODE_MATH = UNICODE_MATH
-    POLYGLOSSIA = POLYGLOSSIA
     TOCLOFT = TOCLOFT
     NOTOCCITE = NOTOCCITE
     NATBIB = NATBIB
