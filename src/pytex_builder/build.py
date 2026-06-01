@@ -119,7 +119,7 @@ def _run(cfg: Config, console: Console) -> None:
     for pass_no in range(1, _MAX_PASSES + 1):
         console.step(f"Compiling (pass {pass_no})")
         run_tectonic(
-            binary, output, build_dir, shell_escape=cfg.shell_escape
+            binary, output, build_dir, shell_escape=cfg.shell_escape, console=console
         )
         # Resolve glossaries after the first pass; rerun only if it changed.
         if pass_no == 1 and run_makeindex(job, build_dir, console=console):

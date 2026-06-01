@@ -7,15 +7,37 @@ its working directory - we point that at the cache dir.
 
 from __future__ import annotations
 
+import os
+import platform
 import shutil
 import subprocess
+import tarfile
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from .console import Console
 
 _INSTALL_URL = "https://drop-sh.fullyjustified.net"
 _CACHE_DIR = Path(tempfile.gettempdir()) / "pytex-tectonic"
+
+# BCF control-file format version -> compatible biber release.
+# Pattern: BCF minor = biber minor - 9  (holds for biber 2.14+)
+_BCF_TO_BIBER: dict[str, str] = {
+    "3.5": "2.14",
+    "3.6": "2.15",
+    "3.7": "2.16",
+    "3.8": "2.17",
+    "3.9": "2.18",
+    "3.10": "2.19",
+    "3.11": "2.20",
+    "3.12": "2.21",
+}
+
+_BIBER_RELEASE_URL = (
+    "https://sourceforge.net/projects/biblatex-biber/files/"
+    "biblatex-biber/{version}/binaries/{sf_dir}/{filename}/download"
+)
 
 
 class BuildError(RuntimeError):
@@ -61,12 +83,141 @@ def ensure_tectonic(console: Console) -> Path:
     return cached
 
 
+def _biber_sf_path() -> tuple[str, str]:
+    """Return (sourceforge_subdir, filename) for biber on this platform."""
+    system = platform.system()
+    machine = platform.machine()
+    if system == "Linux":
+        if machine == "x86_64":
+            return "Linux", "biber-linux_x86_64.tar.gz"
+        return "Linux-musl", f"biber-linuxmusl_{machine}.tar.gz"
+    if system == "Darwin":
+        arch = "arm64" if machine == "arm64" else "x86_64"
+        return "MacOS", f"biber-darwin_{arch}.tar.gz"
+    if system == "Windows":
+        return "Windows", "biber-windows_x86_64.zip"
+    raise BuildError(
+        f"unsupported platform for biber auto-download: {system} {machine}"
+    )
+
+
+def _biber_cached(version: str) -> Path:
+    return _CACHE_DIR / "biber" / version / "biber"
+
+
+def _ensure_biber(version: str, console: Console) -> Path:
+    """Return a path to biber *version*, downloading from SourceForge if needed."""
+    cached = _biber_cached(version)
+    if cached.exists():
+        return cached
+
+    sf_dir, filename = _biber_sf_path()
+    url = _BIBER_RELEASE_URL.format(version=version, sf_dir=sf_dir, filename=filename)
+    console.step(f"Downloading biber {version}")
+    console.detail(f"source: {url}")
+
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cached.parent / filename
+    try:
+        if not shutil.which("curl"):
+            raise BuildError(
+                "biber is not installed and cannot be downloaded without 'curl' on PATH"
+            )
+        proc = subprocess.run(
+            ["curl", "-fsSL", "-o", str(tmp), url],
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode != 0 or not tmp.exists():
+            raise BuildError(
+                f"failed to download biber {version}:\n"
+                + (proc.stderr.strip() or "no output from curl")
+            )
+        with tarfile.open(tmp) as tf:
+            member = next(
+                (
+                    m
+                    for m in tf.getmembers()
+                    if Path(m.name).name == "biber" and m.isfile()
+                ),
+                None,
+            )
+            if member is None:
+                raise BuildError(f"biber binary not found inside {filename}")
+            src = tf.extractfile(member)
+            if src is None:
+                raise BuildError(f"could not read biber from {filename}")
+            cached.write_bytes(src.read())
+    except Exception:
+        if cached.exists():
+            cached.unlink()
+        raise
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+    cached.chmod(0o755)
+    return cached
+
+
+def _biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:
+    """Return a correctly-versioned biber if the BCF file reveals a mismatch."""
+    bcf = build_dir / f"{job}.bcf"
+    if not bcf.exists():
+        return None
+    try:
+        root = ET.parse(bcf).getroot()
+        bcf_ver = root.get("version")
+    except ET.ParseError:
+        return None
+    if bcf_ver is None:
+        return None
+    biber_ver = _BCF_TO_BIBER.get(bcf_ver)
+    if biber_ver is None:
+        console.warn(f"unknown BCF version {bcf_ver!r}; using system biber")
+        return None
+    # System biber may already be the right version - avoid downloading.
+    system_biber = shutil.which("biber")
+    if system_biber:
+        result = subprocess.run(
+            [system_biber, "--version"], capture_output=True, text=True
+        )
+        if f"biber version: {biber_ver}" in result.stdout:
+            return Path(system_biber)
+    return _ensure_biber(biber_ver, console)
+
+
+def _env_with_biber(biber: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    env["PATH"] = str(biber.parent) + os.pathsep + env.get("PATH", "")
+    return env
+
+
+def _probe_bcf(cmd: list[str]) -> None:
+    """Run tectonic with a no-op biber so the BCF file is written to build_dir.
+
+    Tectonic cleans up intermediates when biber fails, so the BCF is never
+    persisted on a real failed run. A fake biber that exits 0 lets the TeX
+    pass finish and tectonic copy the BCF into ``build_dir``. Output is
+    suppressed - the real pass immediately follows.
+    """
+    tmpdir = Path(tempfile.mkdtemp(prefix="pytex-fakeb-"))
+    try:
+        fake = tmpdir / "biber"
+        fake.write_text("#!/bin/sh\nexit 0\n")
+        fake.chmod(0o755)
+        subprocess.run(cmd, env=_env_with_biber(fake), capture_output=True)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def run_tectonic(
     binary: Path,
     tex_file: Path,
     build_dir: Path,
     *,
     shell_escape: bool,
+    console: Console,
 ) -> None:
     """Run a single tectonic pass, keeping intermediates for the glossary step."""
     cmd: list[str] = [
@@ -84,7 +235,18 @@ def run_tectonic(
         cmd += ["-Z", f"shell-escape-cwd={tex_file.parent.resolve()}"]
     cmd.append(str(tex_file))
 
-    proc = subprocess.run(cmd)
+    job = tex_file.stem
+
+    # Determine the right biber from the BCF. If no BCF exists yet (first build
+    # or after a clean), run a silent probe pass with a no-op biber so tectonic
+    # writes the BCF to build_dir without actually needing biber installed.
+    biber = _biber_for_build(build_dir, job, console)
+    if biber is None:
+        _probe_bcf(cmd)
+        biber = _biber_for_build(build_dir, job, console)
+
+    env = _env_with_biber(biber) if biber is not None else None
+    proc = subprocess.run(cmd, env=env)
     if proc.returncode != 0:
         log = build_dir / f"{tex_file.stem}.log"
         raise BuildError(
