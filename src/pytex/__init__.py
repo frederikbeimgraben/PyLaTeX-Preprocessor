@@ -24,7 +24,7 @@ from .commands import (  # noqa: F401
     setspace,
     tables,
 )
-from .helpers import coerce, with_package  # noqa: F401
+from .helpers import coerce, sanitize, with_package  # noqa: F401
 from .model import (  # noqa: F401
     color,
     concat,
@@ -45,6 +45,7 @@ from .registry import Registry  # noqa: F401
 __all__ = [
     "packages",
     "coerce",
+    "sanitize",
     "with_package",
     "biblatex",
     "builtin",

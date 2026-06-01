@@ -1,30 +1,11 @@
-"""Escape literal text for LaTeX.
+"""LaTeX text escaping (re-exported from pytex core).
 
-Markdown text is plain prose, so every LaTeX-special character must be escaped
-before it reaches the document. pytex itself does no escaping (strings pass
-through as ``Raw``), so this lives here.
+The canonical implementation lives in :mod:`pytex.helpers.sanitize` so the
+markdown converter and :func:`pytex.helpers.sanitize.Sanitize` stay in sync.
 """
 
 from __future__ import annotations
 
-from typing import Final
+from pytex.helpers.sanitize import escape_latex
 
-# Order matters only in that backslash maps to a command; we build the result
-# char-by-char so the braces introduced by replacements are never re-escaped.
-_ESCAPES: Final[dict[str, str]] = {
-    "\\": r"\textbackslash{}",
-    "&": r"\&",
-    "%": r"\%",
-    "$": r"\$",
-    "#": r"\#",
-    "_": r"\_",
-    "{": r"\{",
-    "}": r"\}",
-    "~": r"\textasciitilde{}",
-    "^": r"\textasciicircum{}",
-}
-
-
-def escape_latex(text: str) -> str:
-    """Return ``text`` with LaTeX-special characters escaped."""
-    return "".join(_ESCAPES.get(ch, ch) for ch in text)
+__all__ = ["escape_latex"]
