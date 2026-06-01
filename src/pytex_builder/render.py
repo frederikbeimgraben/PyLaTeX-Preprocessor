@@ -58,7 +58,15 @@ def _render_markdown(path: Path) -> TeX:
     # Imported lazily so plain .tex/.py builds need neither marko nor hsrt.
     from pytex.model.document import Document
     from pytex_markdown import IncludeMarkdown
+    from pytex_protocol.frontmatter import split_frontmatter
 
+    text = path.read_text()
+    meta, _ = split_frontmatter(text)
+    # A `gremium:` frontmatter key marks a STUPA/AStA meeting protocol.
+    if "gremium" in meta or meta.get("typ") == "protokoll":
+        from pytex_protocol import render_protocol
+
+        return render_protocol(text)
     return Document(IncludeMarkdown(path))
 
 

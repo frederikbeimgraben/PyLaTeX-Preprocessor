@@ -7,4 +7,5 @@ sys.path.insert(0, str(ROOT / "src"))
 import pytex  # noqa: F401,E402  (populate Registry)
 import pytex_hsrtreport  # noqa: F401,E402
 import pytex_koma  # noqa: F401,E402
+import pytex_protocol  # noqa: F401,E402
 import pytex_tikz.tikz  # noqa: F401,E402
