@@ -19,7 +19,11 @@ HSRT_HYPER_OPTIONS: Final[dict[str, HyperOption]] = {
     "pdfpagemode": "UseOutlines",
     "bookmarksopen": True,
     "bookmarksopenlevel": 0,
-    "hypertexnames": False,
+    # plainpages=false + hypertexnames=true gives roman frontmatter pages their
+    # own named anchors (page.i, ...) so glossary/index \hyperpage links to
+    # those pages resolve instead of dangling against absolute arabic anchors.
+    "plainpages": False,
+    "hypertexnames": True,
     "colorlinks": True,
     "citecolor": HSRT_CITE_COLOR,
     "linkcolor": HSRT_LINK_COLOR,

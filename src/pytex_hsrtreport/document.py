@@ -295,6 +295,11 @@ class HSRTReport(KomaDocument):
     def rendered(self) -> str:
         return Concat(
             DocumentClass(self.document_class, self.document_class_options),
+            # hyperfootnotes is only honoured as a hyperref load option, so it
+            # must be queued before \usepackage{hyperref}. The HSRT footnote
+            # setup never places hyperref's Hfootnote destination, so leaving
+            # footnote-mark links enabled produces dangling links.
+            Raw(r"\PassOptionsToPackage{hyperfootnotes=false}{hyperref}"),
             *self.ordered_packages(),
             self.inline_image_block,
             self.preamble,

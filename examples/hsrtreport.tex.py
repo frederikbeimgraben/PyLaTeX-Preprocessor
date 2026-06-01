@@ -62,7 +62,7 @@ from pytex_hsrtreport import (
 from pytex_hsrtreport.titlepage import TitlePageDataLine
 
 # -- Embedded bibliography (filecontents -> \jobname.bib, read by biber) -------
-_BIB = r"""\begin{filecontents}[overwrite]{\jobname.bib}
+_BIB = r"""\begin{filecontents}[noheader]{\jobname.bib}
 @book{knuth1984texbook,
   author    = {Knuth, Donald E.},
   title     = {The {\TeX}book},
