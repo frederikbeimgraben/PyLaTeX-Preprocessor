@@ -21,6 +21,7 @@ from pytex_markdown.convert import CALLOUT_RE, MarkdownConverter
 
 from .entries import ActionItem, Deadline, Decision, Vote
 from .shortcodes import expand_inline_shortcodes
+from .signatures import SignatureLines
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -42,6 +43,7 @@ _PROTOCOL_CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "DEADLINE": Deadline,
 }
 _VOTE_MARKERS: Final[frozenset[str]] = frozenset({"ABSTIMMUNG", "VOTE"})
+_SIGNATURE_MARKERS: Final[frozenset[str]] = frozenset({"UNTERSCHRIFTEN", "SIGNATURES"})
 
 _TALLY_RE: Final[dict[str, re.Pattern[str]]] = {
     "yes": re.compile(r"(?:ja|yes)\s*[:=]?\s*(\d+)", re.IGNORECASE),
@@ -75,6 +77,17 @@ def _all_text(node: object) -> str:
 def _tally(text: str, key: str) -> int:
     match = _TALLY_RE[key].search(text)
     return int(match.group(1)) if match else 0
+
+
+def _leaf_texts(node: object) -> list[str]:
+    """Every leaf text fragment beneath `node`, in order (one per source line)."""
+    text = _text(node)
+    if text is not None:
+        return [text]
+    out: list[str] = []
+    for child in _children(node):
+        out.extend(_leaf_texts(child))
+    return out
 
 
 class ProtocolConverter(MarkdownConverter):
@@ -112,6 +125,8 @@ class ProtocolConverter(MarkdownConverter):
         name, title, head_rest, rest_blocks = marker
         if name in _VOTE_MARKERS:
             return self._vote_callout(title, kids)
+        if name in _SIGNATURE_MARKERS:
+            return self._signature_callout(kids)
         factory = _PROTOCOL_CALLOUTS.get(name)
         if factory is None:
             return super()._as_callout(kids)
@@ -136,10 +151,28 @@ class ProtocolConverter(MarkdownConverter):
         if match is None:
             return None
         name = match.group(1).upper()
-        if name not in _PROTOCOL_CALLOUTS and name not in _VOTE_MARKERS:
+        if (
+            name not in _PROTOCOL_CALLOUTS
+            and name not in _VOTE_MARKERS
+            and name not in _SIGNATURE_MARKERS
+        ):
             return None
         title = first[match.end() :].strip()
         return name, title, inner[1:], kids[1:]
+
+    def _signature_callout(self, kids: list[object]) -> TeX:
+        # Each line "Rolle: Name" becomes one signer; the marker is stripped
+        # from the first line.
+        lines = [frag for k in kids for frag in _leaf_texts(k)]
+        if lines:
+            lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
+        signers: list[tuple[str, str]] = []
+        for line in (entry.strip() for entry in lines):
+            if not line:
+                continue
+            role, _, person = line.partition(":")
+            signers.append((role.strip(), person.strip()))
+        return SignatureLines(*signers)
 
     def _vote_callout(self, title: str, kids: list[object]) -> TeX:
         text = " ".join(_all_text(k) for k in kids)

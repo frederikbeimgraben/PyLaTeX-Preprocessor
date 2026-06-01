@@ -15,6 +15,7 @@ from .entries import ActionItem, Deadline, Decision, Timestamp, Vote
 from .frontmatter import split_frontmatter
 from .header import ProtocolHeader, header_from_meta
 from .shortcodes import expand_inline_shortcodes, expand_shortcode
+from .signatures import SignatureLines, signature_block_from_meta
 
 __all__ = [
     "ActionItem",
@@ -24,11 +25,13 @@ __all__ = [
     "Protocol",
     "ProtocolConverter",
     "ProtocolHeader",
+    "SignatureLines",
     "Timestamp",
     "Vote",
     "expand_inline_shortcodes",
     "expand_shortcode",
     "header_from_meta",
     "render_protocol",
+    "signature_block_from_meta",
     "split_frontmatter",
 ]
