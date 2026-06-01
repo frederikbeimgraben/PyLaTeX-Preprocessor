@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Final, override
 
-from pytex.commands.builtin import Textbf
+from pytex.commands.builtin import Textbf, Vspace
 from pytex.commands.floats import Columnbreak, Multicols
 from pytex.commands.fontawesome import FaIcon
 from pytex.helpers.parenting import attach
@@ -37,9 +37,7 @@ class VotingResults(TeX):
     no: Final[int]
     abstain: Final[int]
     body: Final[TeX | str] = ""
-    _parent: "TeX | None" = field(
-        default=None, init=False, compare=False, repr=False
-    )
+    _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         attach(self, self.body)
@@ -64,6 +62,7 @@ class VotingResults(TeX):
         return ColoredBox(
             body=Concat(
                 self.body,
+                Vspace("-2em", star=True),
                 Multicols(
                     3,
                     Concat(
@@ -81,7 +80,7 @@ class VotingResults(TeX):
                         Columnbreak(),
                         CustomBox(
                             Concat(Textbf("Enthaltung:"), " ", str(self.abstain)),
-                            "question",
+                            None,
                             "eggplant",
                         ),
                     ),

@@ -14,7 +14,7 @@ from pytex_hsrtreport.voting import VotingResults
         (0, 0, "eggplant"),
     ],
 )
-def test_color_picked_in_python(yes, no, expected):
+def test_color_picked_in_python(yes: int, no: int, expected: str):
     assert VotingResults(yes=yes, no=no, abstain=0).color == expected
 
 

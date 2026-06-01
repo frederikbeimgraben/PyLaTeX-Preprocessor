@@ -157,7 +157,7 @@ class ColoredBox(TeX):
 
 def _preset(
     body: TeX | str,
-    icon_name: str,
+    icon_name: str | None,
     color: str,
     icon_size: str = "24pt",
     icon_offset_x: str = "1.5pt",
@@ -201,7 +201,7 @@ def ImportantBox(body: TeX | str) -> ColoredBox:
 
 
 @Registry.add
-def CustomBox(body: TeX | str, icon: str, color: str) -> ColoredBox:
+def CustomBox(body: TeX | str, icon: str | None, color: str) -> ColoredBox:
     return _preset(body, icon, color)
 
 

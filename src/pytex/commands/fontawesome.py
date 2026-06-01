@@ -1,3 +1,5 @@
+from pytex.model.empty import Empty
+
 from ..helpers.with_package import with_package
 from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
@@ -7,11 +9,11 @@ from ..registry import Registry
 
 @Registry.add
 @with_package(FONTAWESOME)
-def FaIcon(name: str) -> TeX:
+def FaIcon(name: str | None) -> TeX:
     # fontawesome (v4) spells the generic helper lowercase; v5's \faIcon does
     # not exist here. The v4 package loads via Type1 fonts, so it survives
     # tectonic's XeTeX engine (fontawesome5's OTF load crashes it).
-    return ControlSequence("faicon", (Parameter(name),))
+    return ControlSequence("faicon", (Parameter(name),)) if name is not None else Empty
 
 
 def _icon(name: str) -> TeX:
