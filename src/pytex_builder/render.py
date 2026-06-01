@@ -39,9 +39,7 @@ def _render_python(path: Path) -> TeX:
         sys.path.pop(0)
 
     if not hasattr(module, _PYTEX_VAR):
-        raise BuildError(
-            f"{path.name} defines no '{_PYTEX_VAR}' variable to render"
-        )
+        raise BuildError(f"{path.name} defines no '{_PYTEX_VAR}' variable to render")
 
     value = cast(object, getattr(module, _PYTEX_VAR))
     if not isinstance(value, TeX):
@@ -52,6 +50,14 @@ def _render_python(path: Path) -> TeX:
     return value
 
 
+def _render_markdown(path: Path) -> TeX:
+    # Imported lazily so plain .tex/.py builds need neither marko nor hsrt.
+    from pytex.model.document import Document
+    from pytex_markdown import IncludeMarkdown
+
+    return Document(IncludeMarkdown(path))
+
+
 def render_input(path: Path) -> str:
     """Render ``path`` to a LaTeX source string."""
     suffix = path.suffix.lower()
@@ -59,6 +65,9 @@ def render_input(path: Path) -> str:
         return IncludeTeX(path).rendered
     if suffix == ".py":
         return _render_python(path).rendered
+    if suffix in (".md", ".markdown"):
+        return _render_markdown(path).rendered
     raise BuildError(
-        f"unsupported input type '{suffix or path.name}'; expected .tex or .py"
+        f"unsupported input type '{suffix or path.name}'; "
+        + "expected .tex, .py or .md"
     )

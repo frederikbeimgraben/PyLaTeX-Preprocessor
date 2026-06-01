@@ -1,0 +1,24 @@
+% `.py.tex` example: a normal LaTeX file with inline PyTeX expressions.
+%
+%     pytex examples/replacements.py.tex            % -> replacements.out.tex
+%     pytex examples/replacements.py.tex --build     % -> build/replacements.out.pdf
+%
+% The builder wraps the file in IncludeTeX and evaluates inline PyTeX markers,
+% substituting the rendered result. A marker is the LaTeX no-op
+% iffalse/fi pair wrapping a "pytex(...)" call, as used below. Any registered
+% PyTeX factory is in scope. (Markers in comments are evaluated too, so this
+% header avoids writing a literal one.)
+\documentclass{article}
+\begin{document}
+
+\section{Inline replacements}
+
+Today is \iffalse{pytex(Today())}\fi.
+
+A fraction rendered from a PyTeX-Object: $\iffalse{pytex(Frac("1", "2"))}\fi$.
+
+A square root: $\iffalse{pytex(Sqrt("x", n="3"))}\fi$.
+
+Multiplication in python: $3 ^ 2 = \iffalse{pytex(3 ** 2)}\fi$.
+
+\end{document}

@@ -179,3 +179,6 @@ cython_debug/
 
 !src/**/*.tex
 !src/**/*.pdf
+!examples/*.*
+
+**/*.out.*
