@@ -1,3 +1,4 @@
+\usepackage{lastpage}
 \makeatletter
 \def\@title{}
 \def\@author{}
@@ -12,14 +13,13 @@
 \def\chaptermark#1{\def\Chaptername{#1}\Chaptermark{#1}}
 \let\Sectionmark\sectionmark
 \def\sectionmark#1{\def\Sectionname{#1}\Sectionmark{#1}}
-\AtEndDocument{\immediate\write\@auxout{\string\gdef\string\@lastpage{\thepage}}}
 \clearpairofpagestyles
 \setkomafont{pageheadfoot}{\color{gray}\blenderfont}
 \setkomafont{pagenumber}{\color{gray}\blenderfont}
 \setlength{\footskip}{20pt}
 \ohead*{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\Roman{\thechapter}~–~\Chaptername\fi\fi}
 \ifoot{\@author}
-\cfoot{\ifHSRTBackMatter\else Seite~\thepage\if@mainmatter\@ifundefined{@lastpage}{}{~von~\@lastpage}\fi\fi}
+\cfoot{\ifHSRTBackMatter\else Seite~\thepage\if@mainmatter~von~\pageref{LastPage}\fi\fi}
 \ohead{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\thechapter~–~\Chaptername\fi\fi}
 \ihead{\@title}
 \pagestyle{scrheadings}
