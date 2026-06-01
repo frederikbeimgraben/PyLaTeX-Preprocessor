@@ -72,6 +72,9 @@ ignore = ["N802"]
 # glossary holds raw LaTeX template constants (column types, style, labels)
 # that exceed the line length and cannot be reflowed.
 "src/pytex_hsrtreport/glossary.py" = ["E501"]
+# tectonic pins a table of 64-char biber SHA256 checksums; the hash literals
+# are unbreakable.
+"src/pytex_builder/tectonic.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["pytex", "pytex_builder", "pytex_koma", "pytex_tikz", "pytex_hsrtreport", "pytex_markdown"]
