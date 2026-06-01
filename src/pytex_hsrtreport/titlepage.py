@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Final, override
 
@@ -20,11 +21,21 @@ from pytex.commands.tables import Tabular
 from pytex.helpers.parenting import attach
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
+from pytex.model.empty import Empty
 from pytex.model.environment import Environment
 from pytex.model.raw import Raw
 from pytex.registry import Registry
 
 from .logos import titlepage_logo_overlay
+
+
+def _is_blank(node: TeX | str) -> bool:
+    """True for an empty string or the `Empty` node — used to skip empty
+    title-page sections (a protocol has no abstract or keywords)."""
+    if isinstance(node, str):
+        return not node.strip()
+    return node is Empty
+
 
 __all__ = ["TitlePage", "TitlePageDataLine"]
 
@@ -75,62 +86,63 @@ class TitlePage(TeX):
         )
         return tuple(v for v in candidates if isinstance(v, TeX))
 
+    def _title_block(self) -> TeX:
+        return Environment(
+            "flushleft",
+            Concat(
+                Raw(r"\hyphenpenalty=10000\exhyphenpenalty=10000"),
+                Noindent(),
+                SelectColor("black"),
+                Textbf(
+                    Concat(
+                        Blenderfont(),
+                        HugeBig(),
+                        Hspace("-2.5pt", star=True),
+                        self.title,
+                    )
+                ),
+                Raw(r"\par"),
+                Vspace("-0.5em"),
+                Rule(r"\textwidth", "0.5mm"),
+            ),
+        )
+
+    def _content(self) -> Iterator[TeX | str]:
+        # Tikz overlay: logos chained left-to-right from the top-left corner,
+        # matching tmp/Pages/Titlepage.tex but with the foreach unrolled here.
+        yield Raw(titlepage_logo_overlay(self.logo_names), allow_replacements=False)
+        yield Vspace("4cm")
+        yield self._title_block()
+        yield Vspace("2em")
+        yield Setstretch("1.0")
+        # Abstract and keywords are optional — skip the labels when empty
+        # (e.g. a meeting protocol has neither).
+        if not _is_blank(self.abstract):
+            yield SectionStar("Abstract")
+            yield Vspace("-1em")
+            yield self.abstract
+            yield Vspace("1em", star=True)
+        if not _is_blank(self.keywords):
+            yield Raw(r"\par\noindent ")
+            yield Textbf("Keywords")
+            yield Raw(r"\par\noindent ")
+            yield self.keywords
+        yield Vfill()
+        yield Noindent()
+        yield Setstretch("1.0")
+        yield Tabular(
+            r"@{} p{30mm} p{\dimexpr\textwidth-30mm-2\tabcolsep\relax} @{}",
+            _data_table_body(self.data_lines),
+        )
+
     @property
     @override
     def rendered(self) -> str:
-        # Tikz overlay: logos chained left-to-right from the top-left corner,
-        # matching tmp/Pages/Titlepage.tex but with the foreach unrolled here.
-        logo_overlay = Raw(
-            titlepage_logo_overlay(self.logo_names),
-            allow_replacements=False,
-        )
-        # Flag true while the titlepage ships out so footer_logo_hook
-        # suppresses the bottom-right footer logos on this page only.
-        # Reset after \end{titlepage} (which \clearpages, shipping the page
-        # while the flag is still true).
+        # `\HSRTTitlePagetrue` while the titlepage ships out so footer_logo_hook
+        # suppresses the bottom-right footer logos on this page only; reset
+        # after \end{titlepage} (which \clearpages while the flag is still set).
         return Concat(
             Raw(r"\HSRTTitlePagetrue", allow_replacements=False),
-            TitlepageEnv(
-                Concat(
-                    logo_overlay,
-                    Vspace("4cm"),
-                    Environment(
-                        "flushleft",
-                        Concat(
-                            Raw(r"\hyphenpenalty=10000\exhyphenpenalty=10000"),
-                            Noindent(),
-                            SelectColor("black"),
-                            Textbf(
-                                Concat(
-                                    Blenderfont(),
-                                    HugeBig(),
-                                    Hspace("-2.5pt", star=True),
-                                    self.title,
-                                )
-                            ),
-                            Raw(r"\par"),
-                            Vspace("-0.5em"),
-                            Rule(r"\textwidth", "0.5mm"),
-                        ),
-                    ),
-                    Vspace("2em"),
-                    Setstretch("1.0"),
-                    SectionStar("Abstract"),
-                    Vspace("-1em"),
-                    self.abstract,
-                    Vspace("1em", star=True),
-                    Raw(r"\par\noindent "),
-                    Textbf("Keywords"),
-                    Raw(r"\par\noindent "),
-                    self.keywords,
-                    Vfill(),
-                    Noindent(),
-                    Setstretch("1.0"),
-                    Tabular(
-                        r"@{} p{30mm} p{\dimexpr\textwidth-30mm-2\tabcolsep\relax} @{}",
-                        _data_table_body(self.data_lines),
-                    ),
-                )
-            ),
+            TitlepageEnv(Concat(*self._content())),
             Raw(r"\HSRTTitlePagefalse", allow_replacements=False),
         ).rendered
