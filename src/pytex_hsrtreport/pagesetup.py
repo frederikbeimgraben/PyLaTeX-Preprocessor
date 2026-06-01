@@ -30,12 +30,13 @@ _SETUP = r"""
 \pagestyle{scrheadings}
 \renewcommand*{\chapterpagestyle}{scrheadings}
 \setkomafont{disposition}{\blenderfont\bfseries}
-% ToC consistency: section/subsection entries default to the main font (DIN),
-% giving the ToC two different families. Force the whole ToC into \blenderfont
-% after its heading so every entry, leader and page number matches the headings.
-% \AfterTOCHead does not reach the chapter entry/page-number (KOMA reselects
-% their komafont), so set those explicitly too.
-\AfterTOCHead{\blenderfont}
+% ToC consistency: section entries default to the main font (DIN), and their
+% page numbers are wrapped in \normalfont by \@dottedtocline (also DIN), giving
+% the ToC two families. Force the whole ToC into \blenderfont after its heading
+% and alias \normalfont to it (locally to the ToC group) so entries, leaders and
+% page numbers all match the headings. Chapter entry/number keep an explicit
+% bold komafont.
+\AfterTOCHead{\blenderfont\let\normalfont\blenderfont}
 \setkomafont{chapterentry}{\blenderfont\bfseries}
 \setkomafont{chapterentrypagenumber}{\blenderfont\bfseries}
 \setkomafont{chapter}{\LARGE\blenderfont\bfseries}
