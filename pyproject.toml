@@ -11,6 +11,10 @@ authors = [
 description = "Type-safe LaTeX document generation with Python"
 readme = "README.md"
 requires-python = ">=3.13"
+license = { file = "LICENSE" }
+classifiers = [
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
 dependencies = ["pydantic", "marko"]
 
 [project.optional-dependencies]

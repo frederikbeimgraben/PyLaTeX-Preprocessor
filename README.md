@@ -268,3 +268,8 @@ pytex examples/document.tex.py --build
 pytex examples/replacements.py.tex --build
 pytex examples/notes.md --build
 ```
+
+## License
+
+GNU General Public License v3.0 or later (GPL-3.0-or-later). See
+[`LICENSE`](LICENSE).
