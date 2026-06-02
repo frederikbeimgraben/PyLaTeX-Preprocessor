@@ -37,6 +37,9 @@ addopts = "--import-mode=importlib"
 line-length = 88
 target-version = "py313"
 src = ["src", "tests"]
+# Uses Python 3.14 t-string syntax; the py313 target cannot parse it. Excluded
+# from lint/format (it is exercised by pytest on 3.14).
+extend-exclude = ["tests/pytex/test_template.py"]
 
 [tool.ruff.lint]
 select = [

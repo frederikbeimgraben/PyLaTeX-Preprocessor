@@ -1,3 +1,5 @@
+import sys
+
 from . import packages
 from .commands import (
     biblatex,
@@ -87,3 +89,10 @@ __all__ = [
     "tables",
     "with_package",
 ]
+
+# `tex(t"...")` needs PEP 750 template strings (Python 3.14+). Exposed only
+# there; the rest of the library stays importable on 3.13.
+if sys.version_info >= (3, 14):
+    from .template import tex as tex  # pyright: ignore[reportUnreachable]
+
+    __all__.append("tex")

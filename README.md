@@ -68,6 +68,22 @@ pytex example.tex.py --build  # render + compile -> build/example.out.pdf
 
 Bare strings are coerced to text nodes and LaTeX-escaped.
 
+### Template strings (Python 3.14+)
+
+On Python 3.14, `pytex.tex` accepts a [PEP 750](https://peps.python.org/pep-0750/)
+template string and builds a `TeX` tree from it. Static parts are literal LaTeX;
+interpolations are LaTeX-escaped when they are plain values and spliced as-is
+when they are `TeX` nodes (nested template strings and lists are handled too):
+
+```py
+from pytex import tex
+
+name = "Q&A: 50%"
+body = tex(t"{Bold('Heading')} — {name}")   # node spliced; name -> "Q\&A: 50\%"
+```
+
+`tex` is only exported on 3.14+; the rest of the library runs on 3.13.
+
 ## The `pytex` command
 
 The input file is dispatched by extension:
