@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from pytex_analyze import Severity, analyze
+from pytex_analyze import Optimize, Severity, analyze
 
 from .console import Console, color_enabled
 from .render import get_tex_node
@@ -124,7 +124,7 @@ def _parse_args(argv: list[str]) -> Config:
         "-f",
         "--force",
         action="store_true",
-        help="skip pre-flight analysis and build even if problems are found",
+        help="skip the optimize+analysis pass and build even if problems are found",
     )
     _ = parser.add_argument(
         "--variant",
@@ -178,6 +178,22 @@ def _parse_config(
     return cast("dict[str, object]", value)
 
 
+def _optimize(tex_node: TeX) -> TeX:
+    """Return a render-equivalent, tidied version of the input tree.
+
+    `Optimize` rewrites node trees but does not descend into document nodes, so
+    for a `Document` (and its subclasses, e.g. `HSRTReport`) the body is
+    optimised in place - keeping the document object, its type, and its
+    inline-asset methods intact.
+    """
+    from pytex.model.document import Document
+
+    if isinstance(tex_node, Document):
+        tex_node.body = Optimize(tex_node.body)
+        return tex_node
+    return Optimize(tex_node)
+
+
 def _analyze(tex_node: TeX, console: Console) -> None:
     """Run the static checks and report them; abort on any error-level issue.
 
@@ -206,6 +222,12 @@ def _run(cfg: Config, console: Console) -> None:
 
     console.step(f"Rendering {cfg.input.name}")
     tex_node = get_tex_node(cfg.input, variant=cfg.variant, config=cfg.config)
+
+    # Normalise then check, both skipped with --force. Optimize is
+    # render-equivalent, so the output is unchanged; it just tidies the tree
+    # (the printed --tree and the analysis below then see the clean version).
+    if not cfg.force:
+        tex_node = _optimize(tex_node)
 
     if cfg.tree:
         print(render_tree(tex_node, color=color_enabled(sys.stdout)))

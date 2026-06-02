@@ -64,6 +64,22 @@ def test_main_tree_prints_node_tree_and_still_renders(tmp_path, capsys):
     assert out.read_text() == r"\section{X}"
 
 
+def test_default_optimize_keeps_output_identical(tmp_path):
+    # The optimize pass (on by default) is render-equivalent: the produced
+    # .tex must be byte-identical to the --force (no-optimize) output.
+    src = tmp_path / "in.py"
+    _ = src.write_text(
+        "from pytex.model.concat import Concat\n"
+        "from pytex.model.raw import Raw\n"
+        "__pytex__ = Concat('a', Concat(Raw(''), Raw('\\\\newpage')), 'b')\n"
+    )
+    opt = tmp_path / "opt.tex"
+    raw = tmp_path / "raw.tex"
+    assert main([str(src), "-o", str(opt)]) == 0
+    assert main([str(src), "-o", str(raw), "--force"]) == 0
+    assert opt.read_text() == raw.read_text()
+
+
 def test_main_analysis_blocks_missing_image(tmp_path):
     src = tmp_path / "in.py"
     _ = src.write_text(

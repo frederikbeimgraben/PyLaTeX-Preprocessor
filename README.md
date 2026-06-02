@@ -98,7 +98,7 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `--build-dir DIR` | `build` | directory for artifacts and tectonic output |
 | `--no-shell-escape` | shell-escape on | disable shell-escape |
 | `-t`, `--tree` | off | also print the input's `TeX`-node tree (`tree`-style) before rendering/building |
-| `-f`, `--force` | off | skip the pre-flight analysis and build even if problems are found |
+| `-f`, `--force` | off | skip the optimize + analysis pass and build even if problems are found |
 | `--variant STYLE` | auto-detect | Markdown output style (`plain`, `report`, `protocol-asta`, `protocol-stupa`) |
 | `--config JSON` | none | JSON object of document-class params, merged over the frontmatter |
 
@@ -110,10 +110,13 @@ Output is minimal and color-tagged (`==>`, `note:`, `warning:`, `error:`),
 following tectonic's style; on failure it points at the likely cause and the
 log file. Set `NO_COLOR` to disable color.
 
-### Pre-flight analysis
+### Pre-flight optimize + analysis
 
-Before rendering, the builder runs `pytex_analyze` over the node tree to catch
-problems that LaTeX would only surface later (or silently):
+Before rendering, the builder runs two render-equivalent passes over the node
+tree. First `Optimize` tidies the tree (flatten nested `Concat`s, drop empty
+nodes, turn whole-`Raw` LaTeX constructs into native nodes) without changing
+the output. Then `pytex_analyze` checks for problems that LaTeX would only
+surface later (or silently):
 
 - references (`\ref`, `\cref`, `\autoref`, ...) to a label that is never
   defined,
@@ -121,7 +124,7 @@ problems that LaTeX would only surface later (or silently):
 - `\includegraphics` paths that do not exist on disk.
 
 Missing-image issues are errors and abort the build; the rest are warnings.
-Pass `-f`/`--force` to skip the check and build regardless.
+Pass `-f`/`--force` to skip both passes and build regardless.
 
 ### Inspecting the node tree
 
