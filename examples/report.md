@@ -1,18 +1,27 @@
 ---
 title: PyTeX Report Example
 author: Frederik Beimgraben
+abstract: A short report demonstrating every Markdown feature the PyTeX builder supports.
+keywords: [pytex, markdown, latex]
+datalines:
+  - "Version: 0.4.3"
+  - "Date: 2026-06-02"
+  - "Course: Technical Writing"
 classoptions: [11pt, oneside]
 ---
 
 ## Frontmatter
 
-The `report` variant reads three frontmatter fields (each with a German
+The `report` variant reads these frontmatter fields (each with a German
 alias, and `--config` JSON overrides any of them):
 
 | Field | Alias | Meaning |
 |:------|:------|:--------|
 | `title` | `titel` | title-page title; falls back to the first `#` heading |
 | `author` | `autor` | title-page author |
+| `abstract` | `zusammenfassung` | title-page abstract |
+| `keywords` | `schlagworte` | title-page keywords (list or comma string) |
+| `datalines` | `data` | title-page data table; each item is `"Label: value"` |
 | `classoptions` | `class_options` | KOMA class options (list, `a=b` map, or comma string) |
 
 Build it with:

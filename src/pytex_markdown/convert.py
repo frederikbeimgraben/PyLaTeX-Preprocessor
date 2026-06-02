@@ -10,6 +10,7 @@ this module depends on ``pytex_hsrtreport``.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from pytex.commands.builtin import (
@@ -182,7 +183,14 @@ class MarkdownConverter:
             # Relative/local/anchor target: keep the text, drop the dead link.
             return self.inlines(node)
         if kind == "Image":
-            return IncludeImage(str(getattr(node, "dest", "")))
+            dest = str(getattr(node, "dest", ""))
+            if EXTERNAL_URL_RE.match(dest):
+                return IncludeImage(dest)
+            # The .tex is compiled in the build dir, not next to the Markdown
+            # source, so a relative path would not resolve. Make it absolute
+            # (relative to the CWD the build runs from) so \includegraphics
+            # finds the file without copying or base64-embedding it.
+            return IncludeImage(str(Path(dest).resolve()))
         if kind == "LineBreak":
             # Hard break -> newline; soft break -> a plain space.
             soft = bool(getattr(node, "soft", False))

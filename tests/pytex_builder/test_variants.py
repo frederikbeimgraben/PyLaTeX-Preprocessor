@@ -110,3 +110,41 @@ def test_unknown_variant_raises():
 
 def test_variant_names_are_the_public_styles():
     assert VARIANT_NAMES == ("plain", "report", "protocol-asta", "protocol-stupa")
+
+
+def test_report_data_lines_from_frontmatter():
+    src = (
+        "---\ntitle: T\ndatalines:\n"
+        "  - 'Version: 1.0'\n  - 'Date: 2026-06-02'\n---\n## X"
+    )
+    out = build_document(src, variant="report").rendered
+    assert "Version" in out and "1.0" in out
+    assert "Date" in out and "2026-06-02" in out
+
+
+def test_report_data_lines_skip_entries_without_colon():
+    report = build_document(
+        "---\ntitle: T\ndatalines:\n  - 'no colon here'\n  - 'Key: val'\n---\n## X",
+        variant="report",
+    )
+    assert isinstance(report, HSRTReport)
+    assert [line.label for line in report.data_lines] == ["Key"]
+
+
+def test_report_abstract_and_keywords_from_frontmatter():
+    out = build_document(
+        "---\ntitle: T\nabstract: My summary\nkeywords: [a, b, c]\n---\n## X",
+        variant="report",
+    ).rendered
+    assert "My summary" in out
+    assert "a, b, c" in out
+
+
+def test_report_data_lines_latex_escaped():
+    report = build_document(
+        "---\ntitle: T\ndatalines:\n  - 'A & B: x_y'\n---\n## X", variant="report"
+    )
+    assert isinstance(report, HSRTReport)
+    line = report.data_lines[0]
+    assert line.label == r"A \& B"
+    assert line.value == r"x\_y"

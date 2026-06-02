@@ -26,6 +26,7 @@ from pytex.model.concat import Concat
 from pytex.model.document import Document
 from pytex.model.raw import Raw
 from pytex_hsrtreport.document import HSRTReport
+from pytex_hsrtreport.titlepage import TitlePageDataLine
 from pytex_hsrtreport.variants import Variant
 from pytex_markdown import Markdown, escape_latex
 from pytex_protocol.document import build_protocol
@@ -108,6 +109,9 @@ def _report(body: str, options: dict[str, object]) -> TeX:
         show_toc=True,
         title=escape_latex(title) if title is not None else None,
         author=_escaped(_str(options, "author", "autor")),
+        abstract=_escaped(_str(options, "abstract", "zusammenfassung")),
+        keywords=_escaped(_keywords(options)),
+        data_lines=_data_lines(options),
         # Map the shallowest heading in the body to \chapter, so headings nest
         # under it. Without this, a doc whose top level is `##` (because `#` was
         # consumed as the title) would render chapterless sections numbered 0.x.
@@ -151,6 +155,43 @@ def _str(options: Mapping[str, object], *keys: str) -> str | None:
 
 def _escaped(value: str | None) -> str | None:
     return escape_latex(value) if value is not None else None
+
+
+def _keywords(options: Mapping[str, object]) -> str | None:
+    """Title-page keywords from `keywords`/`schlagworte` (string or list)."""
+    for key in ("keywords", "schlagworte"):
+        value = options.get(key)
+        if isinstance(value, list) and value:
+            return ", ".join(str(item) for item in value)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _data_lines(options: Mapping[str, object]) -> tuple[TitlePageDataLine, ...]:
+    """Title-page data table from `datalines`/`data`.
+
+    Each entry is a ``"Label: value"`` string (frontmatter has no nested maps),
+    given as a block list, flow list, or a single scalar. Entries without a
+    colon are skipped.
+    """
+    raw = options.get("datalines", options.get("data"))
+    if isinstance(raw, list):
+        items = [str(item) for item in raw]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+    elif isinstance(raw, str) and raw:
+        items = [raw]
+    else:
+        return ()
+    lines: list[TitlePageDataLine] = []
+    for item in items:
+        label, sep, value = item.partition(":")
+        if sep and label.strip():
+            lines.append(
+                TitlePageDataLine(
+                    escape_latex(label.strip()), escape_latex(value.strip())
+                )
+            )
+    return tuple(lines)
 
 
 def _derive_title(body: str) -> tuple[str | None, str]:

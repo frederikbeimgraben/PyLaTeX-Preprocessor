@@ -46,9 +46,13 @@ def test_table_pulls_in_booktabs_and_tabularx_packages():
     assert {"booktabs", "tabularx"} <= names
 
 
-def test_image_becomes_includegraphics():
+def test_image_becomes_includegraphics_with_absolute_path():
+    # Local image paths are made absolute so \includegraphics resolves them
+    # from the build directory (the .tex is compiled there, not next to the md).
+    from pathlib import Path
+
     out = Markdown("![alt](pics/foo.png)").rendered
-    assert r"\includegraphics{pics/foo.png}" in out
+    assert rf"\includegraphics{{{Path('pics/foo.png').resolve().as_posix()}}}" in out
 
 
 CODE = """\
