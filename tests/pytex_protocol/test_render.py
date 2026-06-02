@@ -29,6 +29,15 @@ def test_abstimmung_callout_parses_tally():
     assert "12" in out and "3" in out and "2" in out
 
 
+def test_abstimmung_keeps_body_text_lines():
+    # Descriptive lines (not the tally) must survive as the box body.
+    out = _render_md(
+        "> [!abstimmung]\n> Beschlussvorschlag XY\n> Ja: 1, Nein: 2, Enthaltung: 3"
+    )
+    assert "Beschlussvorschlag XY" in out
+    assert "vote-yea" in out
+
+
 def test_aufgabe_callout():
     out = _render_md("> [!aufgabe] Doku schreiben")
     assert "Aufgabe" in out

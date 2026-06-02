@@ -24,7 +24,7 @@ from .shortcodes import expand_inline_shortcodes
 from .signatures import SignatureLines
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterator, Mapping
 
     from pytex.interface.tex import TeX
 
@@ -66,17 +66,25 @@ def _children(node: object) -> list[object]:
     return cast("list[object]", children) if isinstance(children, list) else []
 
 
-def _all_text(node: object) -> str:
-    """Concatenate every literal text fragment beneath `node`."""
-    text = _text(node)
-    if text is not None:
-        return text
-    return "".join(_all_text(c) for c in _children(node))
-
-
 def _tally(text: str, key: str) -> int:
     match = _TALLY_RE[key].search(text)
     return int(match.group(1)) if match else 0
+
+
+def _is_tally_line(line: str) -> bool:
+    """A line is the vote tally if it carries at least two of yes/no/abstain."""
+    return sum(1 for rx in _TALLY_RE.values() if rx.search(line)) >= 2
+
+
+def _interleave(items: Iterator[TeX]) -> Iterator[TeX]:
+    """Yield `items` separated by LaTeX line breaks (for multi-line box bodies)."""
+    from pytex.model.raw import Raw
+
+    sep = Raw(r"\\")
+    for i, item in enumerate(items):
+        if i:
+            yield sep
+        yield item
 
 
 def _leaf_texts(node: object) -> list[str]:
@@ -124,7 +132,7 @@ class ProtocolConverter(MarkdownConverter):
             return super()._as_callout(kids)
         name, title, head_rest, rest_blocks = marker
         if name in _VOTE_MARKERS:
-            return self._vote_callout(title, kids)
+            return self._vote_callout(kids)
         if name in _SIGNATURE_MARKERS:
             return self._signature_callout(kids)
         factory = _PROTOCOL_CALLOUTS.get(name)
@@ -174,13 +182,21 @@ class ProtocolConverter(MarkdownConverter):
             signers.append((role.strip(), person.strip()))
         return SignatureLines(*signers)
 
-    def _vote_callout(self, title: str, kids: list[object]) -> TeX:
-        text = " ".join(_all_text(k) for k in kids)
+    def _vote_callout(self, kids: list[object]) -> TeX:
+        # Per source line: the tally line feeds the counts, every other line is
+        # kept as the box body (otherwise descriptive text would be dropped).
+        lines = [frag for k in kids for frag in _leaf_texts(k)]
+        if lines:
+            lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
+        stripped = [s.strip() for s in lines]
+        full = " ".join(stripped)
+        body_lines = [s for s in stripped if s and not _is_tally_line(s)]
+        body = Concat(*_interleave(self.inline_text(s) for s in body_lines))
         return Vote(
-            yes=_tally(text, "yes"),
-            no=_tally(text, "no"),
-            abstain=_tally(text, "abstain"),
-            body=self.inline_text(title) if title else "",
+            yes=_tally(full, "yes"),
+            no=_tally(full, "no"),
+            abstain=_tally(full, "abstain"),
+            body=body,
         )
 
     def inline_text(self, text: str) -> TeX:
