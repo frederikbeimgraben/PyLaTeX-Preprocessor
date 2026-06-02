@@ -10,6 +10,7 @@ add `--build` to compile a PDF into `build/`.
 | `notes.md` | `.md` | Markdown -> PyTeX, including callouts |
 | `mixed.tex.py` | `.tex.py` | mix Python nodes, `Markdown`, and an HSRT box |
 | `hsrtreport.tex.py` | `.tex.py` | full HSRT report class (chapters, callout boxes) |
+| `templatestring.tex.py` | `.tex.py` | `tex(t"...")` template strings (needs Python 3.14) |
 
 ```sh
 pytex examples/document.tex.py --build
@@ -17,6 +18,7 @@ pytex examples/replacements.py.tex --build
 pytex examples/notes.md --build
 pytex examples/mixed.tex.py --build
 pytex examples/hsrtreport.tex.py --build   # needs biber (biblatex)
+pytex examples/templatestring.tex.py --build   # needs Python 3.14 (or a binary)
 ```
 
 `--build` downloads tectonic on first use; callouts/boxes need the bundled
