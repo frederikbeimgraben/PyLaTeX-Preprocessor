@@ -9,7 +9,7 @@ from pytex.interface.package import PackageProtocol
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.model.package import DefinePackage
-from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
+from pytex.packages import CALC, FONTAWESOME, MDFRAMED, XCOLOR
 from pytex.registry import Registry
 
 from .boxes import ColoredBox, CustomBox
@@ -56,7 +56,10 @@ class VotingResults(TeX):
     @property
     @override
     def requires(self) -> frozenset[PackageProtocol]:
-        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME, MULTICOL})
+        # CALC is needed because the nested ColoredBox/CustomBox use infix
+        # length arithmetic; they are built inside `.rendered`, so their own
+        # `requires` (which include CALC) never reach the package collector.
+        return frozenset({MDFRAMED, XCOLOR, FONTAWESOME, MULTICOL, CALC})
 
     @property
     @override

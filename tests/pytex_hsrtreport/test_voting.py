@@ -29,3 +29,12 @@ def test_renders_with_picked_color():
 def test_includes_vote_counts():
     out = VotingResults(yes=7, no=2, abstain=1).rendered
     assert "7" in out and "2" in out and "1" in out
+
+
+def test_requires_calc_for_nested_box_arithmetic():
+    # The nested ColoredBox uses infix length arithmetic; without `calc` it
+    # leaks "-0.5cm-2pt" as text. requires must carry calc since the box is
+    # built inside `.rendered`.
+    from pytex.packages import CALC
+
+    assert CALC in VotingResults(yes=1, no=0, abstain=0).requires
