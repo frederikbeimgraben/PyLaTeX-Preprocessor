@@ -5,11 +5,15 @@ from ..registry import Registry
 
 __all__ = [
     "DeclareRobustCommand",
+    "DeclareRobustCommandStar",
     "Def",
     "Newcommand",
+    "NewcommandStar",
     "Newenvironment",
     "Providecommand",
+    "ProvidecommandStar",
     "Renewcommand",
+    "RenewcommandStar",
     "Renewenvironment",
 ]
 
@@ -38,9 +42,18 @@ def Newcommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
-    star: bool = False,
 ) -> TeX:
-    return _cmd("newcommand", cs, nargs, default, body, star)
+    return _cmd("newcommand", cs, nargs, default, body, star=False)
+
+
+@Registry.add
+def NewcommandStar(
+    cs: str,
+    body: TeX | str,
+    nargs: int | None = None,
+    default: str | None = None,
+) -> TeX:
+    return _cmd("newcommand", cs, nargs, default, body, star=True)
 
 
 @Registry.add
@@ -49,9 +62,18 @@ def Renewcommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
-    star: bool = False,
 ) -> TeX:
-    return _cmd("renewcommand", cs, nargs, default, body, star)
+    return _cmd("renewcommand", cs, nargs, default, body, star=False)
+
+
+@Registry.add
+def RenewcommandStar(
+    cs: str,
+    body: TeX | str,
+    nargs: int | None = None,
+    default: str | None = None,
+) -> TeX:
+    return _cmd("renewcommand", cs, nargs, default, body, star=True)
 
 
 @Registry.add
@@ -60,9 +82,18 @@ def Providecommand(
     body: TeX | str,
     nargs: int | None = None,
     default: str | None = None,
-    star: bool = False,
 ) -> TeX:
-    return _cmd("providecommand", cs, nargs, default, body, star)
+    return _cmd("providecommand", cs, nargs, default, body, star=False)
+
+
+@Registry.add
+def ProvidecommandStar(
+    cs: str,
+    body: TeX | str,
+    nargs: int | None = None,
+    default: str | None = None,
+) -> TeX:
+    return _cmd("providecommand", cs, nargs, default, body, star=True)
 
 
 @Registry.add
@@ -70,9 +101,17 @@ def DeclareRobustCommand(
     cs: str,
     body: TeX | str,
     nargs: int | None = None,
-    star: bool = False,
 ) -> TeX:
-    return _cmd("DeclareRobustCommand", cs, nargs, None, body, star)
+    return _cmd("DeclareRobustCommand", cs, nargs, None, body, star=False)
+
+
+@Registry.add
+def DeclareRobustCommandStar(
+    cs: str,
+    body: TeX | str,
+    nargs: int | None = None,
+) -> TeX:
+    return _cmd("DeclareRobustCommand", cs, nargs, None, body, star=True)
 
 
 @Registry.add

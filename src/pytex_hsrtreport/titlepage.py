@@ -4,7 +4,7 @@ from typing import Final, override
 
 from pytex.commands.builtin import (
     Blenderfont,
-    Hspace,
+    HspaceStar,
     Newline,
     Noindent,
     Rule,
@@ -12,6 +12,7 @@ from pytex.commands.builtin import (
     Textbf,
     Vfill,
     Vspace,
+    VspaceStar,
 )
 from pytex.commands.colors import SelectColor
 from pytex.commands.floats import Titlepage as TitlepageEnv
@@ -97,7 +98,7 @@ class TitlePage(TeX):
                     Concat(
                         Blenderfont(),
                         HugeBig(),
-                        Hspace("-2.5pt", star=True),
+                        HspaceStar("-2.5pt"),
                         self.title,
                     )
                 ),
@@ -121,7 +122,7 @@ class TitlePage(TeX):
             yield SectionStar("Abstract")
             yield Vspace("-1em")
             yield self.abstract
-            yield Vspace("1em", star=True)
+            yield VspaceStar("1em")
         if not _is_blank(self.keywords):
             yield Raw(r"\par\noindent ")
             yield Textbf("Keywords")

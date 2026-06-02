@@ -33,6 +33,7 @@ __all__ = [
     "Group",
     "Hfill",
     "Hspace",
+    "HspaceStar",
     "Immediate",
     "Include",
     "IncludeOnly",
@@ -92,6 +93,7 @@ __all__ = [
     "Verse",
     "Vfill",
     "Vspace",
+    "VspaceStar",
     "Whiledo",
     "Write18",
 ]
@@ -263,15 +265,23 @@ def Pagebreak(n: int | None = None) -> TeX:
 
 
 @Registry.add
-def Hspace(amount: str, star: bool = False) -> TeX:
-    name = "hspace*" if star else "hspace"
-    return ControlSequence(name, (Parameter(amount),))
+def Hspace(amount: str) -> TeX:
+    return ControlSequence("hspace", (Parameter(amount),))
 
 
 @Registry.add
-def Vspace(amount: str, star: bool = False) -> TeX:
-    name = "vspace*" if star else "vspace"
-    return ControlSequence(name, (Parameter(amount),))
+def HspaceStar(amount: str) -> TeX:
+    return ControlSequence("hspace*", (Parameter(amount),))
+
+
+@Registry.add
+def Vspace(amount: str) -> TeX:
+    return ControlSequence("vspace", (Parameter(amount),))
+
+
+@Registry.add
+def VspaceStar(amount: str) -> TeX:
+    return ControlSequence("vspace*", (Parameter(amount),))
 
 
 @Registry.add

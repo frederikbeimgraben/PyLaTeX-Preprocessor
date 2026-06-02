@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Final, override
 
-from pytex.commands.builtin import Hspace, Noindent, Vspace
+from pytex.commands.builtin import HspaceStar, Noindent, VspaceStar
 from pytex.commands.colors import SelectColor
 from pytex.commands.floats import Minipage
 from pytex.commands.font import Fontsize, Selectfont
@@ -105,7 +105,7 @@ class ColoredBox(TeX):
             bg = round((BASE_OPACITY + PER_LEVEL * level) * 100)
             icon_op = bg + ICON_BOOST
             return Concat(
-                Vspace(r"0.5\baselineskip", star=True),
+                VspaceStar(r"0.5\baselineskip"),
                 Raw("~\\\\"),
                 Noindent(),
                 Minipage(
@@ -135,7 +135,7 @@ class ColoredBox(TeX):
                                     ),
                                 ),
                             ),
-                            Hspace("0.25cm+2pt", star=True),
+                            HspaceStar("0.25cm+2pt"),
                             Minipage(
                                 r"\linewidth-0.5cm-2pt",
                                 self.body,

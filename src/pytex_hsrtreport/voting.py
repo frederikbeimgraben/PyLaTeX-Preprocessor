@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Final, override
 
-from pytex.commands.builtin import Textbf, Vspace
+from pytex.commands.builtin import Textbf, VspaceStar
 from pytex.commands.floats import Columnbreak, Multicols
 from pytex.commands.fontawesome import FaIcon
 from pytex.helpers.parenting import attach
@@ -67,7 +67,7 @@ class VotingResults(TeX):
         return ColoredBox(
             body=Concat(
                 self.body,
-                Vspace("-2em", star=True),
+                VspaceStar("-2em"),
                 Multicols(
                     3,
                     Concat(
