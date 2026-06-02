@@ -76,7 +76,7 @@ The input file is dispatched by extension:
 | --- | --- |
 | `.py` | imported as a module; its `__pytex__` node is rendered. Convention: name it `<doc>.tex.py`. |
 | `.tex` | wrapped in `IncludeTeX`; inline `\iffalse{pytex(...)}\fi` markers are evaluated, then rendered. Convention: `<doc>.py.tex`. |
-| `.md` / `.markdown` | converted to nodes via `IncludeMarkdown`. Frontmatter with `gremium:` or `typ: protokoll` routes to the protocol renderer instead. |
+| `.md` / `.markdown` | converted to nodes and wrapped in a document according to `--variant` (see below). Without `--variant` the style is auto-detected. |
 
 ### Inline replacements in `.tex`
 
@@ -99,6 +99,8 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `--no-shell-escape` | shell-escape on | disable shell-escape |
 | `-t`, `--tree` | off | also print the input's `TeX`-node tree (`tree`-style) before rendering/building |
 | `-f`, `--force` | off | skip the pre-flight analysis and build even if problems are found |
+| `--variant STYLE` | auto-detect | Markdown output style (`plain`, `report`, `protocol-asta`, `protocol-stupa`) |
+| `--config JSON` | none | JSON object of document-class params, merged over the frontmatter |
 
 Shell-escape is on by default because inline images decode their base64
 payloads at compile time. The build runs tectonic, then `makeindex` (for
@@ -176,6 +178,33 @@ GitHub-style callouts become HSRT colored boxes (so the module depends on
 
 Both factories are registered, so they work in `\iffalse{pytex(...)}\fi`
 replacements in `.tex` sources too.
+
+### Output variants
+
+When the `pytex` command renders a `.md` file it wraps the converted nodes in a
+document chosen by `--variant`:
+
+| Variant | Document |
+| --- | --- |
+| `plain` | a bare `Document` (default class `article`); `#` -> `\section`. |
+| `report` | an HSRT report with title page and table of contents; `#` -> `\chapter`. |
+| `protocol-asta` | an AStA meeting protocol (HSRT report, AStA logos). |
+| `protocol-stupa` | a StuPa meeting protocol (HSRT report, StuPa logos). |
+
+Without `--variant`, protocol frontmatter (`gremium:` or `typ: protokoll`) picks
+a protocol style and everything else falls back to `plain`.
+
+Document-class parameters come from the YAML frontmatter and from `--config`
+(a JSON object that overrides the frontmatter), e.g.:
+
+```sh
+pytex notes.md --variant plain --config '{"documentclass": "scrartcl", "classoptions": ["11pt", "twocolumn"]}'
+```
+
+`classoptions` accepts a list (`"twocolumn"`, `"DIV=12"`) or a `{key: value}`
+object. For styles with a title page (`report`), the title is taken from
+`title:`/`--config` if given, otherwise from the first `#` heading (which is then
+not also rendered as a chapter).
 
 ## Examples
 

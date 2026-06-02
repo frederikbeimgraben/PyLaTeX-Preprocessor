@@ -217,7 +217,10 @@ class HSRTReport(KomaDocument):
 
     def _body_parts(self) -> Iterator[TeX | str]:
         # -- Front matter --
-        yield Raw(r"\frontmatter")
+        # Trailing newlines keep these matter macros from running into whatever
+        # follows: a body that starts with plain text would otherwise produce
+        # e.g. `\mainmatterThis ...` (an undefined control sequence).
+        yield Raw("\\frontmatter\n")
         if self.show_titlepage and self.title is not None:
             yield TitlePage(
                 title=self.title,
@@ -230,7 +233,7 @@ class HSRTReport(KomaDocument):
             yield Raw(r"\newpage\tableofcontents")
 
         # -- Main matter --
-        yield Raw(r"\mainmatter")
+        yield Raw("\\mainmatter\n")
         yield coerce_tex(self.body)
 
         # -- Back matter --

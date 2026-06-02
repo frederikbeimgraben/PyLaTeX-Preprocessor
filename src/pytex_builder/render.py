@@ -22,6 +22,7 @@ from .tectonic import BuildError
 __all__ = ["get_tex_node", "render_input"]
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 PYTEX_VAR = "__pytex__"
@@ -54,37 +55,44 @@ def _render_python(path: Path) -> TeX:
     return value
 
 
-def _render_markdown(path: Path) -> TeX:
+def _render_markdown(
+    path: Path, variant: str | None, config: Mapping[str, object] | None
+) -> TeX:
     # Imported lazily so plain .tex/.py builds need neither marko nor hsrt.
-    from pytex.model.document import Document
-    from pytex_markdown import IncludeMarkdown
-    from pytex_protocol.frontmatter import split_frontmatter
+    from .variants import build_document
 
-    text = path.read_text()
-    meta, _ = split_frontmatter(text)
-    # A `gremium:` frontmatter key marks a STUPA/AStA meeting protocol.
-    if "gremium" in meta or meta.get("typ") == "protokoll":
-        from pytex_protocol import render_protocol
-
-        return render_protocol(text)
-    return Document(IncludeMarkdown(path))
+    return build_document(path.read_text(), variant=variant, config=config)
 
 
-def get_tex_node(path: Path) -> TeX:
-    """Load ``path`` and return the TeX node without rendering."""
+def get_tex_node(
+    path: Path,
+    *,
+    variant: str | None = None,
+    config: Mapping[str, object] | None = None,
+) -> TeX:
+    """Load ``path`` and return the TeX node without rendering.
+
+    ``variant`` and ``config`` only affect Markdown inputs (see
+    :mod:`pytex_builder.variants`); they are ignored for ``.tex``/``.py``.
+    """
     suffix = path.suffix.lower()
     if suffix == ".tex":
         return IncludeTeX(path)
     if suffix == ".py":
         return _render_python(path)
     if suffix in (".md", ".markdown"):
-        return _render_markdown(path)
+        return _render_markdown(path, variant, config)
     raise BuildError(
         f"unsupported input type '{suffix or path.name}'; "
         + "expected .tex, .py or .md"
     )
 
 
-def render_input(path: Path) -> str:
+def render_input(
+    path: Path,
+    *,
+    variant: str | None = None,
+    config: Mapping[str, object] | None = None,
+) -> str:
     """Render ``path`` to a LaTeX source string."""
-    return get_tex_node(path).rendered
+    return get_tex_node(path, variant=variant, config=config).rendered

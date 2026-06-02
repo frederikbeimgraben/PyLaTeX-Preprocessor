@@ -1,0 +1,87 @@
+"""Tests for Markdown output variants (--variant / --config)."""
+
+import pytest
+
+from pytex.model.document import Document
+from pytex_builder.variants import VARIANT_NAMES, build_document
+from pytex_hsrtreport.document import HSRTReport
+from pytex_hsrtreport.variants import Variant
+
+
+def test_plain_is_a_document_with_default_class():
+    doc = build_document("Just text.", variant="plain")
+    assert isinstance(doc, Document)
+    assert doc.document_class == "article"
+
+
+def test_plain_config_sets_class_and_options():
+    doc = build_document(
+        "x",
+        variant="plain",
+        config={"documentclass": "scrartcl", "classoptions": ["11pt", "twocolumn"]},
+    )
+    assert doc.document_class == "scrartcl"
+    assert {str(o) for o in doc.document_class_options} == {"11pt", "twocolumn"}
+
+
+def test_config_key_value_option_becomes_pair():
+    doc = build_document("x", variant="plain", config={"classoptions": ["DIV=12"]})
+    assert ("DIV", "12") in doc.document_class_options
+
+
+def test_report_derives_title_from_first_heading():
+    report = build_document("# Derived Title\n\nbody", variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.title == "Derived Title"
+    assert report.show_titlepage is True
+    # The heading is consumed as the title, not re-rendered as a chapter.
+    assert r"\chapter{Derived Title}" not in report.rendered
+
+
+def test_report_explicit_title_wins_over_heading():
+    report = build_document(
+        "# Heading\n\nbody", variant="report", config={"title": "Explicit"}
+    )
+    assert report.title == "Explicit"
+
+
+def test_report_without_heading_has_no_titlepage():
+    report = build_document("plain paragraph only", variant="report")
+    assert report.show_titlepage is False
+
+
+def test_report_title_is_latex_escaped():
+    report = build_document("# A & B", variant="report")
+    assert report.title == r"A \& B"
+
+
+def test_protocol_asta_forces_asta_variant():
+    report = build_document(
+        "---\ngremium: StuPa\n---\n# TOP 1\n\nx", variant="protocol-asta"
+    )
+    assert isinstance(report, HSRTReport)
+    assert report.variant is Variant.ASTA
+
+
+def test_protocol_stupa_forces_stupa_variant():
+    report = build_document("# TOP 1\n\nx", variant="protocol-stupa")
+    assert report.variant is Variant.STUPA
+
+
+def test_auto_detects_protocol_from_gremium():
+    report = build_document("---\ngremium: AStA\n---\n# TOP\n\nx")
+    assert isinstance(report, HSRTReport)
+    assert report.variant is Variant.ASTA
+
+
+def test_auto_defaults_to_plain():
+    assert isinstance(build_document("# H\n\ntext"), Document)
+
+
+def test_unknown_variant_raises():
+    with pytest.raises(ValueError, match="unknown variant"):
+        build_document("x", variant="nope")
+
+
+def test_variant_names_are_the_public_styles():
+    assert VARIANT_NAMES == ("plain", "report", "protocol-asta", "protocol-stupa")

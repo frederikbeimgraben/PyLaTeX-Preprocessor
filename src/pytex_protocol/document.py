@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from pytex.interface.tex import TeX
 
-__all__ = ["IncludeProtocol", "Protocol", "render_protocol"]
+__all__ = ["IncludeProtocol", "Protocol", "build_protocol", "render_protocol"]
 
 _PARSER = marko.Markdown()
 
@@ -118,21 +118,31 @@ def _data_lines(meta: Mapping[str, FrontmatterValue]) -> tuple[TitlePageDataLine
     return tuple(lines)
 
 
-def render_protocol(text: str, *, base_level: int = 0) -> HSRTReport:
-    """Build an `HSRTReport` from the Markdown source of a protocol."""
-    meta, body_md = split_frontmatter(text)
+def build_protocol(
+    meta: Mapping[str, FrontmatterValue],
+    body_md: str,
+    *,
+    base_level: int = 0,
+    variant: Variant | None = None,
+    title: str | None = None,
+) -> HSRTReport:
+    """Build an `HSRTReport` from already-split protocol frontmatter and body.
+
+    `variant` overrides the gremium-derived HSRT variant (logos); `title`
+    overrides the auto-composed protocol title.
+    """
     converter = ProtocolConverter(meta=meta, base_level=base_level)
     converted = converter.block(_PARSER.parse(body_md))
     # Optional sign-off block, appended when the frontmatter lists `unterschriften`.
     signatures = signature_block_from_meta(meta)
     tail = (Raw("\n\n"), signatures) if signatures is not None else ()
     return HSRTReport(
-        variant=_variant(meta),
+        variant=variant or _variant(meta),
         document_class="scrbook",
         show_titlepage=True,
         show_toc=False,
         show_footer_logos=True,
-        title=_title(meta),
+        title=title or _title(meta),
         data_lines=_data_lines(meta),
         # Agenda items are top-level `#` headings -> \section. In scrbook a
         # chapterless section would number as "0.1"; number them as agenda
@@ -140,6 +150,14 @@ def render_protocol(text: str, *, base_level: int = 0) -> HSRTReport:
         user_preamble=Raw(r"\renewcommand*{\thesection}{TOP~\arabic{section}}"),
         body=Concat(converted, *tail),
     )
+
+
+def render_protocol(
+    text: str, *, base_level: int = 0, variant: Variant | None = None
+) -> HSRTReport:
+    """Build an `HSRTReport` from the Markdown source of a protocol."""
+    meta, body_md = split_frontmatter(text)
+    return build_protocol(meta, body_md, base_level=base_level, variant=variant)
 
 
 @Registry.add

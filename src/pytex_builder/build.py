@@ -8,6 +8,7 @@ acronyms resolve.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -39,6 +40,8 @@ class Config:
     shell_escape: bool
     tree: bool = False
     force: bool = False
+    variant: str | None = None
+    config: dict[str, object] | None = None
 
 
 def _default_output(inp: Path, build_dir: Path) -> Path:
@@ -123,9 +126,31 @@ def _parse_args(argv: list[str]) -> Config:
         action="store_true",
         help="skip pre-flight analysis and build even if problems are found",
     )
+    _ = parser.add_argument(
+        "--variant",
+        default=None,
+        metavar="STYLE",
+        help=(
+            "Markdown output style: plain, report, protocol-asta, protocol-stupa"
+            + " (default: auto-detect)"
+        ),
+    )
+    _ = parser.add_argument(
+        "--config",
+        default=None,
+        metavar="JSON",
+        help="JSON object of document-class params, merged over the frontmatter",
+    )
     ns = parser.parse_args(argv)
     inp = cast("Path", ns.input)
     build_dir = cast("Path", ns.build_dir)
+    variant = cast("str | None", ns.variant)
+    if variant is not None:
+        from .variants import VARIANT_NAMES
+
+        if variant not in VARIANT_NAMES:
+            parser.error(f"--variant must be one of {', '.join(VARIANT_NAMES)}")
+    config = _parse_config(cast("str | None", ns.config), parser)
     return Config(
         input=inp,
         output=cast("Path | None", ns.output) or _default_output(inp, build_dir),
@@ -134,7 +159,23 @@ def _parse_args(argv: list[str]) -> Config:
         shell_escape=cast("bool", ns.shell_escape),
         tree=cast("bool", ns.tree),
         force=cast("bool", ns.force),
+        variant=variant,
+        config=config,
     )
+
+
+def _parse_config(
+    raw: str | None, parser: argparse.ArgumentParser
+) -> dict[str, object] | None:
+    if raw is None:
+        return None
+    try:
+        value = cast("object", json.loads(raw))
+    except json.JSONDecodeError as exc:
+        parser.error(f"--config is not valid JSON: {exc}")
+    if not isinstance(value, dict):
+        parser.error("--config must be a JSON object")
+    return cast("dict[str, object]", value)
 
 
 def _analyze(tex_node: TeX, console: Console) -> None:
@@ -164,7 +205,7 @@ def _run(cfg: Config, console: Console) -> None:
     build_dir = cfg.build_dir
 
     console.step(f"Rendering {cfg.input.name}")
-    tex_node = get_tex_node(cfg.input)
+    tex_node = get_tex_node(cfg.input, variant=cfg.variant, config=cfg.config)
 
     if cfg.tree:
         print(render_tree(tex_node, color=color_enabled(sys.stdout)))

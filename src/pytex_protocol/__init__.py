@@ -10,7 +10,7 @@ render it to a PDF that matches the HSRTReport look.
 """
 
 from .convert import ProtocolConverter
-from .document import IncludeProtocol, Protocol, render_protocol
+from .document import IncludeProtocol, Protocol, build_protocol, render_protocol
 from .entries import ActionItem, Deadline, Decision, Timestamp, Vote
 from .frontmatter import split_frontmatter
 from .header import ProtocolHeader, header_from_meta
@@ -28,6 +28,7 @@ __all__ = [
     "SignatureLines",
     "Timestamp",
     "Vote",
+    "build_protocol",
     "expand_inline_shortcodes",
     "expand_shortcode",
     "header_from_meta",
