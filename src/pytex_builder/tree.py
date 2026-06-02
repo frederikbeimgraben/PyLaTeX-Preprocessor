@@ -18,8 +18,12 @@ from typing import TYPE_CHECKING, Final, cast
 
 from pytex.helpers.with_package import WithPackage
 from pytex.interface.package import PackageProtocol
+from pytex.model.concat import Concat
+from pytex.model.control_sequence import ControlSequence
+from pytex.model.raw import Raw
 
 if TYPE_CHECKING:
+    from pytex.interface.control_sequence import Parameters
     from pytex.interface.tex import TeX
 
 __all__ = ["render_tree"]
@@ -53,20 +57,55 @@ def _unwrap(node: TeX) -> tuple[TeX, list[str]]:
     return current, packages
 
 
+def _cs_arg_text(cs: ControlSequence[Parameters]) -> str | None:
+    """Text of a control sequence's first argument (e.g. the env name in
+    ``\\begin{name}``)."""
+    for param in cs.params or ():
+        value = getattr(param, "value", None)
+        if isinstance(value, Raw):
+            return value.content
+        if isinstance(value, str):
+            return value
+    return None
+
+
+def _as_environment(node: TeX) -> tuple[str, list[TeX]] | None:
+    """If `node` is the `Concat(\\begin{X}, body..., \\end{X})` shape produced by
+    `Environment`, return ``(X, body_children)``; otherwise `None`."""
+    if not isinstance(node, Concat):
+        return None
+    kids = list(node.children or ())
+    if len(kids) < 2:
+        return None
+    first, last = kids[0], kids[-1]
+    if not (
+        isinstance(first, ControlSequence)
+        and first.name == "begin"
+        and isinstance(last, ControlSequence)
+        and last.name == "end"
+    ):
+        return None
+    name = _cs_arg_text(cast("ControlSequence[Parameters]", first))
+    if name is None or name != _cs_arg_text(cast("ControlSequence[Parameters]", last)):
+        return None
+    return name, kids[1:-1]
+
+
 def _children(node: TeX) -> list[TeX]:
     real, _ = _unwrap(node)
-    return [
-        child
-        for child in (real.children or ())
-        if not isinstance(child, PackageProtocol)
-    ]
+    environment = _as_environment(real)
+    members = environment[1] if environment is not None else (real.children or ())
+    return [child for child in members if not isinstance(child, PackageProtocol)]
 
 
 def _short(text: str, limit: int = 50) -> str:
-    collapsed = " ".join(text.split())
-    if len(collapsed) > limit:
-        collapsed = collapsed[: limit - 1] + "…"
-    return collapsed
+    # Show whitespace literally so a single space (e.g. the separator in
+    # `\item x`) is distinguishable from an empty string. Newlines/tabs become
+    # visible escapes rather than being collapsed away.
+    shown = text.replace("\n", "\\n").replace("\t", "\\t")
+    if len(shown) > limit:
+        shown = shown[: limit - 1] + "…"
+    return shown
 
 
 def _base_label(node: TeX, color: bool) -> str:
@@ -94,7 +133,12 @@ def _base_label(node: TeX, color: bool) -> str:
 
 def _label(node: TeX, color: bool) -> str:
     real, packages = _unwrap(node)
-    label = _base_label(real, color)
+    environment = _as_environment(real)
+    if environment is not None:
+        head = _paint("Environment", color, _Paint.BOLD)
+        label = f"{head} {_paint('{' + environment[0] + '}', color, _Paint.CYAN)}"
+    else:
+        label = _base_label(real, color)
     if packages:
         tag = "+" + ", ".join(dict.fromkeys(packages))
         label += " " + _paint(f"[{tag}]", color, _Paint.YELLOW)
