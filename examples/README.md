@@ -8,6 +8,7 @@ add `--build` to compile a PDF into `build/`.
 | `document.tex.py` | `.tex.py` | build a `Document` with the Python API |
 | `replacements.py.tex` | `.py.tex` | LaTeX file with inline `\iffalse{pytex(...)}\fi` markers |
 | `notes.md` | `.md` | Markdown -> PyTeX, including callouts |
+| `report.md` | `.md` | `--variant report`: all report frontmatter fields, tables, code, arrows, image |
 | `mixed.tex.py` | `.tex.py` | mix Python nodes, `Markdown`, and an HSRT box |
 | `hsrtreport.tex.py` | `.tex.py` | full HSRT report class (chapters, callout boxes) |
 | `templatestring.tex.py` | `.tex.py` | `tex(t"...")` template strings (needs Python 3.14) |
@@ -17,6 +18,7 @@ add `--build` to compile a PDF into `build/`.
 pytex examples/document.tex.py --build
 pytex examples/replacements.py.tex --build
 pytex examples/notes.md --build
+pytex examples/report.md --variant report --build
 pytex examples/mixed.tex.py --build
 pytex examples/hsrtreport.tex.py --build   # needs biber (biblatex)
 pytex examples/templatestring.tex.py --build   # needs Python 3.14 (or a binary)

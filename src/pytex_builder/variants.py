@@ -21,7 +21,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from pytex.commands.builtin import ChapterStar
+from pytex.model.concat import Concat
 from pytex.model.document import Document
+from pytex.model.raw import Raw
 from pytex_hsrtreport.document import HSRTReport
 from pytex_hsrtreport.variants import Variant
 from pytex_markdown import Markdown, escape_latex
@@ -90,8 +93,15 @@ def _plain(body: str, options: dict[str, object]) -> TeX:
 
 def _report(body: str, options: dict[str, object]) -> TeX:
     title = _str(options, "title", "titel")
+    derived = False
     if title is None:
         title, body = _derive_title(body)
+        derived = title is not None
+    body_tex: TeX = Markdown(body, base_level=_report_base_level(body))
+    if derived and title is not None:
+        # The `#` heading was pulled out for the title page; re-emit it at the
+        # top of the body as a big, unnumbered heading so it is not lost.
+        body_tex = Concat(ChapterStar(escape_latex(title)), Raw("\n\n"), body_tex)
     return HSRTReport(
         variant=Variant.INF,
         show_titlepage=title is not None,
@@ -101,7 +111,7 @@ def _report(body: str, options: dict[str, object]) -> TeX:
         # Map the shallowest heading in the body to \chapter, so headings nest
         # under it. Without this, a doc whose top level is `##` (because `#` was
         # consumed as the title) would render chapterless sections numbered 0.x.
-        body=Markdown(body, base_level=_report_base_level(body)),
+        body=body_tex,
         document_class_options=_class_options(options),
     )
 

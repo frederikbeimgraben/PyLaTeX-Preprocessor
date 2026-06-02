@@ -29,9 +29,10 @@ from pytex.commands.builtin import (
     Subsection,
     Subsubsection,
     Texttt,
-    Verbatim,
 )
 from pytex.commands.hyperref import Href
+from pytex.commands.listings import Lstlisting
+from pytex.commands.tables import Bottomrule, Midrule, Tabularx, Toprule
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.model.empty import Empty
@@ -60,6 +61,33 @@ HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
 SECTION_INDEX: Final[int] = 2  # index of Section in HEADINGS
 
 CALLOUT_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[!(\w+)\]\s*", re.IGNORECASE)
+
+# Links with a URL scheme (``https:``, ``mailto:`` ...) or protocol-relative
+# ``//`` are the only ones that survive as clickable ``\href``. A relative or
+# in-document target (``LICENSE``, ``docs/x.md``, ``#section``) points at a
+# repo file that does not exist in the rendered PDF -- hyperref would turn it
+# into a dead ``LICENSE.pdf`` link -- so those keep their text and drop the URL.
+EXTERNAL_URL_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?:[a-z][a-z0-9+.\-]*:|//)", re.IGNORECASE
+)
+
+# ASCII arrows in prose -> inline math arrows. All targets are base-LaTeX
+# macros, so no extra package is pulled in. ``<=`` is deliberately absent: it
+# overwhelmingly means "less than or equal" in prose, not a left arrow.
+ARROWS: Final[dict[str, str]] = {
+    "<-->": r"\longleftrightarrow",
+    "<->": r"\leftrightarrow",
+    "<=>": r"\Leftrightarrow",
+    "-->": r"\longrightarrow",
+    "<--": r"\longleftarrow",
+    "->": r"\rightarrow",
+    "<-": r"\leftarrow",
+    "=>": r"\Rightarrow",
+}
+# Longest alternatives first so e.g. ``<-->`` wins over ``<-``.
+ARROW_RE: Final[re.Pattern[str]] = re.compile(
+    "|".join(re.escape(token) for token in sorted(ARROWS, key=len, reverse=True))
+)
 CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "NOTE": InfoBox,
     "INFO": InfoBox,
@@ -75,6 +103,17 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
 
 PARBREAK: Final[TeX] = Raw("\n\n")
 
+# GFM cell alignment -> tabularx ``X`` column spec. ``X`` columns share the
+# table width and wrap their content, so wide tables no longer overrun the
+# page. ``None`` (no colon) falls back to left, matching how most renderers
+# treat an unaligned column.
+COLUMN_ALIGN: Final[dict[str | None, str]] = {
+    "left": r">{\raggedright\arraybackslash}X",
+    "center": r">{\centering\arraybackslash}X",
+    "right": r">{\raggedleft\arraybackslash}X",
+    None: r">{\raggedright\arraybackslash}X",
+}
+
 
 def _kind(node: object) -> str:
     return type(node).__name__
@@ -89,6 +128,22 @@ def _text(node: object) -> str | None:
     """Return a node's literal text payload, or ``None`` for container nodes."""
     ch = getattr(node, "children", None)
     return ch if isinstance(ch, str) else None
+
+
+def _escape_text(text: str) -> str:
+    """LaTeX-escape prose, turning ASCII arrows into inline math arrows.
+
+    Only used for running text (not code spans/blocks), so ``->`` and friends
+    become ``$\\rightarrow$`` etc. while the surrounding text is escaped.
+    """
+    out: list[str] = []
+    last = 0
+    for match in ARROW_RE.finditer(text):
+        out.append(escape_latex(text[last : match.start()]))
+        out.append(f"${ARROWS[match.group(0)]}$")
+        last = match.end()
+    out.append(escape_latex(text[last:]))
+    return "".join(out)
 
 
 class MarkdownConverter:
@@ -114,15 +169,18 @@ class MarkdownConverter:
             # RawText / CodeSpan / Literal etc. carry a plain string.
             if kind == "CodeSpan":
                 return Texttt(Raw(escape_latex(text)))
-            return Raw(escape_latex(text))
+            return Raw(_escape_text(text))
 
         if kind == "StrongEmphasis":
             return Bold(self.inlines(node))
         if kind == "Emphasis":
             return Emph(self.inlines(node))
-        if kind == "Link":
+        if kind in ("Link", "AutoLink", "Url"):
             dest = str(getattr(node, "dest", ""))
-            return Href(dest, self.inlines(node))
+            if EXTERNAL_URL_RE.match(dest):
+                return Href(dest, self.inlines(node))
+            # Relative/local/anchor target: keep the text, drop the dead link.
+            return self.inlines(node)
         if kind == "Image":
             return IncludeImage(str(getattr(node, "dest", "")))
         if kind == "LineBreak":
@@ -180,7 +238,7 @@ class MarkdownConverter:
         # Rebuild the first paragraph with the marker stripped, keep the rest.
         stripped = first_text[match.end() :]
         head = Concat(
-            Raw(escape_latex(stripped)),
+            Raw(_escape_text(stripped)),
             *(self.inline(c) for c in inner[1:]),
         )
         body_blocks = [head, *(self.block(b) for b in kids[1:])]
@@ -192,10 +250,51 @@ class MarkdownConverter:
         if text is None:
             kids = _children(node)
             text = _text(kids[0]) if kids else ""
-        return Verbatim((text or "").rstrip("\n"))
+        # lstlisting with breaklines so long lines wrap instead of running off
+        # the page. Language is intentionally omitted: listings aborts on
+        # unknown languages, and Markdown info strings are unconstrained. The
+        # body is bracketed by newlines because lstlisting reads code starting
+        # on the line after \begin (and \end must sit on its own line).
+        code = (text or "").rstrip("\n")
+        return Lstlisting(f"\n{code}\n", {"breaklines": "true"})
 
     def _rule(self, _node: object) -> TeX:
         return Concat(Noindent(), Rule(r"\linewidth", "0.4pt"))
+
+    def _table(self, node: object) -> TeX:
+        """GFM pipe table -> ``tabularx`` (\\linewidth) with booktabs rules.
+
+        The first ``TableRow`` is the header (separated by ``\\midrule``);
+        per-column alignment comes from the cells' ``align`` attribute. ``X``
+        columns wrap their content so wide tables stay inside the text width.
+        """
+        rows = [c for c in _children(node) if _kind(c) == "TableRow"]
+        if not rows:
+            return Empty
+        head, *body = rows
+        default = COLUMN_ALIGN[None]
+        spec = "".join(
+            COLUMN_ALIGN.get(cast("str | None", getattr(c, "align", None)), default)
+            for c in _children(head)
+            if _kind(c) == "TableCell"
+        )
+        parts: list[TeX] = [Raw("\n"), Toprule(), Raw("\n"), self._table_row(head)]
+        parts.append(Midrule())
+        parts.append(Raw("\n"))
+        parts.extend(self._table_row(r) for r in body)
+        parts.append(Bottomrule())
+        parts.append(Raw("\n"))
+        return Tabularx(r"\linewidth", spec, Concat(*parts))
+
+    def _table_row(self, node: object) -> TeX:
+        cells = [self.inlines(c) for c in _children(node) if _kind(c) == "TableCell"]
+        joined: list[TeX] = []
+        for i, cell in enumerate(cells):
+            if i:
+                joined.append(Raw(" & "))
+            joined.append(cell)
+        joined.append(Raw(" \\\\\n"))
+        return Concat(*joined)
 
     def _eval_comment(self, node: object) -> TeX:
         """Evaluate a ``[//]: # "EXPR"`` Markdown comment as a pytex expression.
@@ -227,6 +326,8 @@ class MarkdownConverter:
             return self._code(node)
         if kind == "ThematicBreak":
             return self._rule(node)
+        if kind == "Table":
+            return self._table(node)
         if kind == "LinkRefDef":
             # `[//]: # "EXPR"` is the Markdown-comment escape hatch: evaluate it.
             # Any other link reference definition renders to nothing.

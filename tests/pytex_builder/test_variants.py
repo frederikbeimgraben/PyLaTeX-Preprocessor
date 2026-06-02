@@ -34,8 +34,16 @@ def test_report_derives_title_from_first_heading():
     assert isinstance(report, HSRTReport)
     assert report.title == "Derived Title"
     assert report.show_titlepage is True
-    # The heading is consumed as the title, not re-rendered as a chapter.
+    # The heading also stays in the body as a big, unnumbered chapter (not a
+    # numbered \chapter, which would duplicate the title-page heading number).
+    assert r"\chapter*{Derived Title}" in report.rendered
     assert r"\chapter{Derived Title}" not in report.rendered
+
+
+def test_report_derived_title_unnumbered_heading_only_when_derived():
+    # A frontmatter title is not pulled from the body, so no \chapter* is added.
+    out = build_document("---\ntitle: T\n---\n# Top\n\nbody", variant="report").rendered
+    assert r"\chapter*{" not in out
 
 
 def test_report_explicit_title_wins_over_heading():

@@ -28,7 +28,8 @@ if TYPE_CHECKING:
 
 __all__ = ["IncludeMarkdown", "Markdown", "MarkdownConverter", "escape_latex"]
 
-PARSER = marko.Markdown()
+# GFM enables pipe tables (and strikethrough/autolinks); images are core.
+PARSER = marko.Markdown(extensions=["gfm"])
 
 
 @Registry.add
