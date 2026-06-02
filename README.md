@@ -14,6 +14,16 @@ uses.
 
 ## Install
 
+To use the `pytex` command anywhere, install it as an isolated tool with
+[pipx](https://pipx.pypa.io/):
+
+```sh
+pipx install git+https://github.com/frederikbeimgraben/PyTeX-Preprocessor.git
+pipx install .              # or from a local checkout
+```
+
+For development, work in a virtualenv with an editable install instead:
+
 ```sh
 python -m venv venv && . venv/bin/activate
 pip install -e .            # add [dev] for pytest, ruff, basedpyright
