@@ -64,6 +64,21 @@ def test_main_tree_prints_node_tree_and_still_renders(tmp_path, capsys):
     assert out.read_text() == r"\section{X}"
 
 
+def test_main_analysis_blocks_missing_image(tmp_path):
+    src = tmp_path / "in.py"
+    _ = src.write_text(
+        "from pytex.model.image import IncludeImage\n"
+        "__pytex__ = IncludeImage('does-not-exist.png')\n"
+    )
+    out = tmp_path / "in.out.tex"
+    # Default: pre-flight analysis aborts before writing the output.
+    assert main([str(src), "-o", str(out)]) == 1
+    assert not out.exists()
+    # --force skips analysis and renders anyway.
+    assert main([str(src), "-o", str(out), "--force"]) == 0
+    assert out.exists()
+
+
 def test_main_missing_input_returns_one(tmp_path):
     code = main([str(tmp_path / "ghost.tex"), "-o", str(tmp_path / "o.tex")])
     assert code == 1

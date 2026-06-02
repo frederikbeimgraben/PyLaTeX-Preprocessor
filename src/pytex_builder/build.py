@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from pytex_analyze import Severity, analyze
+
 from .console import Console, color_enabled
 from .render import get_tex_node
 from .tectonic import BuildError, ensure_tectonic, run_makeindex, run_tectonic
@@ -22,6 +24,7 @@ from .tree import render_tree
 __all__ = ["Config", "main"]
 
 if TYPE_CHECKING:
+    from pytex.interface.tex import TeX
     from pytex_hsrtreport.document import HSRTReport
 
 MAX_PASSES = 3
@@ -35,6 +38,7 @@ class Config:
     build_dir: Path
     shell_escape: bool
     tree: bool = False
+    force: bool = False
 
 
 def _default_output(inp: Path, build_dir: Path) -> Path:
@@ -111,7 +115,13 @@ def _parse_args(argv: list[str]) -> Config:
         "-t",
         "--tree",
         action="store_true",
-        help="print the TeX-node tree of the input and exit (no rendering)",
+        help="also print the TeX-node tree of the input before rendering",
+    )
+    _ = parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="skip pre-flight analysis and build even if problems are found",
     )
     ns = parser.parse_args(argv)
     inp = cast("Path", ns.input)
@@ -123,7 +133,27 @@ def _parse_args(argv: list[str]) -> Config:
         build_dir=build_dir,
         shell_escape=cast("bool", ns.shell_escape),
         tree=cast("bool", ns.tree),
+        force=cast("bool", ns.force),
     )
+
+
+def _analyze(tex_node: TeX, console: Console) -> None:
+    """Run the static checks and report them; abort on any error-level issue.
+
+    `--force` bypasses this entirely (the caller skips the call).
+    """
+    issues = analyze(tex_node)
+    errors = 0
+    for issue in issues:
+        if issue.severity is Severity.ERROR:
+            errors += 1
+            console.error(issue.message)
+        else:
+            console.warn(issue.message)
+    if errors:
+        raise BuildError(
+            f"analysis found {errors} problem(s); pass -f/--force to build anyway"
+        )
 
 
 def _run(cfg: Config, console: Console) -> None:
@@ -138,6 +168,9 @@ def _run(cfg: Config, console: Console) -> None:
 
     if cfg.tree:
         print(render_tree(tex_node, color=color_enabled(sys.stdout)))
+
+    if not cfg.force:
+        _analyze(tex_node, console)
 
     source = tex_node.rendered
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -98,6 +98,7 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `--build-dir DIR` | `build` | directory for artifacts and tectonic output |
 | `--no-shell-escape` | shell-escape on | disable shell-escape |
 | `-t`, `--tree` | off | also print the input's `TeX`-node tree (`tree`-style) before rendering/building |
+| `-f`, `--force` | off | skip the pre-flight analysis and build even if problems are found |
 
 Shell-escape is on by default because inline images decode their base64
 payloads at compile time. The build runs tectonic, then `makeindex` (for
@@ -106,6 +107,19 @@ payloads at compile time. The build runs tectonic, then `makeindex` (for
 Output is minimal and color-tagged (`==>`, `note:`, `warning:`, `error:`),
 following tectonic's style; on failure it points at the likely cause and the
 log file. Set `NO_COLOR` to disable color.
+
+### Pre-flight analysis
+
+Before rendering, the builder runs `pytex_analyze` over the node tree to catch
+problems that LaTeX would only surface later (or silently):
+
+- references (`\ref`, `\cref`, `\autoref`, ...) to a label that is never
+  defined,
+- labels defined more than once,
+- `\includegraphics` paths that do not exist on disk.
+
+Missing-image issues are errors and abort the build; the rest are warnings.
+Pass `-f`/`--force` to skip the check and build regardless.
 
 ### Inspecting the node tree
 
@@ -135,6 +149,7 @@ Document (article)
 | `pytex_koma` | KOMA-Script classes and commands (`Addchap`, `Minisec`, `KOMAoptions`, ...). |
 | `pytex_tikz` | TikZ pictures and primitives (`TikzPicture`, `Draw`, `Node`, `Circle`, ...). |
 | `pytex_markdown` | Markdown -> native `TeX` conversion (see below). |
+| `pytex_analyze` | static checks over the node tree (dangling refs, duplicate labels, missing images); run by the builder before compilation. |
 | `pytex_hsrtreport` | HSRT report document class, colored callout boxes, title pages, glossary/citation helpers. |
 | `pytex_protocol` | STUPA/AStA meeting minutes from Markdown, built on `pytex_hsrtreport`. |
 
