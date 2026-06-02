@@ -151,7 +151,7 @@ Document (article)
 | `pytex_koma` | KOMA-Script classes and commands (`Addchap`, `Minisec`, `KOMAoptions`, ...). |
 | `pytex_tikz` | TikZ pictures and primitives (`TikzPicture`, `Draw`, `Node`, `Circle`, ...). |
 | `pytex_markdown` | Markdown -> native `TeX` conversion (see below). |
-| `pytex_analyze` | static checks over the node tree (dangling refs, duplicate labels, missing images); run by the builder before compilation. |
+| `pytex_analyze` | static checks over the node tree (dangling refs, duplicate labels, missing images), plus `Optimize` to simplify a tree render-equivalently. |
 | `pytex_hsrtreport` | HSRT report document class, colored callout boxes, title pages, glossary/citation helpers. |
 | `pytex_protocol` | STUPA/AStA meeting minutes from Markdown, built on `pytex_hsrtreport`. |
 

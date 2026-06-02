@@ -11,5 +11,6 @@ to tectonic: references to undefined labels, labels defined more than once, and
 """
 
 from .analyze import Issue, Severity, analyze
+from .optimize import Optimize
 
-__all__ = ["Issue", "Severity", "analyze"]
+__all__ = ["Issue", "Optimize", "Severity", "analyze"]
