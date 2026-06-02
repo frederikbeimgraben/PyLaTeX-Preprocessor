@@ -131,7 +131,18 @@ def test_inline_math_delimiters_preserve_rendering():
     assert Optimize(raw).rendered == raw.rendered
 
 
-def test_dollar_math_is_left_alone():
-    # `$...$` has no exact-rendering node (Math uses \(...\)), so it stays Raw.
-    raw = Raw(r"$x$")
-    assert Optimize(raw).rendered == raw.rendered
+def test_dollar_inline_math_becomes_inlinemath():
+    # `$...$` -> InlineMath = Concat(Raw('$'), body, Raw('$')); rendering kept.
+    raw = Raw(r"see $x^2$ here")
+    out = Optimize(raw)
+    assert out.rendered == raw.rendered
+    assert _types(out) == ["Raw", "Concat", "Raw"]
+    math = out.children[1]
+    assert math.children[0].rendered == "$"
+    assert math.children[-1].rendered == "$"
+
+
+def test_dollar_math_with_marker_inside_expands():
+    raw = Raw(r"$\iffalse{pytex(Frac('1', '2'))}\fi$")
+    out = Optimize(raw)
+    assert out.rendered == raw.rendered == r"$\frac{1}{2}$"

@@ -18,6 +18,7 @@ dev = ["pytest", "ruff", "basedpyright"]
 
 [project.scripts]
 pytex = "pytex_builder.build:main"
+pytex-tex2py = "pytex_builder.tex2py:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

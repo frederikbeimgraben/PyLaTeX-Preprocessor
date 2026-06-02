@@ -28,6 +28,7 @@ __all__ = [
     "Hat",
     "IIInt",
     "IInt",
+    "InlineMath",
     "Int",
     "LabelM",
     "Lim",
@@ -73,6 +74,12 @@ def Math(body: TeX | str) -> TeX:
         body,
         ControlSequence(")", ()),
     )
+
+
+@Registry.add
+def InlineMath(body: TeX | str) -> TeX:
+    """Dollar-delimited inline math: ``$body$``."""
+    return Concat(Raw("$"), body, Raw("$"))
 
 
 @Registry.add

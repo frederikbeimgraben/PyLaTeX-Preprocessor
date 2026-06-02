@@ -25,7 +25,7 @@ from pytex.model.comment import Comment
 from pytex.model.concat import Concat
 from pytex.model.control_sequence import ControlSequence, Parameter
 from pytex.model.environment import Environment
-from pytex.model.math import DisplayMath, Math
+from pytex.model.math import DisplayMath, InlineMath, Math
 from pytex.model.raw import PATTERN, Raw, pytex_namespace
 from pytex.registry import Registry
 
@@ -43,14 +43,15 @@ _ONE_ARG = re.compile(r"\\([a-zA-Z@]+)\{([^{}]*)\}", re.DOTALL)
 _BARE = re.compile(r"\\([a-zA-Z@]+)")
 
 # Constructs recognised *inside* a Raw and split out into their own nodes:
-# inline pytex(...) markers, line comments, and display/inline math delimiters.
-# `\\(` / `\\[` map cleanly onto Math / DisplayMath (same delimiters); `$...$`
-# is deliberately left alone, as it would have to change to `\\(...\\)`.
+# inline pytex(...) markers, line comments, and math delimiters. `\\[`/`\\(`
+# map onto DisplayMath/Math and `$...$` onto InlineMath. (`$` body is kept
+# single-`$`-free so `$$` does not match across a display block.)
 _TOKEN = re.compile(
     rf"(?P<marker>{PATTERN.pattern})"
     + r"|(?P<comment>(?<!\\)%[^\n]*)"
     + r"|\\\[(?P<dmath>.*?)\\\]"
-    + r"|\\\((?P<imath>.*?)\\\)",
+    + r"|\\\((?P<imath>.*?)\\\)"
+    + r"|\$(?P<smath>[^$]*)\$",
     re.DOTALL,
 )
 
@@ -164,7 +165,9 @@ def _token_node(
         return Comment(comment[1:])  # drop the leading '%'
     if (dmath := match.group("dmath")) is not None:
         return DisplayMath(_optimize(Raw(dmath)))
-    return Math(_optimize(Raw(match.group("imath"))))
+    if (imath := match.group("imath")) is not None:
+        return Math(_optimize(Raw(imath)))
+    return InlineMath(_optimize(Raw(match.group("smath"))))
 
 
 def _candidates(content: str) -> Iterator[TeX]:

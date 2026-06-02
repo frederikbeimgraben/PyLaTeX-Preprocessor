@@ -116,7 +116,7 @@ Before rendering, the builder runs two render-equivalent passes over the node
 tree. First `Optimize` tidies the tree (flatten nested `Concat`s, drop empty
 nodes, turn whole-`Raw` LaTeX constructs into native nodes) without changing
 the output (it also expands inline `pytex(...)` markers and turns `Raw`
-comments and `\[...\]` / `\(...\)` math into native nodes). Then
+comments and math — `\[...\]`, `\(...\)`, `$...$` — into native nodes). Then
 `pytex_analyze` checks for problems that LaTeX would only surface later (or
 silently):
 
@@ -210,6 +210,22 @@ pytex notes.md --variant plain --config '{"documentclass": "scrartcl", "classopt
 object. For styles with a title page (`report`), the title is taken from
 `title:`/`--config` if given, otherwise from the first `#` heading (which is then
 not also rendered as a chapter).
+
+## Converting LaTeX to PyTeX
+
+`pytex-tex2py` turns an existing `.tex` file into an equivalent `.tex.py`
+source. It reads the file, runs `Optimize` over it (expanding inline
+`pytex(...)` markers and recognising comments and math), and serialises the
+result to Python that rebuilds the same tree:
+
+```sh
+pytex-tex2py paper.tex            # -> paper.tex.py
+pytex-tex2py paper.tex -o out.py
+```
+
+Rendering the generated `.tex.py` reproduces the original output byte-for-byte;
+nodes the serialiser does not special-case fall back to a literal `Raw`, so the
+conversion always round-trips.
 
 ## Examples
 
