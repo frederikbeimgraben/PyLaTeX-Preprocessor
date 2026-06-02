@@ -104,6 +104,22 @@ def test_comment_is_detected():
     assert out.rendered == "text\n% a note\nmore"
 
 
+def test_comment_owns_its_newline():
+    # The comment node carries the terminating newline; no separate Raw("\n").
+    out = Optimize(Raw("% one\n% two\nbody"))
+    comments = [c for c in out.children if isinstance(c, Comment)]
+    assert [c.text for c in comments] == [" one", " two"]
+    assert all(c.rendered.endswith("\n") for c in comments)
+
+
+def test_unterminated_comment_at_eof_stays_text():
+    # No trailing newline -> not turned into a Comment (would add a newline).
+    raw = Raw("body % trailing")
+    out = Optimize(raw)
+    assert not any(isinstance(c, Comment) for c in (out.children or ()))
+    assert out.rendered == raw.rendered
+
+
 def test_escaped_percent_is_not_a_comment():
     raw = Raw(r"50\% off")
     out = Optimize(raw)

@@ -48,7 +48,9 @@ _BARE = re.compile(r"\\([a-zA-Z@]+)")
 # single-`$`-free so `$$` does not match across a display block.)
 _TOKEN = re.compile(
     rf"(?P<marker>{PATTERN.pattern})"
-    + r"|(?P<comment>(?<!\\)%[^\n]*)"
+    # A comment owns its terminating newline, so the `\n` is required (an
+    # unterminated comment at EOF stays text, keeping rendering identical).
+    + r"|(?<!\\)%(?P<comment>[^\n]*)\n"
     + r"|\\\[(?P<dmath>.*?)\\\]"
     + r"|\\\((?P<imath>.*?)\\\)"
     + r"|\$(?P<smath>[^$]*)\$",
@@ -160,7 +162,7 @@ def _token_node(
             return result
         return Raw(str(result), allow_replacements=False)
     if (comment := match.group("comment")) is not None:
-        return Comment(comment[1:])  # drop the leading '%'
+        return Comment(comment)  # body between '%' and the consumed newline
     if (dmath := match.group("dmath")) is not None:
         return DisplayMath(_optimize(Raw(dmath)))
     if (imath := match.group("imath")) is not None:

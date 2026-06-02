@@ -10,11 +10,11 @@ __all__ = ["Comment"]
 @Registry.add
 @dataclass(frozen=True)
 class Comment(TeX):
-    """A LaTeX comment: ``%`` followed by text up to the end of the line.
+    """A LaTeX comment: ``%`` followed by text and the terminating newline.
 
-    `text` is everything after the ``%`` (the leading space in ``% note`` is
-    part of it). The trailing newline is not included, so the comment composes
-    with surrounding nodes exactly as written.
+    `text` is the content between the ``%`` and the end of the line (the
+    leading space in ``% note`` is part of it). The trailing newline *is* part
+    of the rendered output, so a comment ends its line as written.
     """
 
     text: Final[str]
@@ -23,4 +23,4 @@ class Comment(TeX):
     @property
     @override
     def rendered(self) -> str:
-        return f"%{self.text}"
+        return f"%{self.text}\n"
