@@ -14,6 +14,20 @@ uses.
 
 ## Install
 
+### Prebuilt binary
+
+Each release attaches standalone `pytex` binaries (Linux/macOS/Windows) — no
+Python or `pip` needed. Download one from the
+[Releases](https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases)
+page, make it executable, and run it. The binary bundles its own interpreter
+plus common data packages (numpy, pandas, openpyxl/calamine for spreadsheets,
+Pillow, PyYAML), so documents can `import` those without installing anything;
+see [`packaging/`](packaging/). It is built on Python 3.14, so documents may use
+`tex(t"...")` even on machines without 3.14. (`--build` still needs `tectonic`,
+which pytex downloads on first use.)
+
+### From PyPI
+
 To use the `pytex` command anywhere, install it as an isolated tool with
 [pipx](https://pipx.pypa.io/):
 

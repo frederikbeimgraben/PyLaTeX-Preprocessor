@@ -1,0 +1,31 @@
+# Extra Python packages baked into the standalone `pytex` binary.
+#
+# The binary runs `.tex.py` files (and `pytex(...)` markers) inside its own
+# frozen interpreter, which cannot see the user's site-packages. Anything a
+# document might `import` must therefore be bundled here.
+#
+# `requirements` are pip-installed into the build environment; `collect` are the
+# *import* names PyInstaller is told to pull in wholesale (collect_all) — they
+# differ from the pip name for some packages (Pillow -> PIL, PyYAML -> yaml,
+# python-calamine -> python_calamine).
+
+[bundle]
+requirements = [
+  "numpy",
+  "pandas",
+  "openpyxl",        # read/write .xlsx
+  "python-calamine", # fast .xlsx/.xls/.ods reader (pandas engine="calamine")
+  "Pillow",          # images
+  "PyYAML",          # .yaml/.yml data
+  "tabulate",        # quick tables from data
+]
+
+collect = [
+  "numpy",
+  "pandas",
+  "openpyxl",
+  "python_calamine",
+  "PIL",
+  "yaml",
+  "tabulate",
+]

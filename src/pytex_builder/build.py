@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -76,10 +77,20 @@ def _slug(name: str) -> str:
     return name or "document"
 
 
+def _version() -> str:
+    try:
+        return version("pytex-preprocessor")
+    except PackageNotFoundError:
+        return "unknown"
+
+
 def _parse_args(argv: list[str]) -> Config:
     parser = argparse.ArgumentParser(
         prog="pytex",
         description="Render PyTeX (.py) or LaTeX (.tex) sources and build PDFs.",
+    )
+    _ = parser.add_argument(
+        "--version", action="version", version=f"pytex {_version()}"
     )
     _ = parser.add_argument(
         "input",

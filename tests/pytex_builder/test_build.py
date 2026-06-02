@@ -17,6 +17,13 @@ def _console() -> Console:
     return Console(StringIO())
 
 
+def test_main_version_prints_and_exits(capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+    assert exc.value.code == 0
+    assert "pytex" in capsys.readouterr().out
+
+
 def test_run_renders_tex_to_output_file(tmp_path):
     src = tmp_path / "in.tex"
     _ = src.write_text(r"\section{X}")

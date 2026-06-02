@@ -55,6 +55,77 @@ jobs:
           name: dist
           path: dist/
 
+  # Standalone single-file binaries (PyInstaller), one per OS. Built on 3.14 so
+  # documents can use t-strings; bundle.toml is baked in so .tex.py files can
+  # import numpy/pandas/openpyxl/… without the user installing anything.
+  binaries:
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: pytex-linux-x86_64
+            bin: dist/pytex
+          - os: macos-latest
+            asset: pytex-macos-arm64
+            bin: dist/pytex
+          - os: windows-latest
+            asset: pytex-windows-x86_64.exe
+            bin: dist/pytex.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Stamp version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python - "$VERSION" <<'PY'
+          import re, sys, pathlib
+          version = sys.argv[1]
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text()
+          text, n = re.subn(
+              r'^version = ".*"$', f'version = "{version}"', text, count=1, flags=re.M
+          )
+          assert n == 1, "could not find a version line to stamp"
+          path.write_text(text)
+          PY
+
+      - name: Build binary
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          python packaging/build.py
+
+      - name: Name the asset
+        shell: bash
+        run: mv "${{ matrix.bin }}" "dist/${{ matrix.asset }}"
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          BIN="dist/${{ matrix.asset }}"
+          "./$BIN" --version
+          "./$BIN" examples/document.tex.py -o smoke.out.tex -f
+          grep -q 'maketitle' smoke.out.tex
+          # a document that imports a bundled package must run inside the binary
+          printf 'import numpy as np\nfrom pytex.model.raw import Raw\n__pytex__ = Raw(str(int(np.arange(4).sum())))\n' > numpy.tex.py
+          "./$BIN" numpy.tex.py -o numpy.out.tex -f
+          grep -qx '6' numpy.out.tex && echo "bundled import OK"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: dist/${{ matrix.asset }}
+
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
@@ -74,19 +145,28 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: publish-pypi
+    needs: [publish-pypi, binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the GitHub Release
     steps:
-      - name: Download artifacts
+      - name: Download sdist/wheel
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: binaries/
+          merge-multiple: true
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/*
+          files: |
+            dist/*
+            binaries/*
