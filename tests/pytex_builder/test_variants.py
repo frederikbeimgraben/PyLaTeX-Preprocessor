@@ -45,6 +45,23 @@ def test_report_explicit_title_wins_over_heading():
     assert report.title == "Explicit"
 
 
+def test_report_top_headings_become_chapters_not_0x_sections():
+    # `#` is consumed as the title, so the body's top level is `##`; those must
+    # still render as chapters (not chapterless 0.x sections).
+    out = build_document(
+        "# Title\n\n## One\n\ntext\n\n## Two\n\nmore", variant="report"
+    ).rendered
+    assert r"\chapter{One}" in out and r"\chapter{Two}" in out
+
+
+def test_report_with_frontmatter_title_keeps_hash_as_chapter():
+    out = build_document(
+        "---\ntitle: T\n---\n# Top\n\n## Sub", variant="report"
+    ).rendered
+    assert r"\chapter{Top}" in out
+    assert r"\section{Sub}" in out
+
+
 def test_report_without_heading_has_no_titlepage():
     report = build_document("plain paragraph only", variant="report")
     assert report.show_titlepage is False

@@ -39,13 +39,10 @@ __all__ = ["VARIANT_NAMES", "build_document"]
 
 VARIANT_NAMES: tuple[str, ...] = ("plain", "report", "protocol-asta", "protocol-stupa")
 
-# Markdown `#` (level 1) becomes a chapter in a report (scrbook), so headings
-# nest under it; the plain Document keeps the default `#` -> \section mapping.
-_REPORT_BASE_LEVEL = -1
-
 type Options = Mapping[str, object]
 
 _H1_RE = re.compile(r"^#\s+(.+?)\s*#*\s*$")
+_HEADING_RE = re.compile(r"^(#{1,6})\s")
 
 
 def build_document(
@@ -101,9 +98,18 @@ def _report(body: str, options: dict[str, object]) -> TeX:
         show_toc=True,
         title=escape_latex(title) if title is not None else None,
         author=_escaped(_str(options, "author", "autor")),
-        body=Markdown(body, base_level=_REPORT_BASE_LEVEL),
+        # Map the shallowest heading in the body to \chapter, so headings nest
+        # under it. Without this, a doc whose top level is `##` (because `#` was
+        # consumed as the title) would render chapterless sections numbered 0.x.
+        body=Markdown(body, base_level=_report_base_level(body)),
         document_class_options=_class_options(options),
     )
+
+
+def _report_base_level(body: str) -> int:
+    """Heading shift mapping the shallowest `#`-level in `body` to `\\chapter`."""
+    levels = [len(m.group(1)) for m in map(_HEADING_RE.match, body.splitlines()) if m]
+    return -min(levels) if levels else -1
 
 
 def _protocol(
