@@ -21,10 +21,12 @@ from typing import TYPE_CHECKING, cast
 from pytex.helpers.coerce import coerce_tex
 from pytex.helpers.with_package import WithPackage
 from pytex.interface.tex import TeX
+from pytex.model.comment import Comment
 from pytex.model.concat import Concat
 from pytex.model.control_sequence import ControlSequence, Parameter
 from pytex.model.environment import Environment
-from pytex.model.raw import Raw
+from pytex.model.math import DisplayMath, Math
+from pytex.model.raw import PATTERN, Raw, pytex_namespace
 from pytex.registry import Registry
 
 if TYPE_CHECKING:
@@ -39,6 +41,18 @@ __all__ = ["Optimize"]
 _ENV = re.compile(r"\\begin\{([a-zA-Z@*]+)\}(.*)\\end\{\1\}", re.DOTALL)
 _ONE_ARG = re.compile(r"\\([a-zA-Z@]+)\{([^{}]*)\}", re.DOTALL)
 _BARE = re.compile(r"\\([a-zA-Z@]+)")
+
+# Constructs recognised *inside* a Raw and split out into their own nodes:
+# inline pytex(...) markers, line comments, and display/inline math delimiters.
+# `\\(` / `\\[` map cleanly onto Math / DisplayMath (same delimiters); `$...$`
+# is deliberately left alone, as it would have to change to `\\(...\\)`.
+_TOKEN = re.compile(
+    rf"(?P<marker>{PATTERN.pattern})"
+    + r"|(?P<comment>(?<!\\)%[^\n]*)"
+    + r"|\\\[(?P<dmath>.*?)\\\]"
+    + r"|\\\((?P<imath>.*?)\\\)",
+    re.DOTALL,
+)
 
 
 @Registry.add
@@ -96,10 +110,16 @@ def _is_environment(concat: Concat) -> bool:
 
 
 def _native(raw: Raw) -> TeX:
-    """Convert a `Raw` that is one whole LaTeX construct to a native node.
+    """Turn a `Raw` into native nodes where it is safe to do so.
 
-    Falls back to the original `Raw` unless a candidate renders identically.
+    Two recognisers, both guarded by re-render equality so meaning is kept:
+    the embedded constructs in `_TOKEN` (pytex markers, comments, `\\[...\\]`
+    and `\\(...\\)` math) are split out, and a `Raw` that is one whole LaTeX
+    construct becomes the matching node. Falls back to the original `Raw`.
     """
+    tokenized = _tokenize(raw)
+    if tokenized is not None:
+        return tokenized
     if "\\" not in raw.content:
         return raw
     target = raw.rendered
@@ -107,6 +127,44 @@ def _native(raw: Raw) -> TeX:
         if candidate.rendered == target:
             return candidate
     return raw
+
+
+def _tokenize(raw: Raw) -> TeX | None:
+    """Split a `Raw` into literal text and the native nodes for the constructs
+    in `_TOKEN`. Returns `None` when nothing matches or the result would not
+    render identically."""
+    content = raw.content
+    namespace = pytex_namespace(raw.namespace or {})
+    parts: list[TeX] = []
+    cursor = 0
+    for match in _TOKEN.finditer(content):
+        if match.start() > cursor:
+            parts.append(Raw(content[cursor : match.start()], allow_replacements=False))
+        parts.append(_token_node(match, raw.allow_replacements, namespace))
+        cursor = match.end()
+    if not parts:
+        return None
+    if cursor < len(content):
+        parts.append(Raw(content[cursor:], allow_replacements=False))
+    candidate = Concat(*(_optimize(part) for part in parts))
+    return candidate if candidate.rendered == raw.rendered else None
+
+
+def _token_node(
+    match: re.Match[str], allow_replacements: bool, namespace: dict[str, object]
+) -> TeX:
+    if match.group("marker") is not None:
+        if not allow_replacements:
+            return Raw(match.group(0), allow_replacements=False)
+        result = cast("object", eval(match.group("expr"), namespace))
+        if isinstance(result, TeX):
+            return result
+        return Raw(str(result), allow_replacements=False)
+    if (comment := match.group("comment")) is not None:
+        return Comment(comment[1:])  # drop the leading '%'
+    if (dmath := match.group("dmath")) is not None:
+        return DisplayMath(_optimize(Raw(dmath)))
+    return Math(_optimize(Raw(match.group("imath"))))
 
 
 def _candidates(content: str) -> Iterator[TeX]:

@@ -27,6 +27,7 @@ from .commands import (
 from .helpers import coerce, sanitize, with_package
 from .model import (
     color,
+    comment,
     concat,
     control_sequence,
     document,
@@ -51,6 +52,7 @@ __all__ = [
     "coerce",
     "color",
     "colors",
+    "comment",
     "concat",
     "conditionals",
     "control_sequence",

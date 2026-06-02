@@ -1,11 +1,16 @@
 """Tests for `Optimize`: simplify a TeX tree without changing what it renders."""
 
 from pytex.commands.builtin import Section
+from pytex.model.comment import Comment
 from pytex.model.concat import Concat
 from pytex.model.control_sequence import ControlSequence
 from pytex.model.empty import Empty
 from pytex.model.raw import Raw
 from pytex_analyze import Optimize
+
+
+def _types(node):
+    return [type(c).__name__ for c in (node.children or ())]
 
 
 def _names(node):
@@ -69,9 +74,64 @@ def test_optimize_preserves_rendering_of_real_document():
     assert Optimize(doc).rendered == doc.rendered
 
 
-def test_marker_raw_is_not_misconverted():
-    # A Raw carrying a pytex(...) replacement must not be reinterpreted as a
-    # literal command (its rendered form differs from its content).
+def test_pure_marker_raw_expands_to_native_node():
+    # A whole-Raw marker evaluates to a native node, not a Raw.
+    out = Optimize(Raw(r"\iffalse{pytex(Frac('1', '2'))}\fi"))
+    assert isinstance(out, ControlSequence)
+    assert out.name == "frac"
+    assert out.rendered == r"\frac{1}{2}"
+
+
+def test_mixed_text_and_markers_expand_to_concat():
+    raw = Raw(r"x = \iffalse{pytex(Frac('a', 'b'))}\fi and \iffalse{pytex(2 ** 3)}\fi.")
+    out = Optimize(raw)
+    assert out.rendered == raw.rendered
+    # Literal text is kept as Raw; the markers became their evaluated nodes.
+    kinds = _names(out)
+    assert "ControlSequence" in kinds  # \frac
+    assert kinds[0] == "Raw" and out.children[0].rendered.startswith("x = ")
+
+
+def test_marker_expansion_preserves_rendering():
     raw = Raw(r"\iffalse{pytex(3 + 4)}\fi")
     out = Optimize(raw)
     assert out.rendered == raw.rendered == "7"
+
+
+def test_comment_is_detected():
+    out = Optimize(Raw("text\n% a note\nmore"))
+    assert any(isinstance(c, Comment) for c in out.children)
+    assert out.rendered == "text\n% a note\nmore"
+
+
+def test_escaped_percent_is_not_a_comment():
+    raw = Raw(r"50\% off")
+    out = Optimize(raw)
+    assert not any(isinstance(c, Comment) for c in (out.children or ()))
+    assert out.rendered == raw.rendered
+
+
+def test_display_math_delimiters_become_displaymath():
+    raw = Raw(r"see \[ x^2 \] here")
+    out = Optimize(raw)
+    assert out.rendered == raw.rendered
+    # \[ ... \] becomes DisplayMath = Concat(\[ , body, \]); it sits between the
+    # surrounding text as its own child, so the Raw is no longer monolithic.
+    assert _types(out) == ["Raw", "Concat", "Raw"]
+    math = out.children[1]
+    assert [type(c).__name__ for c in math.children] == [
+        "ControlSequence",
+        "Raw",
+        "ControlSequence",
+    ]
+
+
+def test_inline_math_delimiters_preserve_rendering():
+    raw = Raw(r"\( y = 1 \)")
+    assert Optimize(raw).rendered == raw.rendered
+
+
+def test_dollar_math_is_left_alone():
+    # `$...$` has no exact-rendering node (Math uses \(...\)), so it stays Raw.
+    raw = Raw(r"$x$")
+    assert Optimize(raw).rendered == raw.rendered

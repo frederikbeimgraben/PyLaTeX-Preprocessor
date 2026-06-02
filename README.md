@@ -115,8 +115,10 @@ log file. Set `NO_COLOR` to disable color.
 Before rendering, the builder runs two render-equivalent passes over the node
 tree. First `Optimize` tidies the tree (flatten nested `Concat`s, drop empty
 nodes, turn whole-`Raw` LaTeX constructs into native nodes) without changing
-the output. Then `pytex_analyze` checks for problems that LaTeX would only
-surface later (or silently):
+the output (it also expands inline `pytex(...)` markers and turns `Raw`
+comments and `\[...\]` / `\(...\)` math into native nodes). Then
+`pytex_analyze` checks for problems that LaTeX would only surface later (or
+silently):
 
 - references (`\ref`, `\cref`, `\autoref`, ...) to a label that is never
   defined,

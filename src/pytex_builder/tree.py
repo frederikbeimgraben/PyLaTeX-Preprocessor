@@ -120,6 +120,10 @@ def _base_label(node: TeX, color: bool) -> str:
         content = _short(str(getattr(node, "content", "")))
         return f'{head} {_paint(chr(34) + content + chr(34), color, _Paint.GREEN)}'
 
+    if cls == "Comment":
+        content = _short(str(getattr(node, "text", "")))
+        return f"{head} {_paint(chr(37) + content, color, _Paint.DIM)}"
+
     if cls == "Parameter":
         braces = "[ ]" if getattr(node, "optional", False) else "{ }"
         return f"{head} {_paint(braces, color, _Paint.DIM)}"
