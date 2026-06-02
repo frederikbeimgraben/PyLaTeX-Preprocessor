@@ -18,9 +18,10 @@ To use the `pytex` command anywhere, install it as an isolated tool with
 [pipx](https://pipx.pypa.io/):
 
 ```sh
-pipx install git+https://github.com/frederikbeimgraben/PyTeX-Preprocessor.git
-pipx install .              # or from a local checkout
+pipx install pytex-preprocessor
 ```
+
+It is also available via plain `pip install pytex-preprocessor`.
 
 For development, work in a virtualenv with an editable install instead:
 
