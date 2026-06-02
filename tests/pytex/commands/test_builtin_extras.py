@@ -6,7 +6,6 @@ from pytex.commands.builtin import (
     EndAccSupp,
     Foreach,
     Immediate,
-    Inputfile,
     Newglossarystyle,
     Pagenumbering,
     PartStar,
@@ -42,10 +41,6 @@ def test_write18():
 
 def test_verbatiminput():
     assert Verbatiminput("file.txt").rendered == r"\verbatiminput{file.txt}"
-
-
-def test_inputfile():
-    assert Inputfile("file.tex").rendered == r"\input{file.tex}"
 
 
 def test_whiledo():

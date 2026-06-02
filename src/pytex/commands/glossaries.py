@@ -12,8 +12,8 @@ __all__ = [
     "Gls",
     "Glsenablehyper",
     "Glspl",
-    "Glsplupper",
-    "Glsupper",
+    "GlsUpper",
+    "GlsplUpper",
     "Makeglossaries",
     "Newacronym",
     "Newglossaryentry",
@@ -80,7 +80,7 @@ def Gls(label: str) -> TeX:
 
 @Registry.add
 @with_package(GLOSSARIES)
-def Glsupper(label: str) -> TeX:
+def GlsUpper(label: str) -> TeX:
     return ControlSequence("Gls", (Parameter(label),))
 
 
@@ -92,7 +92,7 @@ def Glspl(label: str) -> TeX:
 
 @Registry.add
 @with_package(GLOSSARIES)
-def Glsplupper(label: str) -> TeX:
+def GlsplUpper(label: str) -> TeX:
     return ControlSequence("Glspl", (Parameter(label),))
 
 

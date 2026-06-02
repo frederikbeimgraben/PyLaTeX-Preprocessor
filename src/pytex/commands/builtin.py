@@ -38,7 +38,6 @@ __all__ = [
     "IncludeOnly",
     "Indent",
     "Input",
-    "Inputfile",
     "Italic",
     "Item",
     "Itemize",
@@ -550,12 +549,6 @@ def Write18(text: str) -> TeX:
 @Registry.add
 def Verbatiminput(path: str) -> TeX:
     return ControlSequence("verbatiminput", (Parameter(path),))
-
-
-@Registry.add
-def Inputfile(path: str) -> TeX:
-    """Alias for `\\input{path}` — `Input` already defined above as Input(path)."""
-    return ControlSequence("input", (Parameter(path),))
 
 
 @Registry.add
