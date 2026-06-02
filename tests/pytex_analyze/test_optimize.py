@@ -130,9 +130,9 @@ def test_escaped_percent_is_not_a_comment():
 def test_display_math_delimiters_become_displaymath():
     raw = Raw(r"see \[ x^2 \] here")
     out = Optimize(raw)
-    assert out.rendered == raw.rendered
-    # \[ ... \] becomes DisplayMath = Concat(\[ , body, \]); it sits between the
-    # surrounding text as its own child, so the Raw is no longer monolithic.
+    # \[ ... \] becomes DisplayMath; its boundary whitespace is trimmed (TeX
+    # ignores it), so the only change from the original is inside the delimiters.
+    assert out.rendered == r"see \[x^2\] here"
     assert _types(out) == ["Raw", "Concat", "Raw"]
     math = out.children[1]
     assert [type(c).__name__ for c in math.children] == [
@@ -142,9 +142,9 @@ def test_display_math_delimiters_become_displaymath():
     ]
 
 
-def test_inline_math_delimiters_preserve_rendering():
-    raw = Raw(r"\( y = 1 \)")
-    assert Optimize(raw).rendered == raw.rendered
+def test_inline_paren_math_trims_boundary_whitespace():
+    # \( ... \) -> Math, boundary whitespace dropped (math-equivalent).
+    assert Optimize(Raw(r"\( y = 1 \)")).rendered == r"\(y = 1\)"
 
 
 def test_dollar_inline_math_becomes_inlinemath():

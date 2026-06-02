@@ -39,6 +39,26 @@ def test_display_math():
     assert DisplayMath("x").rendered == r"\[x\]"
 
 
+def test_math_strips_outer_whitespace():
+    # TeX math ignores boundary whitespace; strip it (interior is kept).
+    assert DisplayMath("  x = 1 \n").rendered == r"\[x = 1\]"
+    assert Math("  y  ").rendered == r"\(y\)"
+    assert DisplayMath("a + b").rendered == r"\[a + b\]"
+
+
+def test_display_math_drops_blank_lines_at_boundary():
+    # A leading/trailing blank line would be a \par inside math (a LaTeX error).
+    assert DisplayMath("\n\n x \n\n").rendered == r"\[x\]"
+
+
+def test_math_trims_concat_boundary_only():
+    from pytex.model.concat import Concat
+    from pytex.model.math import Frac
+
+    out = DisplayMath(Concat("  x = ", Frac("-b", "2a"), "  "))
+    assert out.rendered == r"\[x = \frac{-b}{2a}\]"
+
+
 def test_equation():
     assert Equation("E=mc^2").rendered == r"\begin{equation}E=mc^2\end{equation}"
 

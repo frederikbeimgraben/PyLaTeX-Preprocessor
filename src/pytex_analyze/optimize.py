@@ -130,10 +130,24 @@ def _native(raw: Raw) -> TeX:
     return raw
 
 
+_MATH_OPEN = re.compile(r"(\\[\[(])\s+")
+_MATH_CLOSE = re.compile(r"\s+(\\[\])])")
+
+
+def _strip_math_ws(text: str) -> str:
+    r"""Drop whitespace just inside ``\[..\]`` and ``\(..\)``.
+
+    TeX math mode ignores it, so two strings that differ only there render the
+    same — this lets the tokenizer accept a `DisplayMath`/`Math` candidate
+    (which trims that whitespace) as equivalent to the original.
+    """
+    return _MATH_CLOSE.sub(r"\1", _MATH_OPEN.sub(r"\1", text))
+
+
 def _tokenize(raw: Raw) -> TeX | None:
     """Split a `Raw` into literal text and the native nodes for the constructs
-    in `_TOKEN`. Returns `None` when nothing matches or the result would not
-    render identically."""
+    in `_TOKEN`. Returns `None` when nothing matches or the result would change
+    the rendered output (math-delimiter whitespace aside — TeX ignores that)."""
     content = raw.content
     namespace = pytex_namespace(raw.namespace or {})
     parts: list[TeX] = []
@@ -148,7 +162,11 @@ def _tokenize(raw: Raw) -> TeX | None:
     if cursor < len(content):
         parts.append(Raw(content[cursor:], allow_replacements=False))
     candidate = Concat(*(_optimize(part) for part in parts))
-    return candidate if candidate.rendered == raw.rendered else None
+    rendered = candidate.rendered
+    target = raw.rendered
+    if rendered == target or _strip_math_ws(rendered) == _strip_math_ws(target):
+        return candidate
+    return None
 
 
 def _token_node(

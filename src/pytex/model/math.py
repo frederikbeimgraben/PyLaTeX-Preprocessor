@@ -67,11 +67,46 @@ __all__ = [
 ]
 
 
+def _restrip(raw: Raw, how: str) -> Raw:
+    content = raw.content.lstrip() if how == "l" else raw.content.rstrip()
+    return Raw(content, raw.namespace, raw.allow_replacements)
+
+
+def _is_blank(node: TeX | str) -> bool:
+    return isinstance(node, Raw) and node.content.strip() == ""
+
+
+def _trim(body: TeX | str) -> TeX | str:
+    """Strip whitespace just inside the math delimiters.
+
+    TeX math mode ignores leading/trailing spaces and newlines, so this is
+    render-equivalent; it also avoids a blank line (`\\par`) sneaking inside the
+    delimiters, which is a hard LaTeX error. Only the outer boundary is touched
+    (interior whitespace can be significant, e.g. in `\\text{}` or alignments).
+    """
+    if isinstance(body, str):
+        return body.strip()
+    if isinstance(body, Raw):
+        return Raw(body.content.strip(), body.namespace, body.allow_replacements)
+    if isinstance(body, Concat):
+        elements = list(body.elements)
+        while elements and _is_blank(elements[0]):
+            elements.pop(0)
+        while elements and _is_blank(elements[-1]):
+            elements.pop()
+        if elements and isinstance(elements[0], Raw):
+            elements[0] = _restrip(elements[0], "l")
+        if elements and isinstance(elements[-1], Raw):
+            elements[-1] = _restrip(elements[-1], "r")
+        return Concat(*elements)
+    return body
+
+
 @Registry.add
 def Math(body: TeX | str) -> TeX:
     return Concat(
         ControlSequence("(", ()),
-        body,
+        _trim(body),
         ControlSequence(")", ()),
     )
 
@@ -79,14 +114,14 @@ def Math(body: TeX | str) -> TeX:
 @Registry.add
 def InlineMath(body: TeX | str) -> TeX:
     """Dollar-delimited inline math: ``$body$``."""
-    return Concat(Raw("$"), body, Raw("$"))
+    return Concat(Raw("$"), _trim(body), Raw("$"))
 
 
 @Registry.add
 def DisplayMath(body: TeX | str) -> TeX:
     return Concat(
         ControlSequence("[", ()),
-        body,
+        _trim(body),
         ControlSequence("]", ()),
     )
 
