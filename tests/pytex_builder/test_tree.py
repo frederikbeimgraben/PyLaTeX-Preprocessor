@@ -54,6 +54,16 @@ def test_tree_shows_environments_as_environment_nodes():
     assert r"\end" not in tree
 
 
+def test_tree_shows_math_nodes_by_name():
+    from pytex.model.math import DisplayMath, InlineMath, Math
+
+    assert render_tree(DisplayMath("x")).splitlines()[0] == "DisplayMath"
+    assert render_tree(Math("x")).splitlines()[0] == "Math"
+    assert render_tree(InlineMath("x")).splitlines()[0] == "InlineMath"
+    # The delimiters are hidden; the body shows underneath.
+    assert r"\[" not in render_tree(DisplayMath("x"))
+
+
 def test_tree_color_wraps_ansi_codes():
     plain = render_tree(Section("X"), color=False)
     colored = render_tree(Section("X"), color=True)

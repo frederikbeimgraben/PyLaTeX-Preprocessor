@@ -70,13 +70,15 @@ def analyze(node: TeX) -> list[Issue]:
     for current in _walk(node):
         if isinstance(current, ControlSequence):
             cs = cast("ControlSequence[Parameters]", current)
-            if cs.name in _LABEL_COMMANDS and (
-                text := _first_required_text(cs)
-            ) is not None:
+            if (
+                cs.name in _LABEL_COMMANDS
+                and (text := _first_required_text(cs)) is not None
+            ):
                 label_counts[text] += 1
-            elif cs.name in _REF_COMMANDS and (
-                text := _first_required_text(cs)
-            ) is not None:
+            elif (
+                cs.name in _REF_COMMANDS
+                and (text := _first_required_text(cs)) is not None
+            ):
                 references.extend(
                     name.strip() for name in text.split(",") if name.strip()
                 )

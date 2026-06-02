@@ -69,9 +69,7 @@ def _optimize(node: TeX) -> TeX:
         return WithPackage(_optimize(cast("TeX", node.child)), node.package)
     if isinstance(node, ControlSequence):
         cs = cast("ControlSequence[Parameters]", node)
-        params = cast(
-            "Parameters", tuple(_optimize(p) for p in (cs.params or ()))
-        )
+        params = cast("Parameters", tuple(_optimize(p) for p in (cs.params or ())))
         return ControlSequence(cs.name, params, cs.required_packages)
     if isinstance(node, Parameter):
         value = cast("Parameter[ParameterType]", node).value

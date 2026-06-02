@@ -91,10 +91,35 @@ def _as_environment(node: TeX) -> tuple[str, list[TeX]] | None:
     return name, kids[1:-1]
 
 
+def _as_math(node: TeX) -> tuple[str, list[TeX]] | None:
+    """If `node` is one of the math Concats produced by `Math` (`\\(..\\)`),
+    `DisplayMath` (`\\[..\\]`) or `InlineMath` (`$..$`), return ``(label,
+    body)``; otherwise `None`."""
+    if not isinstance(node, Concat):
+        return None
+    kids = list(node.children or ())
+    if len(kids) < 2:
+        return None
+    first, last = kids[0], kids[-1]
+    if isinstance(first, ControlSequence) and isinstance(last, ControlSequence):
+        if first.name == "[" and last.name == "]":
+            return "DisplayMath", kids[1:-1]
+        if first.name == "(" and last.name == ")":
+            return "Math", kids[1:-1]
+    if (
+        isinstance(first, Raw)
+        and first.content == "$"
+        and isinstance(last, Raw)
+        and last.content == "$"
+    ):
+        return "InlineMath", kids[1:-1]
+    return None
+
+
 def _children(node: TeX) -> list[TeX]:
     real, _ = _unwrap(node)
-    environment = _as_environment(real)
-    members = environment[1] if environment is not None else (real.children or ())
+    group = _as_environment(real) or _as_math(real)
+    members = group[1] if group is not None else (real.children or ())
     return [child for child in members if not isinstance(child, PackageProtocol)]
 
 
@@ -118,7 +143,7 @@ def _base_label(node: TeX, color: bool) -> str:
 
     if cls == "Raw":
         content = _short(str(getattr(node, "content", "")))
-        return f'{head} {_paint(chr(34) + content + chr(34), color, _Paint.GREEN)}'
+        return f"{head} {_paint(chr(34) + content + chr(34), color, _Paint.GREEN)}"
 
     if cls == "Comment":
         content = _short(str(getattr(node, "text", "")))
@@ -138,9 +163,12 @@ def _base_label(node: TeX, color: bool) -> str:
 def _label(node: TeX, color: bool) -> str:
     real, packages = _unwrap(node)
     environment = _as_environment(real)
+    math = _as_math(real)
     if environment is not None:
         head = _paint("Environment", color, _Paint.BOLD)
         label = f"{head} {_paint('{' + environment[0] + '}', color, _Paint.CYAN)}"
+    elif math is not None:
+        label = _paint(math[0], color, _Paint.BOLD)
     else:
         label = _base_label(real, color)
     if packages:
