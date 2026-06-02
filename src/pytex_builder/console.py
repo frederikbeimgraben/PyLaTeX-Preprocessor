@@ -10,10 +10,10 @@ import os
 import sys
 from typing import Final, TextIO
 
-__all__ = ["Console"]
+__all__ = ["Console", "color_enabled"]
 
 
-def _color_enabled(stream: TextIO) -> bool:
+def color_enabled(stream: TextIO) -> bool:
     if os.environ.get("NO_COLOR"):
         return False
     if os.environ.get("PYTEX_FORCE_COLOR"):
@@ -37,7 +37,7 @@ class Console:
 
     def __init__(self, stream: TextIO | None = None) -> None:
         self.stream: TextIO = stream or sys.stderr
-        self.color: bool = _color_enabled(self.stream)
+        self.color: bool = color_enabled(self.stream)
 
     def _paint(self, text: str, *codes: str) -> str:
         if not self.color or not codes:

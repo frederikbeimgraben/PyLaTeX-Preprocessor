@@ -25,7 +25,7 @@ def test_concat_sets_parent_on_children():
 
 
 def test_concat_coerced_str_children_have_parent():
-    c = Concat("hello")
+    c = Concat("hello", "world")
     coerced = c.elements[0]
     assert coerced.parent is c
 
@@ -60,7 +60,7 @@ def test_parents_chain_through_tree():
     leaf = Raw("leaf")
     mid = Parameter(leaf)
     cs = ControlSequence("foo", (mid,))
-    root = Concat(cs)
+    root = Concat(cs, Raw("tail"))
     assert leaf.parent is mid
     assert mid.parent is cs
     assert cs.parent is root

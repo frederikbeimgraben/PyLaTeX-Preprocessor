@@ -62,6 +62,11 @@ class ControlSequence[P: Parameters](TeX):
 
     @property
     @override
+    def children(self) -> tuple[TeX, ...]:
+        return tuple(self.params or ())
+
+    @property
+    @override
     def requires(self) -> frozenset[PackageProtocol]:
         return self.required_packages
 

@@ -14,9 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from .console import Console
+from .console import Console, color_enabled
 from .render import get_tex_node
 from .tectonic import BuildError, ensure_tectonic, run_makeindex, run_tectonic
+from .tree import render_tree
 
 __all__ = ["Config", "main"]
 
@@ -33,6 +34,7 @@ class Config:
     build: bool
     build_dir: Path
     shell_escape: bool
+    tree: bool = False
 
 
 def _default_output(inp: Path, build_dir: Path) -> Path:
@@ -105,6 +107,12 @@ def _parse_args(argv: list[str]) -> Config:
         action="store_false",
         help="disable shell-escape (on by default; needed for inline images)",
     )
+    _ = parser.add_argument(
+        "-t",
+        "--tree",
+        action="store_true",
+        help="print the TeX-node tree of the input and exit (no rendering)",
+    )
     ns = parser.parse_args(argv)
     inp = cast("Path", ns.input)
     build_dir = cast("Path", ns.build_dir)
@@ -114,6 +122,7 @@ def _parse_args(argv: list[str]) -> Config:
         build=cast("bool", ns.build),
         build_dir=build_dir,
         shell_escape=cast("bool", ns.shell_escape),
+        tree=cast("bool", ns.tree),
     )
 
 
@@ -126,6 +135,10 @@ def _run(cfg: Config, console: Console) -> None:
 
     console.step(f"Rendering {cfg.input.name}")
     tex_node = get_tex_node(cfg.input)
+
+    if cfg.tree:
+        print(render_tree(tex_node, color=color_enabled(sys.stdout)))
+
     source = tex_node.rendered
     output.parent.mkdir(parents=True, exist_ok=True)
     _ = output.write_text(source)

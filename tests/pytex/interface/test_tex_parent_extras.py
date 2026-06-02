@@ -6,15 +6,15 @@ from pytex_hsrtreport import HSRTReport, InfoBox, WarningBox
 
 def test_concat_three_levels_parents():
     leaf = Raw("leaf")
-    mid = Concat(leaf)
-    root = Concat(mid)
+    mid = Concat(leaf, Raw("x"))
+    root = Concat(mid, Raw("y"))
     assert leaf.parent is mid
     assert mid.parent is root
     assert leaf.parents == (mid, root)
 
 
 def test_str_child_in_concat_gets_parent():
-    c = Concat("hello")
+    c = Concat("hello", "world")
     assert c.elements[0].parent is c
 
 

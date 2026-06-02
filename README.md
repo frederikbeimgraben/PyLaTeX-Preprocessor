@@ -97,6 +97,7 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `-b`, `--build` | off | compile the rendered `.tex` to PDF with tectonic |
 | `--build-dir DIR` | `build` | directory for artifacts and tectonic output |
 | `--no-shell-escape` | shell-escape on | disable shell-escape |
+| `-t`, `--tree` | off | also print the input's `TeX`-node tree (`tree`-style) before rendering/building |
 
 Shell-escape is on by default because inline images decode their base64
 payloads at compile time. The build runs tectonic, then `makeindex` (for
@@ -105,6 +106,24 @@ payloads at compile time. The build runs tectonic, then `makeindex` (for
 Output is minimal and color-tagged (`==>`, `note:`, `warning:`, `error:`),
 following tectonic's style; on failure it points at the likely cause and the
 log file. Set `NO_COLOR` to disable color.
+
+### Inspecting the node tree
+
+`--tree` prints the parsed `TeX`-node tree (then renders/builds as usual),
+useful for debugging how an input maps to nodes. Nodes that require a package
+are tagged with it (`[+package]`):
+
+```
+$ pytex example.tex.py --tree
+Document (article)
+├── ControlSequence \title
+│   └── Parameter { }
+│       └── Raw "PyTeX Example"
+└── Concat
+    ├── ControlSequence \maketitle
+    ├── ControlSequence \cref [+cleveref]
+    └── ...
+```
 
 ## Packages
 

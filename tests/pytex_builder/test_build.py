@@ -49,6 +49,21 @@ def test_main_render_only_returns_zero(tmp_path):
     assert out.read_text() == r"\hi"
 
 
+def test_main_tree_prints_node_tree_and_still_renders(tmp_path, capsys):
+    src = tmp_path / "in.py"
+    _ = src.write_text(
+        "from pytex.commands.builtin import Section\n__pytex__ = Section('X')\n"
+    )
+    out = tmp_path / "in.out.tex"
+    code = main([str(src), "-o", str(out), "--tree"])
+    assert code == 0
+    tree = capsys.readouterr().out
+    assert r"ControlSequence \section" in tree
+    assert "├──" in tree or "└──" in tree
+    # --tree prints the tree but still renders the output.
+    assert out.read_text() == r"\section{X}"
+
+
 def test_main_missing_input_returns_one(tmp_path):
     code = main([str(tmp_path / "ghost.tex"), "-o", str(tmp_path / "o.tex")])
     assert code == 1

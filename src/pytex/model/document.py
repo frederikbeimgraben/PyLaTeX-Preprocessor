@@ -30,6 +30,11 @@ class Document(TeX):
         attach(self, self.body, self.preamble)
 
     @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        return (coerce_tex(self.preamble), coerce_tex(self.body))
+
+    @property
     def packages(self) -> frozenset[PackageProtocol]:
         def get_packages(obj: TeX, found: set[PackageProtocol]) -> None:
             found |= {
