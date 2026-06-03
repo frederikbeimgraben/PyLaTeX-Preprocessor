@@ -69,6 +69,8 @@ class TitlePage(TeX):
     keywords: Final[TeX | str] = ""
     data_lines: Final[tuple[TitlePageDataLine, ...]] = ()
     logo_names: Final[tuple[str, ...]] = ()
+    abstract_heading: Final[str] = "Abstract"
+    keywords_heading: Final[str] = "Keywords"
     _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -119,13 +121,13 @@ class TitlePage(TeX):
         # Abstract and keywords are optional — skip the labels when empty
         # (e.g. a meeting protocol has neither).
         if not _is_blank(self.abstract):
-            yield SectionStar("Abstract")
+            yield SectionStar(self.abstract_heading)
             yield Vspace("-1em")
             yield self.abstract
             yield VspaceStar("1em")
         if not _is_blank(self.keywords):
             yield Raw(r"\par\noindent ")
-            yield Textbf("Keywords")
+            yield Textbf(self.keywords_heading)
             yield Raw(r"\par\noindent ")
             yield self.keywords
         yield Vfill()

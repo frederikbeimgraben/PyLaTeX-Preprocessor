@@ -131,6 +131,8 @@ class HSRTReport(KomaDocument):
     author: TeX | str | None = None
     abstract: TeX | str | None = None
     keywords: TeX | str | None = None
+    abstract_heading: str = "Abstract"
+    keywords_heading: str = "Keywords"
     data_lines: tuple[TitlePageDataLine, ...] = ()
 
     inline_logos: bool = True
@@ -228,6 +230,8 @@ class HSRTReport(KomaDocument):
                 keywords=self.keywords or "",
                 data_lines=self.data_lines,
                 logo_names=default_logo_names(self.variant),
+                abstract_heading=self.abstract_heading,
+                keywords_heading=self.keywords_heading,
             )
         if self.show_toc:
             yield Raw(r"\newpage\tableofcontents")
