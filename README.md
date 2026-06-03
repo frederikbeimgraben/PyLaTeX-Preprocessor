@@ -253,8 +253,10 @@ not also rendered as a chapter).
 
 The report styles read further frontmatter keys: `author`, `abstract`,
 `keywords`, title-page `datalines` (a list of `"Label: value"` entries),
-`bibliography` (see [Markdown](#markdown)), and the labels `abstract_heading` /
-`keywords_heading` to rename the default "Abstract" / "Keywords" sections.
+`bibliography` (see [Markdown](#markdown)), `logos` (title-page logos — vendored
+names like `INF`/`MAKERS` and/or paths to custom image files), and the labels
+`abstract_heading` / `keywords_heading` to rename the default "Abstract" /
+"Keywords" sections.
 
 ## Converting LaTeX to PyTeX
 
