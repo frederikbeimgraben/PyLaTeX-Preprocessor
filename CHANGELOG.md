@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-06-04
+
+### Added
+- Configurable title-page headings: `abstract_heading` / `keywords_heading`
+  frontmatter keys (with aliases) override the default "Abstract" / "Keywords"
+  labels.
+
+### Fixed
+- Content-address the SVG→PDF cache so an edited vendored logo (e.g. the
+  left-aligned MAKERS title-page logo) reconverts instead of reusing a stale PDF.
+- Align wrapped title-page titles: the per-first-line optical kern that left a
+  two-line title's later lines offset from the first is gone.
+
 ## [0.4.6] - 2026-06-04
 
 ### Added
@@ -72,6 +85,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Standalone PyInstaller binary with a bundle config.
 - `tex(t"...")` template strings (PEP 750, Python 3.14+).
 
+[0.4.7]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases/tag/v0.4.7
 [0.4.6]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases/tag/v0.4.6
 [0.4.5]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases/tag/v0.4.5
 [0.4.4]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases/tag/v0.4.4
