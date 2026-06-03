@@ -92,10 +92,7 @@ def _leaf_texts(node: object) -> list[str]:
     text = _text(node)
     if text is not None:
         return [text]
-    out: list[str] = []
-    for child in _children(node):
-        out.extend(_leaf_texts(child))
-    return out
+    return [frag for child in _children(node) for frag in _leaf_texts(child)]
 
 
 class ProtocolConverter(MarkdownConverter):
@@ -204,15 +201,14 @@ class ProtocolConverter(MarkdownConverter):
         return expand_inline_shortcodes(text, self.meta)
 
 
-def _join(blocks: list[TeX]) -> list[TeX]:
+def _join(blocks: list[TeX]) -> Iterator[TeX]:
     from pytex.model.empty import Empty
     from pytex.model.raw import Raw
 
     parbreak = Raw("\n\n")
     kept = [b for b in blocks if b is not Empty]
-    out: list[TeX] = []
-    for i, b in enumerate(kept):
-        if i:
-            out.append(parbreak)
-        out.append(b)
-    return out
+    return (
+        part
+        for i, b in enumerate(kept)
+        for part in ((parbreak, b) if i else (b,))
+    )
