@@ -118,13 +118,14 @@ def expand_shortcode(inner: str, meta: Mapping[str, FrontmatterValue]) -> TeX:
 
 def expand_inline_shortcodes(text: str, meta: Mapping[str, FrontmatterValue]) -> TeX:
     """Split `text` on ``{{...}}`` markers, escaping prose and expanding codes."""
-    parts: list[TeX] = []
-    pos = 0
-    for match in SHORTCODE_RE.finditer(text):
-        if match.start() > pos:
-            parts.append(Raw(escape_latex(text[pos : match.start()])))
-        parts.append(expand_shortcode(match.group(1), meta))
-        pos = match.end()
-    if pos < len(text):
-        parts.append(Raw(escape_latex(text[pos:])))
-    return Concat(*parts)
+    # ``re.split`` with the capturing group alternates prose / inner / prose /
+    # ...; odd pieces are the shortcode bodies, even pieces the prose between
+    # them. Empty prose pieces (adjacent or edge markers) are dropped, matching
+    # the original cursor logic that only emitted non-empty gaps.
+    return Concat(
+        *(
+            expand_shortcode(piece, meta) if index % 2 else Raw(escape_latex(piece))
+            for index, piece in enumerate(SHORTCODE_RE.split(text))
+            if index % 2 or piece
+        )
+    )

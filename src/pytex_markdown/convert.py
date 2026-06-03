@@ -48,7 +48,7 @@ from .escape import escape_latex
 __all__ = ["MarkdownConverter"]
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 # Heading commands ordered from the broadest division downward. The default
 # `base_level` of 0 maps Markdown ``#`` (level 1) to ``Section``.
@@ -91,6 +91,9 @@ ARROWS: Final[dict[str, str]] = {
 ARROW_RE: Final[re.Pattern[str]] = re.compile(
     "|".join(re.escape(token) for token in sorted(ARROWS, key=len, reverse=True))
 )
+# Capturing variant: ``re.split`` keeps the matched arrows as odd-indexed
+# pieces, so escaping prose and substituting arrows is a single pass.
+ARROW_SPLIT_RE: Final[re.Pattern[str]] = re.compile(f"({ARROW_RE.pattern})")
 CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "NOTE": InfoBox,
     "INFO": InfoBox,
@@ -165,14 +168,12 @@ def _escape_text(text: str) -> str:
     Only used for running text (not code spans/blocks), so ``->`` and friends
     become ``$\\rightarrow$`` etc. while the surrounding text is escaped.
     """
-    out: list[str] = []
-    last = 0
-    for match in ARROW_RE.finditer(text):
-        out.append(escape_latex(text[last : match.start()]))
-        out.append(f"${ARROWS[match.group(0)]}$")
-        last = match.end()
-    out.append(escape_latex(text[last:]))
-    return "".join(out)
+    # ``re.split`` with the capturing group alternates prose / arrow / prose /
+    # ...; odd pieces are the matched arrows, even pieces the text around them.
+    return "".join(
+        f"${ARROWS[piece]}$" if index % 2 else escape_latex(piece)
+        for index, piece in enumerate(ARROW_SPLIT_RE.split(text))
+    )
 
 
 def _prose(text: str) -> TeX:
@@ -186,13 +187,19 @@ def _prose(text: str) -> TeX:
     """
     if EURO_SIGN not in text:
         return Raw(_escape_text(text))
-    parts: list[TeX] = []
-    for i, segment in enumerate(text.split(EURO_SIGN)):
-        if i:
-            parts.append(Euro())
-        if segment:
-            parts.append(Raw(_escape_text(segment)))
-    return Concat(*parts)
+    # Each split point gets a ``Euro`` node (all but the first segment); each
+    # non-empty segment its escaped text. Empty segments (``50€€`` / leading
+    # ``€``) drop their text but keep the euro, preserving spacing exactly.
+    return Concat(
+        *(
+            node
+            for i, segment in enumerate(text.split(EURO_SIGN))
+            for node in (
+                *((Euro(),) if i else ()),
+                *((Raw(_escape_text(segment)),) if segment else ()),
+            )
+        )
+    )
 
 
 def _citation(match: re.Match[str]) -> TeX | None:
@@ -383,13 +390,18 @@ class MarkdownConverter:
             for c in _children(head)
             if _kind(c) == "TableCell"
         )
-        parts: list[TeX] = [Raw("\n"), Toprule(), Raw("\n"), self._table_row(head)]
-        parts.append(Midrule())
-        parts.append(Raw("\n"))
-        parts.extend(self._table_row(r) for r in body)
-        parts.append(Bottomrule())
-        parts.append(Raw("\n"))
-        table = Tabularx(r"\linewidth", spec, Concat(*parts))
+        body_rows = Concat(
+            Raw("\n"),
+            Toprule(),
+            Raw("\n"),
+            self._table_row(head),
+            Midrule(),
+            Raw("\n"),
+            *(self._table_row(r) for r in body),
+            Bottomrule(),
+            Raw("\n"),
+        )
+        table = Tabularx(r"\linewidth", spec, body_rows)
         # Wrap in vertical space: `\par` closes the surrounding paragraph so
         # `\addvspace` lands in vertical mode both before and after the table.
         return Concat(
@@ -400,13 +412,16 @@ class MarkdownConverter:
 
     def _table_row(self, node: object) -> TeX:
         cells = [self.inlines(c) for c in _children(node) if _kind(c) == "TableCell"]
-        joined: list[TeX] = []
-        for i, cell in enumerate(cells):
-            if i:
-                joined.append(Raw(" & "))
-            joined.append(cell)
-        joined.append(Raw(" \\\\\n"))
-        return Concat(*joined)
+        # ``&`` between cells, ``\\`` after the last one. The genexp emits each
+        # cell, prefixing every cell after the first with the column separator.
+        return Concat(
+            *(
+                part
+                for i, cell in enumerate(cells)
+                for part in ((Raw(" & "), cell) if i else (cell,))
+            ),
+            Raw(" \\\\\n"),
+        )
 
     def _eval_comment(self, node: object) -> TeX:
         """Evaluate a ``[//]: # "EXPR"`` Markdown comment as a pytex expression.
@@ -473,12 +488,7 @@ def _strip_md_title(title: str) -> str:
     return t
 
 
-def _interleave(blocks: list[TeX]) -> list[TeX]:
-    """Join block nodes with paragraph breaks, dropping empties."""
+def _interleave(blocks: list[TeX]) -> Iterator[TeX]:
+    """Yield non-empty block nodes separated by paragraph breaks."""
     kept = [b for b in blocks if b is not Empty]
-    joined: list[TeX] = []
-    for i, b in enumerate(kept):
-        if i:
-            joined.append(PARBREAK)
-        joined.append(b)
-    return joined
+    return (part for i, b in enumerate(kept) for part in ((PARBREAK, b) if i else (b,)))
