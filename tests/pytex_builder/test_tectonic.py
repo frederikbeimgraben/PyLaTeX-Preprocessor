@@ -14,11 +14,11 @@ import pytex_builder.tectonic as tec
 from pytex_builder.console import Console
 from pytex_builder.tectonic import (
     BuildError,
+    _biber_candidates,
     _biber_for_build,
-    _biber_sf_path,
     _biber_sources,
     _download_to,
-    _mirror_asset,
+    _extract_biber_binary,
     ensure_tectonic,
     run_makeindex,
 )
@@ -33,52 +33,104 @@ def test_builderror_is_runtimeerror():
 
 
 @pytest.mark.parametrize(
-    ("system", "machine", "expected_dir", "expected_file"),
+    ("system", "machine", "first_asset"),
     [
-        ("Linux", "x86_64", "Linux", "biber-linux_x86_64.tar.gz"),
-        ("Linux", "aarch64", "Linux-musl", "biber-linuxmusl_aarch64.tar.gz"),
-        ("Darwin", "arm64", "MacOS", "biber-darwin_arm64.tar.gz"),
-        ("Darwin", "x86_64", "MacOS", "biber-darwin_x86_64.tar.gz"),
-        ("Windows", "AMD64", "Windows", "biber-windows_x86_64.zip"),
+        ("Linux", "x86_64", "biber-2.17-linux_x86_64-musl.tar.gz"),
+        ("Linux", "aarch64", "biber-2.17-linux_aarch64.tar.gz"),
+        ("Darwin", "arm64", "biber-2.17-darwin_universal.tar.gz"),
+        ("Darwin", "x86_64", "biber-2.17-darwin_universal.tar.gz"),
+        ("Windows", "AMD64", "biber-2.17-MSWIN64.zip"),
     ],
 )
-def test_biber_sf_path(monkeypatch, system, machine, expected_dir, expected_file):
+def test_biber_candidates_first(monkeypatch, system, machine, first_asset):
     monkeypatch.setattr(tec.platform, "system", lambda: system)
     monkeypatch.setattr(tec.platform, "machine", lambda: machine)
-    assert _biber_sf_path() == (expected_dir, expected_file)
+    assert _biber_candidates("2.17")[0][2] == first_asset
 
 
-def test_biber_sf_path_unsupported_raises(monkeypatch):
+def test_biber_candidates_linux_x86_64_prefers_musl_then_glibc(monkeypatch):
+    # The static musl build (no libnsl.so.1 dependency) is tried before glibc.
+    monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
+    assets = [asset for _, _, asset in _biber_candidates("2.17")]
+    assert assets == [
+        "biber-2.17-linux_x86_64-musl.tar.gz",
+        "biber-2.17-linux_x86_64.tar.gz",
+    ]
+
+
+def test_biber_candidates_macos_subdir_moved_at_217(monkeypatch):
+    monkeypatch.setattr(tec.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
+    assert _biber_candidates("2.16")[0][0] == "OSX_Intel"
+    assert _biber_candidates("2.17")[0][0] == "MacOS"
+
+
+def test_biber_candidates_unsupported_raises(monkeypatch):
     monkeypatch.setattr(tec.platform, "system", lambda: "Plan9")
     monkeypatch.setattr(tec.platform, "machine", lambda: "pdp11")
     with pytest.raises(BuildError, match="unsupported platform"):
-        _biber_sf_path()
+        _biber_candidates("2.17")
 
 
-def test_mirror_asset_inserts_version():
-    assert (
-        _mirror_asset("2.17", "biber-linux_x86_64.tar.gz")
-        == "biber-2.17-linux_x86_64.tar.gz"
-    )
-
-
-def test_biber_sources_mirror_first_with_known_sha(monkeypatch):
+def test_biber_sources_mirror_before_sourceforge_per_candidate(monkeypatch):
     monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
     monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
     sources = _biber_sources("2.17")
-    assert len(sources) == 2
-    (mirror_url, mirror_sha), (sf_url, sf_sha) = sources
-    assert "github.com" in mirror_url and "biber-2.17-linux_x86_64.tar.gz" in mirror_url
-    assert "sourceforge.net" in sf_url
-    # checksum is the same content regardless of source
-    assert mirror_sha == sf_sha == tec.BIBER_SHA256["biber-2.17-linux_x86_64.tar.gz"]
+    # musl (mirror, SourceForge) then glibc (mirror, SourceForge)
+    assert len(sources) == 4
+    urls = [url for url, _ in sources]
+    assert "github.com" in urls[0] and "musl" in urls[0]
+    assert "sourceforge.net" in urls[1]
+    assert "github.com" in urls[2] and urls[2].endswith(
+        "biber-2.17-linux_x86_64.tar.gz"
+    )
+    assert "sourceforge.net" in urls[3]
+    # every mirrored platform now carries a pinned checksum
+    assert all(sha for _, sha in sources)
 
 
-def test_biber_sources_unknown_platform_has_no_sha(monkeypatch):
-    monkeypatch.setattr(tec.platform, "system", lambda: "Darwin")
-    monkeypatch.setattr(tec.platform, "machine", lambda: "arm64")
-    sources = _biber_sources("2.17")
-    assert all(sha is None for _, sha in sources)
+def test_is_biber_member_selects_binary_skips_appledouble():
+    assert tec._is_biber_member("biber")
+    assert tec._is_biber_member("biber.exe")
+    assert tec._is_biber_member("dir/biber-linux_x86_64-musl")
+    assert not tec._is_biber_member("._biber")
+    assert not tec._is_biber_member("README")
+
+
+def test_extract_biber_from_tar_picks_largest_biber(tmp_path):
+    import io
+    import tarfile
+
+    archive = tmp_path / "a.tar.gz"
+    with tarfile.open(archive, "w:gz") as tf:
+        for name, data in [("._biber", b"junk"), ("biber", b"REALBINARY")]:
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+    assert _extract_biber_binary(archive, "x") == b"REALBINARY"
+
+
+def test_extract_biber_from_zip(tmp_path):
+    import zipfile
+
+    archive = tmp_path / "a.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("biber.exe", b"WINBINARY")
+    assert _extract_biber_binary(archive, "x") == b"WINBINARY"
+
+
+def test_extract_biber_missing_raises(tmp_path):
+    import io
+    import tarfile
+
+    archive = tmp_path / "a.tar.gz"
+    with tarfile.open(archive, "w:gz") as tf:
+        info = tarfile.TarInfo("README")
+        info.size = 1
+        tf.addfile(info, io.BytesIO(b"x"))
+    with pytest.raises(BuildError, match="not found"):
+        _extract_biber_binary(archive, "x")
 
 
 def test_download_to_rejects_checksum_mismatch(monkeypatch, tmp_path):
