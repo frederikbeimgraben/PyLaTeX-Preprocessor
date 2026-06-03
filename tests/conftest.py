@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import pytex  # noqa: F401,E402  (populate Registry)
 import pytex_hsrtreport  # noqa: F401,E402
 import pytex_koma  # noqa: F401,E402
-import pytex_protocol  # noqa: F401,E402
+import pytex_markdown.protocol  # noqa: F401,E402
 import pytex_tikz.tikz  # noqa: F401,E402
 
 # `tex(t"...")` tests use PEP 750 syntax that does not parse before 3.14; skip
