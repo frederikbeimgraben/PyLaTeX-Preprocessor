@@ -18,6 +18,7 @@ from pytex.commands.builtin import (
     Chapter,
     Emph,
     Enumerate,
+    Euro,
     Itemize,
     Newline,
     Noindent,
@@ -102,6 +103,11 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "ERROR": WarningBox,
 }
 
+# U+20AC EURO SIGN. The DIN text font has no euro glyph, so the raw char would
+# render as tofu; we splice in a real ``Euro`` node (eurosym ``\euro{}``) which
+# ships its own glyph and registers the package requirement.
+EURO_SIGN: Final[str] = "€"
+
 PARBREAK: Final[TeX] = Raw("\n\n")
 
 # GFM cell alignment -> tabularx ``X`` column spec. ``X`` columns share the
@@ -147,6 +153,26 @@ def _escape_text(text: str) -> str:
     return "".join(out)
 
 
+def _prose(text: str) -> TeX:
+    """Escape prose, splitting literal euro signs into ``Euro`` nodes.
+
+    Each ``€`` becomes a real :func:`Euro` node (eurosym ``\\euro{}``) instead
+    of a raw char so the preamble auto-loads ``eurosym`` and the glyph renders
+    even under the DIN font. Text between the euros keeps its arrow/escape
+    handling, and the split preserves surrounding spacing exactly (e.g. ``50€``
+    stays glyph-adjacent, ``€ 50`` keeps its space).
+    """
+    if EURO_SIGN not in text:
+        return Raw(_escape_text(text))
+    parts: list[TeX] = []
+    for i, segment in enumerate(text.split(EURO_SIGN)):
+        if i:
+            parts.append(Euro())
+        if segment:
+            parts.append(Raw(_escape_text(segment)))
+    return Concat(*parts)
+
+
 class MarkdownConverter:
     """Walk a marko AST, producing a single ``TeX`` tree.
 
@@ -170,7 +196,7 @@ class MarkdownConverter:
             # RawText / CodeSpan / Literal etc. carry a plain string.
             if kind == "CodeSpan":
                 return Texttt(Raw(escape_latex(text)))
-            return Raw(_escape_text(text))
+            return _prose(text)
 
         if kind == "StrongEmphasis":
             return Bold(self.inlines(node))
@@ -246,7 +272,7 @@ class MarkdownConverter:
         # Rebuild the first paragraph with the marker stripped, keep the rest.
         stripped = first_text[match.end() :]
         head = Concat(
-            Raw(_escape_text(stripped)),
+            _prose(stripped),
             *(self.inline(c) for c in inner[1:]),
         )
         body_blocks = [head, *(self.block(b) for b in kids[1:])]

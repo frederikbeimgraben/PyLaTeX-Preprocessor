@@ -34,6 +34,11 @@ ESCAPES: Final[dict[str, str]] = {
     "}": r"\}",
     "~": r"\textasciitilde{}",
     "^": r"\textasciicircum{}",
+    # babel ngerman (always loaded) makes `"` an active shorthand char, so a
+    # literal double quote would be swallowed/mangled. `\textquotedbl{}` is a
+    # font-encoding macro (T1/textcomp), not a shorthand, so it prints an
+    # upright double quote untouched; the empty group stops space-gobbling.
+    '"': r"\textquotedbl{}",
 }
 
 
