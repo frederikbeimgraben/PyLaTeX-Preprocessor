@@ -1,3 +1,4 @@
+import hashlib
 from collections.abc import Iterator
 from importlib.resources import files
 from pathlib import Path
@@ -29,9 +30,20 @@ KNOWN_LOGOS: Final[dict[str, str]] = {
 
 
 def logo_path(name: str) -> Path:
-    if name not in KNOWN_LOGOS:
-        raise ValueError(f"unknown HSRT logo {name!r}; known: {sorted(KNOWN_LOGOS)}")
-    return LOGO_DIR / KNOWN_LOGOS[name]
+    """Resolve a logo reference to a file.
+
+    ``name`` is either a vendored logo key (``"INF"``, ``"MAKERS"`` ...) or a
+    path to a custom image file (``.svg``/``.pdf``/``.png``/...).
+    """
+    if name in KNOWN_LOGOS:
+        return LOGO_DIR / KNOWN_LOGOS[name]
+    candidate = Path(name).expanduser()
+    if candidate.is_file():
+        return candidate
+    raise ValueError(
+        f"unknown logo {name!r}: not a vendored logo {sorted(KNOWN_LOGOS)} "
+        + "nor an existing file path"
+    )
 
 
 # Output dir for logos referenced by the tikz overlays, relative to the .tex
@@ -45,12 +57,17 @@ LOGO_OUTPUT_DIR: Final[str] = "logos"
 def logo_output_name(name: str) -> str:
     """Filename of a logo as materialised in the output ``logos/`` dir.
 
-    SVG sources are converted to PDF, so they get a ``.pdf`` suffix.
+    SVG sources are converted to PDF, so they get a ``.pdf`` suffix. A custom
+    (non-vendored) path is suffixed with a short hash of its absolute location
+    so two custom logos sharing a stem — or clashing with a vendored name —
+    never collide in ``logos/``.
     """
     src = logo_path(name)
-    if src.suffix.lower() == ".svg":
-        return f"{src.stem}.pdf"
-    return src.name
+    suffix = ".pdf" if src.suffix.lower() == ".svg" else src.suffix
+    if name in KNOWN_LOGOS:
+        return f"{src.stem}{suffix}"
+    digest = hashlib.sha1(str(src.resolve()).encode()).hexdigest()[:8]
+    return f"{src.stem}-{digest}{suffix}"
 
 
 def logo_output_rel(name: str) -> str:

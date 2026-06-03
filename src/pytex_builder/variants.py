@@ -142,6 +142,7 @@ def _report(
         )
         or "Keywords",
         data_lines=_data_lines(options),
+        logos=_logos(options),
         # Map the shallowest heading in the body to \chapter, so headings nest
         # under it. Without this, a doc whose top level is `##` (because `#` was
         # consumed as the title) would render chapterless sections numbered 0.x.
@@ -193,6 +194,32 @@ def _bibliography(options: Mapping[str, object]) -> str | None:
         return value
     path = Path(value)
     return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def _resolve_logo(item: str) -> str:
+    """A vendored logo name passes through; a file path is made absolute.
+
+    Absolute so the logo resolves from the build directory rather than the
+    Markdown source's directory.
+    """
+    candidate = Path(item).expanduser()
+    return str(candidate.resolve()) if candidate.is_file() else item
+
+
+def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
+    """Title-page logos from the ``logos``/``logo`` frontmatter, or ``None``.
+
+    Each entry is a vendored logo name (``INF``, ``MAKERS`` ...) or a path to a
+    custom image; given as a list or a single scalar.
+    """
+    raw = options.get("logos", options.get("logo"))
+    if isinstance(raw, list):
+        items = [str(item) for item in raw]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+    elif isinstance(raw, str) and raw:
+        items = [raw]
+    else:
+        return None
+    return tuple(_resolve_logo(item) for item in items)
 
 
 def _bib_preamble(content: str) -> TeX:

@@ -231,6 +231,31 @@ def test_report_titlepage_heading_is_escaped():
     assert r"\section*{A \& B}" in out
 
 
+def test_report_logos_override_from_frontmatter():
+    report = build_document(
+        "---\ntitle: T\nlogos: [INF, STUPA]\n---\n## X", variant="report"
+    )
+    assert isinstance(report, HSRTReport)
+    assert report.logos == ("INF", "STUPA")
+    out = report.rendered
+    assert "logos/INF.pdf" in out and "logos/STUPA.pdf" in out
+
+
+def test_report_custom_logo_path_made_absolute(tmp_path):
+    logo = tmp_path / "brand.png"
+    logo.write_bytes(b"\x89PNG")
+    report = build_document(f"---\ntitle: T\nlogo: {logo}\n---\n## X", variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.logos == (str(logo.resolve()),)
+
+
+def test_report_without_logos_uses_variant_default():
+    report = build_document("# T\n\nbody", variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.logos is None
+    assert "logos/INF.pdf" in report.rendered
+
+
 def test_report_without_bibliography_has_none():
     report = build_document("# T\n\nbody", variant="report")
     assert isinstance(report, HSRTReport)
