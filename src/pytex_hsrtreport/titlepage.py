@@ -4,7 +4,6 @@ from typing import Final, override
 
 from pytex.commands.builtin import (
     Blenderfont,
-    HspaceStar,
     Newline,
     Noindent,
     Rule,
@@ -98,7 +97,12 @@ class TitlePage(TeX):
                     Concat(
                         Blenderfont(),
                         HugeBig(),
-                        HspaceStar("-2.5pt"),
+                        # A plain control-word terminator, not an optical kern:
+                        # the old \hspace*{-2.5pt} shifted only the first line,
+                        # leaving a wrapped title's later lines misaligned with
+                        # it and the rule. The space just ends \Huge (TeX gobbles
+                        # it) so the title's first word is not read as a macro.
+                        Raw(" "),
                         self.title,
                     )
                 ),

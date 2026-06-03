@@ -44,6 +44,15 @@ def test_titlepage_uses_huge_big_font():
     assert r"\Huge" in out
 
 
+def test_titlepage_title_has_no_first_line_optical_kern():
+    # A leading \hspace*{-2.5pt} only shifts the first line, so a wrapped title
+    # would have its later lines misaligned. It must be gone.
+    out = TitlePage("Some very long title").rendered
+    assert r"\hspace*{-2.5pt}" not in out
+    # \Huge is still terminated (so the first title word is not read as a macro).
+    assert r"\Huge Some very long title" in out
+
+
 def test_titlepage_uses_blenderfont():
     out = TitlePage("T").rendered
     assert r"\blenderfont" in out
