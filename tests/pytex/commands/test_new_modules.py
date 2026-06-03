@@ -242,6 +242,8 @@ def test_biblatex_commands():
     assert Textcite("k1", "k2").rendered == r"\textcite{k1,k2}"
     assert Parencite("k").rendered == r"\parencite{k}"
     assert Autocite("k").rendered == r"\autocite{k}"
+    assert Autocite("a", "b").rendered == r"\autocite{a,b}"
+    assert Autocite("k", postnote="S. 5").rendered == r"\autocite[S. 5]{k}"
     assert Footcite("k").rendered == r"\footcite{k}"
     assert Citeauthor("k").rendered == r"\citeauthor{k}"
     assert Printbibliography().rendered == r"\printbibliography"

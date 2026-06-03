@@ -58,8 +58,12 @@ def Parencite(*keys: str) -> TeX:
 
 @Registry.add
 @with_package(BIBLATEX)
-def Autocite(*keys: str) -> TeX:
-    return ControlSequence("autocite", (Parameter(",".join(keys)),))
+def Autocite(*keys: str, postnote: str | None = None) -> TeX:
+    key_param = Parameter(",".join(keys))
+    if postnote is None:
+        return ControlSequence("autocite", (key_param,))
+    # A single optional argument to \autocite is the postnote (e.g. a page).
+    return ControlSequence("autocite", (Parameter(postnote, optional=True), key_param))
 
 
 @Registry.add

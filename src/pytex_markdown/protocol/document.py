@@ -21,8 +21,8 @@ from pytex_hsrtreport.document import HSRTReport
 from pytex_hsrtreport.titlepage import TitlePageDataLine
 from pytex_hsrtreport.variants import Variant
 
+from ..frontmatter import FrontmatterValue, split_frontmatter
 from .convert import ProtocolConverter
-from .frontmatter import FrontmatterValue, split_frontmatter
 from .signatures import signature_block_from_meta
 
 if TYPE_CHECKING:

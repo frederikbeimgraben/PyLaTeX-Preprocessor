@@ -1,21 +1,42 @@
-"""STUPA/AStA meeting-protocol rendering, built on top of ``pytex_hsrtreport``.
+"""Deprecated alias for :mod:`pytex_markdown.protocol`.
 
-Write the minutes in Obsidian-flavoured Markdown - YAML frontmatter for the
-meeting header, ``> [!beschluss]`` / ``> [!abstimmung]`` / ``> [!aufgabe]``
-callouts and inline ``{{shortcodes}}`` for the protocol-specific bits - and
-render it to a PDF that matches the HSRTReport look.
-
-    from pytex_protocol import IncludeProtocol
-    __pytex__ = IncludeProtocol("sitzung.md")
+``pytex_protocol`` was merged into ``pytex_markdown``: the generic
+frontmatter parser moved to :mod:`pytex_markdown.frontmatter` and the
+meeting-protocol rendering to :mod:`pytex_markdown.protocol`. This package
+re-exports that public API so existing imports keep working; prefer the new
+locations.
 """
 
-from .convert import ProtocolConverter
-from .document import IncludeProtocol, Protocol, build_protocol, render_protocol
-from .entries import ActionItem, Deadline, Decision, Timestamp, Vote
-from .frontmatter import split_frontmatter
-from .header import ProtocolHeader, header_from_meta
-from .shortcodes import expand_inline_shortcodes, expand_shortcode
-from .signatures import SignatureLines, signature_block_from_meta
+from __future__ import annotations
+
+import warnings
+
+from pytex_markdown.frontmatter import split_frontmatter
+from pytex_markdown.protocol import (
+    ActionItem,
+    Deadline,
+    Decision,
+    IncludeProtocol,
+    Protocol,
+    ProtocolConverter,
+    ProtocolHeader,
+    SignatureLines,
+    Timestamp,
+    Vote,
+    build_protocol,
+    expand_inline_shortcodes,
+    expand_shortcode,
+    header_from_meta,
+    render_protocol,
+    signature_block_from_meta,
+)
+
+warnings.warn(
+    "pytex_protocol is deprecated; import from pytex_markdown.protocol"
+    + " (and pytex_markdown.frontmatter) instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 __all__ = [
     "ActionItem",
