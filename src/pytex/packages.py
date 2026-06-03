@@ -113,6 +113,9 @@ ARYDSHLN: Package = DefinePackage("arydshln")
 LMODERN: Package = DefinePackage("lmodern")
 HYPHENAT: Package = DefinePackage("hyphenat")
 FP: Package = DefinePackage("fp")
+# Ships its own euro glyph, so `\euro{}` renders independent of the text font
+# (e.g. DIN, whose font set lacks a euro glyph and would otherwise tofu).
+EUROSYM: Package = DefinePackage("eurosym")
 
 
 class Packages(Enum):
@@ -219,3 +222,4 @@ class Packages(Enum):
     LMODERN = LMODERN
     HYPHENAT = HYPHENAT
     FP = FP
+    EUROSYM = EUROSYM

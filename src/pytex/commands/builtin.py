@@ -1,8 +1,10 @@
+from ..helpers.with_package import with_package
 from ..interface.tex import TeX
 from ..model.concat import Concat
 from ..model.control_sequence import ControlSequence, Parameter
 from ..model.environment import Environment
 from ..model.raw import Raw
+from ..packages import EUROSYM
 from ..registry import Registry
 
 __all__ = [
@@ -24,6 +26,7 @@ __all__ = [
     "Emph",
     "EndAccSupp",
     "Enumerate",
+    "Euro",
     "FlushLeft",
     "FlushRight",
     "Footnote",
@@ -233,6 +236,18 @@ def Italic(body: TeX | str) -> TeX:
 @Registry.add
 def Newline() -> TeX:
     return Raw("\\\\")
+
+
+@Registry.add
+@with_package(EUROSYM)
+def Euro() -> TeX:
+    """Euro sign via ``eurosym``'s ``\\euro{}``.
+
+    eurosym ships its own glyph, so it renders even when the text font (e.g.
+    DIN) has no euro glyph. The trailing empty group stops the macro from
+    gobbling a following space, keeping ``50\\euro{} each`` spaced correctly.
+    """
+    return ControlSequence("euro", (Parameter(Raw("")),))
 
 
 @Registry.add
