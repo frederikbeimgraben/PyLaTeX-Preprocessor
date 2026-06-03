@@ -67,6 +67,9 @@ jobs:
           - os: ubuntu-latest
             asset: pytex-linux-x86_64
             bin: dist/pytex
+          - os: ubuntu-24.04-arm
+            asset: pytex-linux-arm64
+            bin: dist/pytex
           - os: macos-latest
             asset: pytex-macos-arm64
             bin: dist/pytex
