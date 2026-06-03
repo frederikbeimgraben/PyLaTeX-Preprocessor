@@ -207,8 +207,4 @@ def _join(blocks: list[TeX]) -> Iterator[TeX]:
 
     parbreak = Raw("\n\n")
     kept = [b for b in blocks if b is not Empty]
-    return (
-        part
-        for i, b in enumerate(kept)
-        for part in ((parbreak, b) if i else (b,))
-    )
+    return (part for i, b in enumerate(kept) for part in ((parbreak, b) if i else (b,)))

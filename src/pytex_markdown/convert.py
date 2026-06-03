@@ -491,8 +491,4 @@ def _strip_md_title(title: str) -> str:
 def _interleave(blocks: list[TeX]) -> Iterator[TeX]:
     """Yield non-empty block nodes separated by paragraph breaks."""
     kept = [b for b in blocks if b is not Empty]
-    return (
-        part
-        for i, b in enumerate(kept)
-        for part in ((PARBREAK, b) if i else (b,))
-    )
+    return (part for i, b in enumerate(kept) for part in ((PARBREAK, b) if i else (b,)))

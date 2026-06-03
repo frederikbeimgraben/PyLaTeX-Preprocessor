@@ -124,9 +124,7 @@ def expand_inline_shortcodes(text: str, meta: Mapping[str, FrontmatterValue]) ->
     # the original cursor logic that only emitted non-empty gaps.
     return Concat(
         *(
-            expand_shortcode(piece, meta)
-            if index % 2
-            else Raw(escape_latex(piece))
+            expand_shortcode(piece, meta) if index % 2 else Raw(escape_latex(piece))
             for index, piece in enumerate(SHORTCODE_RE.split(text))
             if index % 2 or piece
         )
