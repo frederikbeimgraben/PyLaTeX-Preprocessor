@@ -133,6 +133,9 @@ class HSRTReport(KomaDocument):
     keywords: TeX | str | None = None
     abstract_heading: str = "Abstract"
     keywords_heading: str = "Keywords"
+    # Title-page logos: vendored names or custom file paths. None -> the
+    # variant's default set.
+    logos: tuple[str, ...] | None = None
     data_lines: tuple[TitlePageDataLine, ...] = ()
 
     inline_logos: bool = True
@@ -229,7 +232,7 @@ class HSRTReport(KomaDocument):
                 abstract=self.abstract or "",
                 keywords=self.keywords or "",
                 data_lines=self.data_lines,
-                logo_names=default_logo_names(self.variant),
+                logo_names=self._title_logos(),
                 abstract_heading=self.abstract_heading,
                 keywords_heading=self.keywords_heading,
             )
@@ -269,6 +272,12 @@ class HSRTReport(KomaDocument):
             for font_path in all_font_paths()
         )
 
+    def _title_logos(self) -> tuple[str, ...]:
+        """Title-page logos: the explicit ``logos`` override or variant default."""
+        if self.logos is not None:
+            return self.logos
+        return default_logo_names(self.variant)
+
     def write_inline_logos(self, target_dir: str = ".") -> tuple[str, ...]:
         """Write the logos used by the tikz overlays to ``<target_dir>/logos/``.
 
@@ -281,11 +290,11 @@ class HSRTReport(KomaDocument):
 
         from .logos import LOGO_OUTPUT_DIR, logo_output_name, logo_path
 
-        # Titlepage overlay uses the title logos, the footer hook its own set
-        # (which may differ, e.g. MAKERS); the skyline is emitted on every page
-        # regardless of show_footer_logos.
+        # Titlepage overlay uses the title logos (override or variant default),
+        # the footer hook its own set (which may differ, e.g. MAKERS); the
+        # skyline is emitted on every page regardless of show_footer_logos.
         names = sorted(
-            set(default_logo_names(self.variant))
+            set(self._title_logos())
             | set(footer_logo_names(self.variant))
             | {"Skyline"}
         )

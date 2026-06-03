@@ -31,6 +31,26 @@ def test_logo_path_unknown_raises():
         logo_path("NOPE")
 
 
+def test_logo_path_accepts_custom_file(tmp_path):
+    custom = tmp_path / "mylogo.png"
+    custom.write_bytes(b"\x89PNG")
+    assert logo_path(str(custom)) == custom
+
+
+def test_logo_output_name_disambiguates_custom_paths(tmp_path):
+    from pytex_hsrtreport.logos import logo_output_name
+
+    a = tmp_path / "a" / "logo.png"
+    b = tmp_path / "b" / "logo.png"
+    for p in (a, b):
+        p.parent.mkdir(parents=True)
+        p.write_bytes(b"\x89PNG")
+    # Same stem, different dirs -> different output names (no logos/ collision).
+    assert logo_output_name(str(a)) != logo_output_name(str(b))
+    # Vendored names keep their clean stem.
+    assert logo_output_name("INF") == "INF.pdf"
+
+
 def test_logo_rendering_includes_resolved_path():
     out = Logo("HSRT", inline_base64=False, scale=0.5).rendered
     assert "HSRT.pdf" in out
