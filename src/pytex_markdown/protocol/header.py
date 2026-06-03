@@ -17,7 +17,7 @@ from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.model.raw import Raw
 from pytex.registry import Registry
-from pytex_hsrtreport.boxes import ColoredBox
+from pytex_components.boxes import ColoredBox
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping

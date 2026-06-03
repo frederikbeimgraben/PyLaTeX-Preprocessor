@@ -1,6 +1,6 @@
 import pytest
 
-from pytex_hsrtreport.voting import VotingResults
+from pytex_components.voting import VotingResults
 
 
 @pytest.mark.parametrize(

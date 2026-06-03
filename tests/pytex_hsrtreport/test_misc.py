@@ -1,19 +1,19 @@
-from pytex_hsrtreport.citations import Fcite
-from pytex_hsrtreport.cleveref_names import GermanCrefNames
-from pytex_hsrtreport.colors import HSRT_PALETTE, HSRTColors
-from pytex_hsrtreport.glossary import AcrShortcut, HSRTGlossarySetup
-from pytex_hsrtreport.hyperref_config import HSRTHyperref
-from pytex_hsrtreport.listings import HSRTListingStyles, style_options
-from pytex_hsrtreport.logos import Logo, LogoStrip, logo_path
-from pytex_hsrtreport.pagebreak import (
+from pytex_components.citations import Fcite
+from pytex_components.cleveref_names import GermanCrefNames
+from pytex_components.pagebreak import (
     Conditionalpagebreak,
     Keeptogether,
     Smartsection,
     Smartsubsection,
 )
+from pytex_components.wordcount import WordcountCommands
+from pytex_hsrtreport.colors import HSRT_PALETTE, HSRTColors
+from pytex_hsrtreport.glossary import AcrShortcut, HSRTGlossarySetup
+from pytex_hsrtreport.hyperref_config import HSRTHyperref
+from pytex_hsrtreport.listings import HSRTListingStyles, style_options
+from pytex_hsrtreport.logos import Logo, LogoStrip, logo_path
 from pytex_hsrtreport.titlepage import TitlePage, TitlePageDataLine
 from pytex_hsrtreport.variants import Variant
-from pytex_hsrtreport.wordcount import WordcountCommands
 
 
 def test_hsrt_palette_size():

@@ -1,7 +1,34 @@
-from . import (
+# The generic widgets moved to ``pytex_components``; re-export the modules and
+# symbols so ``pytex_hsrtreport.ColoredBox`` (and ``.boxes`` etc.) keep working.
+from pytex_components import (
+    ColoredBox,
+    Conditionalpagebreak,
+    Critical,
+    CustomBox,
+    DiscussionBox,
+    DraftWatermark,
+    Fcite,
+    GermanCrefNames,
+    ImportantBox,
+    InfoBox,
+    Keeptogether,
+    Smartsection,
+    Smartsubsection,
+    SuccessBox,
+    VotingResults,
+    WarningBox,
+    WatermarkCounter,
+    WordcountCommands,
     boxes,
     citations,
     cleveref_names,
+    pagebreak,
+    voting,
+    watermark,
+    wordcount,
+)
+
+from . import (
     colors,
     document,
     fonts,
@@ -9,25 +36,10 @@ from . import (
     hyperref_config,
     listings,
     logos,
-    pagebreak,
     pagesetup,
     titlepage,
     variants,
-    voting,
-    watermark,
-    wordcount,
 )
-from .boxes import (
-    ColoredBox,
-    CustomBox,
-    DiscussionBox,
-    ImportantBox,
-    InfoBox,
-    SuccessBox,
-    WarningBox,
-)
-from .citations import Fcite
-from .cleveref_names import GermanCrefNames
 from .colors import HSRT_PALETTE, HSRTColors
 from .document import HSRTReport
 from .fonts import HSRTFontSetup
@@ -41,19 +53,9 @@ from .hyperref_config import (
 )
 from .listings import HSRTListingStyles, style_options
 from .logos import DefaultLogos, Logo, LogoStrip, logo_path
-from .pagebreak import (
-    Conditionalpagebreak,
-    Critical,
-    Keeptogether,
-    Smartsection,
-    Smartsubsection,
-)
 from .pagesetup import HSRTPageSetup
 from .titlepage import TitlePage, TitlePageDataLine
 from .variants import Variant, default_logo_names
-from .voting import VotingResults
-from .watermark import DraftWatermark, WatermarkCounter
-from .wordcount import WordcountCommands
 
 __all__ = [
     "HSRT_CITE_COLOR",

@@ -14,7 +14,7 @@ DRAFTWATERMARK: Final = DefinePackage("draftwatermark")
 
 
 def _watermark_text(text: str) -> str:
-    """Build the tiled watermark grid: 100 rows × 16 cols, accessibility-friendly."""
+    """Build the tiled watermark grid: 100 rows x 16 cols, accessibility-friendly."""
     safe = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
     return (
         r"\setcounter{it}{1}"

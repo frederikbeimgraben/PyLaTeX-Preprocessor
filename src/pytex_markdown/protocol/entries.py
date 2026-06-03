@@ -14,8 +14,8 @@ from pytex.commands.colors import Textcolor
 from pytex.commands.fontawesome import FaIcon
 from pytex.model.concat import Concat
 from pytex.registry import Registry
-from pytex_hsrtreport.boxes import ColoredBox
-from pytex_hsrtreport.voting import VotingResults
+from pytex_components.boxes import ColoredBox
+from pytex_components.voting import VotingResults
 
 if TYPE_CHECKING:
     from pytex.interface.tex import TeX

@@ -41,9 +41,9 @@ from pytex.packages import (
     XCOLOR,
 )
 from pytex.registry import Registry
+from pytex_components.cleveref_names import GermanCrefNames
 from pytex_koma.document import KomaDocument
 
-from .cleveref_names import GermanCrefNames
 from .colors import HSRTColors
 from .fonts import HSRTFontSetup
 from .glossary import AcrShortcut, HSRTGlossarySetup

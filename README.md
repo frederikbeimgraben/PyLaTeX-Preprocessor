@@ -129,7 +129,7 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `--no-shell-escape` | shell-escape on | disable shell-escape |
 | `-t`, `--tree` | off | also print the input's `TeX`-node tree (`tree`-style) before rendering/building |
 | `-f`, `--force` | off | skip the optimize + analysis pass and build even if problems are found |
-| `--variant STYLE` | auto-detect | Markdown output style (`plain`, `report`, `protocol-asta`, `protocol-stupa`) |
+| `--variant STYLE` | auto-detect | Markdown output style (`plain`, `report`, `report-makers`, `protocol-asta`, `protocol-stupa`) |
 | `--config JSON` | none | JSON object of document-class params, merged over the frontmatter |
 
 Shell-escape is on by default because inline images decode their base64
@@ -185,10 +185,11 @@ Document (article)
 | `pytex` | core node model, `Document`, math, tables, graphics, and factories for the common LaTeX packages (biblatex, cleveref, glossaries, hyperref, listings, ...). |
 | `pytex_koma` | KOMA-Script classes and commands (`Addchap`, `Minisec`, `KOMAoptions`, ...). |
 | `pytex_tikz` | TikZ pictures and primitives (`TikzPicture`, `Draw`, `Node`, `Circle`, ...). |
-| `pytex_markdown` | Markdown -> native `TeX` conversion (see below). |
+| `pytex_components` | reusable, template-agnostic widgets: colored callout boxes (`ColoredBox` + presets), a voting tally, draft watermark, word-count and smart-pagebreak macros, a clickable author-year citation, German cleveref labels. |
+| `pytex_markdown` | Markdown -> native `TeX` conversion (see below), including `pytex_markdown.protocol` (STUPA/AStA meeting minutes) and `pytex_markdown.frontmatter` (YAML frontmatter parsing). |
 | `pytex_analyze` | static checks over the node tree (dangling refs, duplicate labels, missing images), plus `Optimize` to simplify a tree render-equivalently. |
-| `pytex_hsrtreport` | HSRT report document class, colored callout boxes, title pages, glossary/citation helpers. |
-| `pytex_protocol` | STUPA/AStA meeting minutes from Markdown, built on `pytex_hsrtreport`. |
+| `pytex_hsrtreport` | HSRT report document class, title pages, logos, and HSRT colors/fonts/glossary helpers. Builds on `pytex_components` (and re-exports it for compatibility). |
+| `pytex_protocol` | deprecated alias for `pytex_markdown.protocol` (kept as a re-export shim). |
 
 ## Markdown
 
@@ -201,15 +202,23 @@ body = Markdown("# Title\n\nText with **bold**, `code`, [a link](https://x).")
 body = IncludeMarkdown("notes.md", base_level=-1)   # base_level=-1: # -> \chapter
 ```
 
-Headings, emphasis, inline/fenced code, lists, links, images, block quotes and
-thematic breaks map to the standard pytex library; text is LaTeX-escaped.
-GitHub-style callouts become HSRT colored boxes (so the module depends on
-`pytex_hsrtreport`):
+Headings, emphasis, inline/fenced code, lists, links, images, GFM tables, block
+quotes and thematic breaks map to the standard pytex library; text is
+LaTeX-escaped. Some extras on top of plain Markdown:
 
-```md
-> [!NOTE]      -> InfoBox        > [!IMPORTANT] -> ImportantBox
-> [!TIP]       -> SuccessBox     > [!WARNING]   -> WarningBox
-```
+- **GitHub-style callouts** become colored boxes (from `pytex_components`):
+  ```md
+  > [!NOTE]      -> InfoBox        > [!IMPORTANT] -> ImportantBox
+  > [!TIP]       -> SuccessBox     > [!WARNING]   -> WarningBox
+  ```
+- **Citations** in Pandoc syntax: `[@key]` / `[@key, p. 5]` -> `\autocite`,
+  `[@a; @b]` -> a combined cite, and a narrative `@key` -> `\textcite`.
+- **Bibliography** from frontmatter — `bibliography:` is either inline BibTeX (a
+  `|` block scalar) or a path to a `.bib` file; reports print a numbered
+  `\printbibliography`.
+- ASCII **math arrows** (`->`, `=>`, `<->`, ...) become inline math arrows, the
+  **euro sign** `€` becomes a font-independent `\euro{}`, and tables get a bit of
+  vertical breathing room.
 
 Both factories are registered, so they work in `\iffalse{pytex(...)}\fi`
 replacements in `.tex` sources too.
@@ -223,6 +232,7 @@ document chosen by `--variant`:
 | --- | --- |
 | `plain` | a bare `Document` (default class `article`); `#` -> `\section`. |
 | `report` | an HSRT report with title page and table of contents; `#` -> `\chapter`. |
+| `report-makers` | a `report` branded with the MAKERS logo (title page + footer). |
 | `protocol-asta` | an AStA meeting protocol (HSRT report, AStA logos). |
 | `protocol-stupa` | a StuPa meeting protocol (HSRT report, StuPa logos). |
 
@@ -240,6 +250,11 @@ pytex notes.md --variant plain --config '{"documentclass": "scrartcl", "classopt
 object. For styles with a title page (`report`), the title is taken from
 `title:`/`--config` if given, otherwise from the first `#` heading (which is then
 not also rendered as a chapter).
+
+The report styles read further frontmatter keys: `author`, `abstract`,
+`keywords`, title-page `datalines` (a list of `"Label: value"` entries),
+`bibliography` (see [Markdown](#markdown)), and the labels `abstract_heading` /
+`keywords_heading` to rename the default "Abstract" / "Keywords" sections.
 
 ## Converting LaTeX to PyTeX
 
