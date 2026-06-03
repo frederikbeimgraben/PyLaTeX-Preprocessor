@@ -32,8 +32,8 @@ from pytex_markdown.protocol import (
 )
 
 warnings.warn(
-    "pytex_protocol is deprecated; import from pytex_markdown.protocol "
-    "(and pytex_markdown.frontmatter) instead.",
+    "pytex_protocol is deprecated; import from pytex_markdown.protocol"
+    + " (and pytex_markdown.frontmatter) instead.",
     DeprecationWarning,
     stacklevel=2,
 )
