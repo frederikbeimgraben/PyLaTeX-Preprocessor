@@ -10,6 +10,7 @@ class Variant(Enum):
     STUPA = "stupa"
     ASTA = "asta"
     ECHO = "echo"
+    MAKERS = "makers"
 
 
 DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
@@ -17,6 +18,7 @@ DEFAULT_LOGOS: dict[Variant, tuple[str, ...]] = {
     Variant.STUPA: ("STUPA",),
     Variant.ASTA: ("ASTA",),
     Variant.ECHO: ("ECHO",),
+    Variant.MAKERS: ("MAKERS",),
 }
 
 

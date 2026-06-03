@@ -142,8 +142,8 @@ def _parse_args(argv: list[str]) -> Config:
         default=None,
         metavar="STYLE",
         help=(
-            "Markdown output style: plain, report, protocol-asta, protocol-stupa"
-            + " (default: auto-detect)"
+            "Markdown output style: plain, report, report-makers, "
+            + "protocol-asta, protocol-stupa (default: auto-detect)"
         ),
     )
     _ = parser.add_argument(
