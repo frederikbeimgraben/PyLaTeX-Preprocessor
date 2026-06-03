@@ -4,6 +4,8 @@ A *variant* maps a Markdown source to a concrete document:
 
 * ``plain``          - a bare ``Document`` wrapping the converted Markdown.
 * ``report``         - an HSRT report with title page and table of contents.
+* ``report-makers``  - an HSRT report branded with the MAKERS logo (title page
+  and footer on every page).
 * ``protocol-asta``  - an AStA meeting protocol (HSRT report, AStA logos).
 * ``protocol-stupa`` - a StuPa meeting protocol (HSRT report, StuPa logos).
 
@@ -41,7 +43,13 @@ if TYPE_CHECKING:
 
 __all__ = ["VARIANT_NAMES", "build_document"]
 
-VARIANT_NAMES: tuple[str, ...] = ("plain", "report", "protocol-asta", "protocol-stupa")
+VARIANT_NAMES: tuple[str, ...] = (
+    "plain",
+    "report",
+    "report-makers",
+    "protocol-asta",
+    "protocol-stupa",
+)
 
 type Options = Mapping[str, object]
 
@@ -65,6 +73,8 @@ def build_document(
         return _plain(body, options)
     if variant == "report":
         return _report(body, options)
+    if variant == "report-makers":
+        return _report(body, options, logo_variant=Variant.MAKERS, footer_logos=True)
     if variant == "protocol-asta":
         return _protocol(meta, body, options, force=Variant.ASTA)
     if variant == "protocol-stupa":
@@ -92,7 +102,13 @@ def _plain(body: str, options: dict[str, object]) -> TeX:
     )
 
 
-def _report(body: str, options: dict[str, object]) -> TeX:
+def _report(
+    body: str,
+    options: dict[str, object],
+    *,
+    logo_variant: Variant = Variant.INF,
+    footer_logos: bool = False,
+) -> TeX:
     title = _str(options, "title", "titel")
     derived = False
     if title is None:
@@ -104,8 +120,9 @@ def _report(body: str, options: dict[str, object]) -> TeX:
         # top of the body as a big, unnumbered heading so it is not lost.
         body_tex = Concat(ChapterStar(escape_latex(title)), Raw("\n\n"), body_tex)
     return HSRTReport(
-        variant=Variant.INF,
+        variant=logo_variant,
         show_titlepage=title is not None,
+        show_footer_logos=footer_logos,
         show_toc=True,
         title=escape_latex(title) if title is not None else None,
         author=_escaped(_str(options, "author", "autor")),

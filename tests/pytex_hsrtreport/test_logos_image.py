@@ -64,6 +64,18 @@ def test_default_logos_for_stupa():
     assert "STUPA.pdf" in out
 
 
+def test_makers_logo_path_resolves_to_vendored_svg():
+    p = logo_path("MAKERS")
+    assert p.name == "MAKERS.svg"
+    assert p.exists()
+
+
+def test_default_logos_for_makers():
+    # SVG sources resolve to a converted PDF reference.
+    out = DefaultLogos(Variant.MAKERS, inline_base64=False).rendered
+    assert "MAKERS" in out and ".pdf" in out
+
+
 def test_inline_logo_collected_by_document():
     from pytex_hsrtreport import HSRTReport
 

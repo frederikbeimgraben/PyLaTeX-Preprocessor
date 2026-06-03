@@ -109,7 +109,31 @@ def test_unknown_variant_raises():
 
 
 def test_variant_names_are_the_public_styles():
-    assert VARIANT_NAMES == ("plain", "report", "protocol-asta", "protocol-stupa")
+    assert VARIANT_NAMES == (
+        "plain",
+        "report",
+        "report-makers",
+        "protocol-asta",
+        "protocol-stupa",
+    )
+
+
+def test_report_makers_uses_makers_logos_and_footer():
+    report = build_document("# MAKERS Bericht\n\nbody", variant="report-makers")
+    assert isinstance(report, HSRTReport)
+    assert report.variant is Variant.MAKERS
+    # MAKERS branding shows on the title page and in the page footer.
+    assert report.show_footer_logos is True
+    assert report.show_titlepage is True
+    assert "logos/MAKERS.pdf" in report.rendered
+
+
+def test_plain_report_keeps_inf_logos_and_no_footer():
+    # The default report is unchanged: INF variant, footer logos off.
+    report = build_document("# Bericht\n\nbody", variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.variant is Variant.INF
+    assert report.show_footer_logos is False
 
 
 def test_report_data_lines_from_frontmatter():

@@ -21,6 +21,8 @@ KNOWN_LOGOS: Final[dict[str, str]] = {
     "ASTA": "ASTA.svg",
     "STUPA": "STUPA.pdf",
     "ECHO": "ECHO.svg",
+    "MAKERS": "MAKERS.svg",
+    "MAKERS-Icon": "MAKERS-Icon.svg",
     "Skyline": "Skyline.pdf",
 }
 
