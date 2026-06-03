@@ -13,6 +13,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from pytex.commands.biblatex import Autocite, Textcite
 from pytex.commands.builtin import (
     Bold,
     Chapter,
@@ -108,6 +109,22 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
 # ships its own glyph and registers the package requirement.
 EURO_SIGN: Final[str] = "€"
 
+# Pandoc-style citations in prose. A bracketed ``[@key]`` / ``[@key, p. 5]`` /
+# ``[@a; @b]`` becomes ``\autocite``; a narrative ``@key`` becomes ``\textcite``.
+# Keys use the usual BibTeX charset. The narrative form needs a non-word, non-``@``
+# char before it so an e-mail remnant like ``foo@bar`` is never mistaken for a
+# cite (e-mails arrive as their own ``Url`` node anyway).
+# A BibTeX key starts with an alphanumeric/underscore and, like Pandoc, may
+# contain internal punctuation but must not END on it (so a trailing sentence
+# period such as ``@knuth.`` is not swallowed into the key).
+_CITE_KEY = r"[A-Za-z0-9_](?:[\w:.#$%&+?<>~/-]*[A-Za-z0-9_])?"
+CITATION_RE: Final[re.Pattern[str]] = re.compile(
+    r"\[(?P<bracket>\s*@[^\]]+)\]" + rf"|(?<![\w@])@(?P<narrative>{_CITE_KEY})"
+)
+_CITE_ENTRY_RE: Final[re.Pattern[str]] = re.compile(
+    rf"^@(?P<key>{_CITE_KEY})\s*(?:,\s*(?P<post>.+))?$"
+)
+
 PARBREAK: Final[TeX] = Raw("\n\n")
 
 # Vertical breathing room added above and below a rendered table. ``\addvspace``
@@ -178,6 +195,55 @@ def _prose(text: str) -> TeX:
     return Concat(*parts)
 
 
+def _citation(match: re.Match[str]) -> TeX | None:
+    """Build a cite node from a ``CITATION_RE`` match, or ``None`` if not a cite.
+
+    Narrative ``@key`` -> ``\\textcite``. Bracketed ``[@key]`` -> ``\\autocite``;
+    a single key may carry a postnote (``[@key, p. 5]``) and several keys may be
+    separated by ``;`` (``[@a; @b]``). A malformed bracket (no valid ``@key``
+    inside) returns ``None`` so it falls back to plain escaped text.
+    """
+    narrative = match.group("narrative")
+    if narrative is not None:
+        return Textcite(narrative)
+    keys: list[str] = []
+    postnote: str | None = None
+    for entry in match.group("bracket").split(";"):
+        parsed = _CITE_ENTRY_RE.match(entry.strip())
+        if parsed is None:
+            return None
+        keys.append(parsed.group("key"))
+        if parsed.group("post") is not None:
+            postnote = parsed.group("post").strip()
+    # Biblatex attaches a single postnote to a lone key; drop it for multi-cites.
+    if len(keys) == 1 and postnote is not None:
+        return Autocite(keys[0], postnote=escape_latex(postnote))
+    return Autocite(*keys)
+
+
+def _inline_text(text: str) -> TeX:
+    """Convert prose, turning Pandoc citations into cite nodes.
+
+    Citation spans are pulled out first (so their keys are not LaTeX-escaped);
+    the text around them keeps the euro/arrow/escape handling of :func:`_prose`.
+    """
+    parts: list[TeX] = []
+    last = 0
+    for match in CITATION_RE.finditer(text):
+        node = _citation(match)
+        if node is None:
+            continue
+        if match.start() > last:
+            parts.append(_prose(text[last : match.start()]))
+        parts.append(node)
+        last = match.end()
+    if not parts:
+        return _prose(text)
+    if last < len(text):
+        parts.append(_prose(text[last:]))
+    return Concat(*parts)
+
+
 class MarkdownConverter:
     """Walk a marko AST, producing a single ``TeX`` tree.
 
@@ -201,7 +267,7 @@ class MarkdownConverter:
             # RawText / CodeSpan / Literal etc. carry a plain string.
             if kind == "CodeSpan":
                 return Texttt(Raw(escape_latex(text)))
-            return _prose(text)
+            return _inline_text(text)
 
         if kind == "StrongEmphasis":
             return Bold(self.inlines(node))
@@ -277,7 +343,7 @@ class MarkdownConverter:
         # Rebuild the first paragraph with the marker stripped, keep the rest.
         stripped = first_text[match.end() :]
         head = Concat(
-            _prose(stripped),
+            _inline_text(stripped),
             *(self.inline(c) for c in inner[1:]),
         )
         body_blocks = [head, *(self.block(b) for b in kids[1:])]

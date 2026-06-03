@@ -21,11 +21,14 @@ of the document when it is not given via frontmatter/config.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+from pytex.commands.biblatex import Addbibresource
 from pytex.commands.builtin import ChapterStar
 from pytex.model.concat import Concat
 from pytex.model.document import Document
+from pytex.model.empty import Empty
 from pytex.model.raw import Raw
 from pytex_hsrtreport.document import HSRTReport
 from pytex_hsrtreport.titlepage import TitlePageDataLine
@@ -118,11 +121,14 @@ def _report(
         # The `#` heading was pulled out for the title page; re-emit it at the
         # top of the body as a big, unnumbered heading so it is not lost.
         body_tex = Concat(ChapterStar(escape_latex(title)), Raw("\n\n"), body_tex)
+    bibliography = _bibliography(options)
     return HSRTReport(
         variant=logo_variant,
         show_titlepage=title is not None,
         show_footer_logos=footer_logos,
         show_toc=True,
+        show_bibliography=bibliography is not None,
+        user_preamble=_bib_preamble(bibliography) if bibliography else Empty,
         title=escape_latex(title) if title is not None else None,
         author=_escaped(_str(options, "author", "autor")),
         abstract=_escaped(_str(options, "abstract", "zusammenfassung")),
@@ -159,6 +165,41 @@ def _protocol(
 
 
 # -- helpers ---------------------------------------------------------------
+
+# Self-contained .bib name written next to the .tex via filecontents so biber
+# finds it in the build dir without an external file path.
+_BIB_FILENAME = "pytex-md-refs.bib"
+
+
+def _bibliography(options: Mapping[str, object]) -> str | None:
+    """BibTeX content from the ``bibliography`` frontmatter, or ``None``.
+
+    The value is either inline BibTeX (a block scalar, recognised by an ``@``
+    entry) or a path to a ``.bib`` file, which is read in. A path that does not
+    resolve to a file is ignored.
+    """
+    value = _str(options, "bibliography", "literatur", "bibliografie", "bib")
+    if value is None:
+        return None
+    if "@" in value:
+        return value
+    path = Path(value)
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def _bib_preamble(content: str) -> TeX:
+    """Emit the bibliography as an inline ``filecontents`` .bib + ``\\addbibresource``.
+
+    Writing the .bib via ``filecontents`` keeps the document self-contained: the
+    file lands in the build dir at compile time, so biber resolves it without a
+    separate path (and the numeric biblatex default style applies).
+    """
+    block = (
+        f"\\begin{{filecontents*}}[overwrite,noheader]{{{_BIB_FILENAME}}}\n"
+        + content.rstrip("\n")
+        + "\n\\end{filecontents*}\n"
+    )
+    return Concat(Raw(block, allow_replacements=False), Addbibresource(_BIB_FILENAME))
 
 
 def _str(options: Mapping[str, object], *keys: str) -> str | None:
