@@ -59,7 +59,10 @@ class IncludeImage(TeX):
         if src.suffix.lower() in PDF_COMPAT:
             return src
         if src.suffix.lower() == ".svg":
-            digest = hashlib.sha1(src.resolve().as_posix().encode()).hexdigest()[:10]
+            # Content-address the cache: hash the SVG bytes, not its path, so an
+            # edited source reconverts instead of reusing a stale PDF that
+            # happens to live at the same path-derived name.
+            digest = hashlib.sha1(src.read_bytes()).hexdigest()[:10]
             return Path("build") / f"{src.stem}-{digest}.pdf"
         raise ValueError(f"unsupported image extension: {src.suffix}")
 
