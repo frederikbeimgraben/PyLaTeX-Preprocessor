@@ -38,18 +38,32 @@ def test_svg_extension_routes_through_build(tmp_path):
     assert "x-" in target.name
 
 
-def test_svg_target_uses_sha_digest(tmp_path):
+def test_svg_target_uses_content_sha_digest(tmp_path):
     src = tmp_path / "logo.svg"
-    src.write_text("<svg></svg>")
+    content = "<svg></svg>"
+    src.write_text(content)
     img = IncludeImage(src)
-    expected_prefix = hashlib.sha1(src.resolve().as_posix().encode()).hexdigest()[:10]
+    expected_prefix = hashlib.sha1(content.encode()).hexdigest()[:10]
     assert expected_prefix in img.resolved_path.name
+
+
+def test_svg_target_changes_when_content_changes(tmp_path):
+    # Editing the source (same path) must reconvert, not reuse a stale PDF.
+    src = tmp_path / "logo.svg"
+    src.write_text("<svg>old</svg>")
+    before = IncludeImage(src).resolved_path.name
+    src.write_text("<svg>new</svg>")
+    after = IncludeImage(src).resolved_path.name
+    assert before != after
 
 
 def test_ensure_converted_invokes_inkscape(monkeypatch, tmp_path):
     src = tmp_path / "x.svg"
-    src.write_text("<svg></svg>")
+    src.write_text("<svg>invoke</svg>")
     img = IncludeImage(src)
+    # The content-addressed cache target lives in ./build; clear any leftover
+    # from a previous run so conversion is actually exercised.
+    img.resolved_path.unlink(missing_ok=True)
     calls: list[list[str]] = []
 
     def fake_run(cmd, check, capture_output):
@@ -65,6 +79,7 @@ def test_ensure_converted_invokes_inkscape(monkeypatch, tmp_path):
     img.ensure_converted()
     assert any("inkscape" in c[0] for c in calls)
     assert img.resolved_path.exists()
+    img.resolved_path.unlink(missing_ok=True)
 
 
 def test_ensure_converted_skips_if_target_exists(monkeypatch, tmp_path):
