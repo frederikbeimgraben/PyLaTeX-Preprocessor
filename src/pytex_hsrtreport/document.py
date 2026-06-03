@@ -57,7 +57,7 @@ from .listings import HSRTListingStyles
 from .logos import DefaultLogos, footer_logo_hook
 from .pagesetup import HSRTPageSetup
 from .titlepage import TitlePage, TitlePageDataLine
-from .variants import Variant, default_logo_names
+from .variants import Variant, default_logo_names, footer_logo_names
 
 __all__ = ["HSRTReport"]
 
@@ -195,7 +195,7 @@ class HSRTReport(KomaDocument):
         # that HSRTFontSetup's \renewcommand{\blenderfont} requires.
         yield HSRTPageSetup()
         # The skyline is drawn on every page; footer logos only when requested.
-        logo_names = default_logo_names(self.variant) if self.show_footer_logos else ()
+        logo_names = footer_logo_names(self.variant) if self.show_footer_logos else ()
         yield Raw(footer_logo_hook(logo_names), allow_replacements=False)
         if self.inline_fonts:
             yield HSRTFontSetup()
@@ -277,9 +277,14 @@ class HSRTReport(KomaDocument):
 
         from .logos import LOGO_OUTPUT_DIR, logo_output_name, logo_path
 
-        # Titlepage overlay + footer hook use the variant defaults; the footer
-        # skyline is emitted on every page regardless of show_footer_logos.
-        names = sorted(set(default_logo_names(self.variant)) | {"Skyline"})
+        # Titlepage overlay uses the title logos, the footer hook its own set
+        # (which may differ, e.g. MAKERS); the skyline is emitted on every page
+        # regardless of show_footer_logos.
+        names = sorted(
+            set(default_logo_names(self.variant))
+            | set(footer_logo_names(self.variant))
+            | {"Skyline"}
+        )
         base = Path(target_dir)
         return tuple(
             # IncludeImage.read_bytes converts svg -> pdf on the fly.

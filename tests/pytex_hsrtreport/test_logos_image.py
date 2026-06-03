@@ -70,10 +70,32 @@ def test_makers_logo_path_resolves_to_vendored_svg():
     assert p.exists()
 
 
+def test_makers_ralign_logo_path_resolves_to_vendored_svg():
+    p = logo_path("MAKERS-RAlign")
+    assert p.name == "MAKERS-RAlign.svg"
+    assert p.exists()
+
+
 def test_default_logos_for_makers():
     # SVG sources resolve to a converted PDF reference.
     out = DefaultLogos(Variant.MAKERS, inline_base64=False).rendered
     assert "MAKERS" in out and ".pdf" in out
+
+
+def test_makers_footer_logo_differs_from_title():
+    from pytex_hsrtreport.variants import default_logo_names, footer_logo_names
+
+    # Title uses the left-aligned logo, footer the right-aligned one.
+    assert default_logo_names(Variant.MAKERS) == ("MAKERS",)
+    assert footer_logo_names(Variant.MAKERS) == ("MAKERS-RAlign",)
+
+
+def test_footer_logos_default_to_title_logos():
+    from pytex_hsrtreport.variants import default_logo_names, footer_logo_names
+
+    # Variants without a footer override reuse their title-page logos.
+    for variant in (Variant.INF, Variant.STUPA, Variant.ASTA, Variant.ECHO):
+        assert footer_logo_names(variant) == default_logo_names(variant)
 
 
 def test_inline_logo_collected_by_document():
