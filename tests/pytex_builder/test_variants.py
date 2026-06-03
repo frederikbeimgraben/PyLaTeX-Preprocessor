@@ -175,3 +175,37 @@ def test_report_data_lines_latex_escaped():
     line = report.data_lines[0]
     assert line.label == r"A \& B"
     assert line.value == r"x\_y"
+
+
+def test_report_inline_bibliography_emits_filecontents_and_resource():
+    src = (
+        "---\ntitle: T\nbibliography: |\n"
+        "  @book{k, author = {A}, title = {B}, year = {2020}}\n"
+        "---\n## X\n\nSee [@k]."
+    )
+    report = build_document(src, variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.show_bibliography is True
+    out = report.rendered
+    assert r"\begin{filecontents*}" in out
+    assert "pytex-md-refs.bib" in out
+    assert r"\addbibresource{pytex-md-refs.bib}" in out
+    assert r"\printbibliography" in out
+    assert r"\autocite{k}" in out
+
+
+def test_report_bibliography_from_file(tmp_path):
+    bib = tmp_path / "refs.bib"
+    _ = bib.write_text("@book{k, author = {A}, title = {B}, year = {2020}}\n")
+    src = f"---\ntitle: T\nbibliography: {bib}\n---\n## X"
+    report = build_document(src, variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.show_bibliography is True
+    assert "@book{k" in report.rendered
+
+
+def test_report_without_bibliography_has_none():
+    report = build_document("# T\n\nbody", variant="report")
+    assert isinstance(report, HSRTReport)
+    assert report.show_bibliography is False
+    assert "addbibresource" not in report.rendered
