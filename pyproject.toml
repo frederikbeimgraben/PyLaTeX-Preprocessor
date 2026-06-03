@@ -85,4 +85,4 @@ ignore = ["N802"]
 "src/pytex_builder/tectonic.py" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pytex", "pytex_builder", "pytex_koma", "pytex_tikz", "pytex_hsrtreport", "pytex_markdown"]
+known-first-party = ["pytex_components", "pytex", "pytex_builder", "pytex_koma", "pytex_tikz", "pytex_hsrtreport", "pytex_markdown"]

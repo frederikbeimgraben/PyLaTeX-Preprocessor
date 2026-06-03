@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 import pytex  # noqa: F401,E402  (populate Registry)
+import pytex_components  # noqa: F401,E402
 import pytex_hsrtreport  # noqa: F401,E402
 import pytex_koma  # noqa: F401,E402
 import pytex_markdown.protocol  # noqa: F401,E402

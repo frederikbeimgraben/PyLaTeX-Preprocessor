@@ -1,6 +1,6 @@
 from pytex.commands.builtin import Textbf
+from pytex_components.voting import VotingResults
 from pytex_hsrtreport.titlepage import TitlePage, TitlePageDataLine
-from pytex_hsrtreport.voting import VotingResults
 
 
 def test_titlepage_wraps_in_titlepage_env():

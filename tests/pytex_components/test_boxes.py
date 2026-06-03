@@ -1,5 +1,5 @@
 from pytex.packages import FONTAWESOME, MDFRAMED, XCOLOR
-from pytex_hsrtreport.boxes import (
+from pytex_components.boxes import (
     ColoredBox,
     CustomBox,
     DiscussionBox,

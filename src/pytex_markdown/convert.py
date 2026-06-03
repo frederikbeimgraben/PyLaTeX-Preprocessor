@@ -41,7 +41,7 @@ from pytex.model.concat import Concat
 from pytex.model.empty import Empty
 from pytex.model.image import IncludeImage
 from pytex.model.raw import Raw, pytex_namespace
-from pytex_hsrtreport.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
+from pytex_components.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
 from .escape import escape_latex
 
