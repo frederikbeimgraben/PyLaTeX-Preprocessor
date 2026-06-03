@@ -204,6 +204,33 @@ def test_report_bibliography_from_file(tmp_path):
     assert "@book{k" in report.rendered
 
 
+def test_report_custom_titlepage_headings():
+    src = (
+        "---\ntitle: T\nabstract: a\nkeywords: [x]\n"
+        "abstract_heading: Kurzfassung\nkeywords_heading: Schlagwörter\n---\n## S"
+    )
+    out = build_document(src, variant="report").rendered
+    assert r"\section*{Kurzfassung}" in out
+    assert r"\textbf{Schlagwörter}" in out
+    assert r"\section*{Abstract}" not in out
+
+
+def test_report_titlepage_headings_default_when_unset():
+    out = build_document(
+        "---\ntitle: T\nabstract: a\nkeywords: [x]\n---\n## S", variant="report"
+    ).rendered
+    assert r"\section*{Abstract}" in out
+    assert r"\textbf{Keywords}" in out
+
+
+def test_report_titlepage_heading_is_escaped():
+    out = build_document(
+        "---\ntitle: T\nabstract: a\nabstract_heading: A & B\n---\n## S",
+        variant="report",
+    ).rendered
+    assert r"\section*{A \& B}" in out
+
+
 def test_report_without_bibliography_has_none():
     report = build_document("# T\n\nbody", variant="report")
     assert isinstance(report, HSRTReport)

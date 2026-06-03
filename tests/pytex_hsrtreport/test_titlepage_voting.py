@@ -58,6 +58,25 @@ def test_titlepage_uses_blenderfont():
     assert r"\blenderfont" in out
 
 
+def test_titlepage_default_abstract_keywords_headings():
+    out = TitlePage("T", abstract="a", keywords="k").rendered
+    assert r"\section*{Abstract}" in out
+    assert r"\textbf{Keywords}" in out
+
+
+def test_titlepage_custom_abstract_keywords_headings():
+    out = TitlePage(
+        "T",
+        abstract="a",
+        keywords="k",
+        abstract_heading="Kurzfassung",
+        keywords_heading="Schlagwörter",
+    ).rendered
+    assert r"\section*{Kurzfassung}" in out
+    assert r"\textbf{Schlagwörter}" in out
+    assert r"\section*{Abstract}" not in out
+
+
 def test_voting_uses_multicols():
     out = VotingResults(yes=1, no=1, abstain=0).rendered
     assert r"\begin{multicols}{3}" in out

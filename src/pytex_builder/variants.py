@@ -133,6 +133,14 @@ def _report(
         author=_escaped(_str(options, "author", "autor")),
         abstract=_escaped(_str(options, "abstract", "zusammenfassung")),
         keywords=_escaped(_keywords(options)),
+        abstract_heading=_escaped(
+            _str(options, "abstract_heading", "abstract_title", "zusammenfassung_titel")
+        )
+        or "Abstract",
+        keywords_heading=_escaped(
+            _str(options, "keywords_heading", "keywords_title", "schlagworte_titel")
+        )
+        or "Keywords",
         data_lines=_data_lines(options),
         # Map the shallowest heading in the body to \chapter, so headings nest
         # under it. Without this, a doc whose top level is `##` (because `#` was
