@@ -1,4 +1,7 @@
-from pytex_protocol.shortcodes import expand_inline_shortcodes, expand_shortcode
+from pytex_markdown.protocol.shortcodes import (
+    expand_inline_shortcodes,
+    expand_shortcode,
+)
 
 META = {
     "gremium": "STUPA",

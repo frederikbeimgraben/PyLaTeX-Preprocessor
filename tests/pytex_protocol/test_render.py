@@ -4,8 +4,8 @@ import marko
 
 from pytex_hsrtreport.document import HSRTReport
 from pytex_hsrtreport.variants import Variant
-from pytex_protocol import render_protocol
-from pytex_protocol.convert import ProtocolConverter
+from pytex_markdown.protocol import render_protocol
+from pytex_markdown.protocol.convert import ProtocolConverter
 
 _PARSER = marko.Markdown()
 
@@ -90,7 +90,7 @@ def test_render_protocol_full_document():
 
 
 def test_title_is_descriptive_with_german_date():
-    from pytex_protocol.document import _title
+    from pytex_markdown.protocol.document import _title
 
     assert (
         _title({"gremium": "STUPA", "datum": "2026-06-15"})
@@ -101,7 +101,7 @@ def test_title_is_descriptive_with_german_date():
 
 
 def test_data_lines_cover_metadata():
-    from pytex_protocol.document import _data_lines
+    from pytex_markdown.protocol.document import _data_lines
 
     meta = {
         "datum": "2026-06-15",

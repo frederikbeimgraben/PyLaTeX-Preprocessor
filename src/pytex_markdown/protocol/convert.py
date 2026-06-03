@@ -17,8 +17,8 @@ import re
 from typing import TYPE_CHECKING, Final, cast, override
 
 from pytex.model.concat import Concat
-from pytex_markdown.convert import CALLOUT_RE, MarkdownConverter
 
+from ..convert import CALLOUT_RE, MarkdownConverter
 from .entries import ActionItem, Deadline, Decision, Vote
 from .shortcodes import expand_inline_shortcodes
 from .signatures import SignatureLines
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from pytex.interface.tex import TeX
 
-    from .frontmatter import FrontmatterValue
+    from ..frontmatter import FrontmatterValue
 
 __all__ = ["ProtocolConverter"]
 

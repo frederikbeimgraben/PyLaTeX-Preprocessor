@@ -1,4 +1,4 @@
-from pytex_protocol.header import ProtocolHeader, header_from_meta
+from pytex_markdown.protocol.header import ProtocolHeader, header_from_meta
 
 META = {
     "gremium": "STUPA",
