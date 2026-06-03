@@ -34,3 +34,44 @@ def test_unterminated_fence_is_not_treated_as_frontmatter():
     meta, body = split_frontmatter(text)
     assert meta == {}
     assert body == text
+
+
+def test_literal_block_scalar_preserves_newlines_and_indent():
+    src = (
+        "---\n"
+        "bibliography: |\n"
+        "  @book{knuth,\n"
+        "    author = {Knuth},\n"
+        "  }\n"
+        "title: T\n"
+        "---\n"
+        "Body\n"
+    )
+    meta, body = split_frontmatter(src)
+    # Common indent stripped, inner indentation and line breaks kept.
+    assert meta["bibliography"] == "@book{knuth,\n  author = {Knuth},\n}\n"
+    # The key after the block is still parsed, and the body is untouched.
+    assert meta["title"] == "T"
+    assert body == "Body"
+
+
+def test_folded_block_scalar_joins_lines_with_spaces():
+    src = "---\nabstract: >\n  one two\n  three\n\n  next para\n---\nx"
+    meta, _ = split_frontmatter(src)
+    assert meta["abstract"] == "one two three\nnext para\n"
+
+
+def test_block_scalar_strip_chomping():
+    meta, _ = split_frontmatter("---\nb: |-\n  line1\n  line2\n---\nx")
+    assert meta["b"] == "line1\nline2"
+
+
+def test_block_scalar_keep_chomping():
+    meta, _ = split_frontmatter("---\nb: |+\n  line1\n\n\n---\nx")
+    assert meta["b"] == "line1\n\n"
+
+
+def test_pipe_prefixed_scalar_is_not_a_block_scalar():
+    # A value that merely starts with `|` stays an ordinary scalar.
+    meta, _ = split_frontmatter("---\nt: |pipe\n---\nx")
+    assert meta["t"] == "|pipe"
