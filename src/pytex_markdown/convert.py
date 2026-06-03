@@ -110,6 +110,11 @@ EURO_SIGN: Final[str] = "€"
 
 PARBREAK: Final[TeX] = Raw("\n\n")
 
+# Vertical breathing room added above and below a rendered table. ``\addvspace``
+# (rather than ``\vspace``) coalesces with adjacent spacing so a table next to a
+# heading or another block does not accumulate a double gap.
+TABLE_VSPACE: Final[str] = r"0.8\baselineskip"
+
 # GFM cell alignment -> tabularx ``X`` column spec. ``X`` columns share the
 # table width and wrap their content, so wide tables no longer overrun the
 # page. ``None`` (no colon) falls back to left, matching how most renderers
@@ -318,7 +323,14 @@ class MarkdownConverter:
         parts.extend(self._table_row(r) for r in body)
         parts.append(Bottomrule())
         parts.append(Raw("\n"))
-        return Tabularx(r"\linewidth", spec, Concat(*parts))
+        table = Tabularx(r"\linewidth", spec, Concat(*parts))
+        # Wrap in vertical space: `\par` closes the surrounding paragraph so
+        # `\addvspace` lands in vertical mode both before and after the table.
+        return Concat(
+            Raw(f"\\par\\addvspace{{{TABLE_VSPACE}}}\n"),
+            table,
+            Raw(f"\n\\par\\addvspace{{{TABLE_VSPACE}}}"),
+        )
 
     def _table_row(self, node: object) -> TeX:
         cells = [self.inlines(c) for c in _children(node) if _kind(c) == "TableCell"]

@@ -22,6 +22,16 @@ def test_table_becomes_tabularx_with_wrapping_alignment_spec():
     assert r"\end{tabularx}" in out
 
 
+def test_table_wrapped_in_vertical_space():
+    # Tables get breathing room above and below via \addvspace (in vmode).
+    out = Markdown(TABLE).rendered
+    assert out.count(r"\par\addvspace{0.8\baselineskip}") == 2
+    before = out.index(r"\par\addvspace{0.8\baselineskip}")
+    after = out.rindex(r"\par\addvspace{0.8\baselineskip}")
+    assert before < out.index(r"\begin{tabularx}")
+    assert after > out.index(r"\end{tabularx}")
+
+
 def test_table_uses_booktabs_rules():
     out = Markdown(TABLE).rendered
     assert r"\toprule" in out
