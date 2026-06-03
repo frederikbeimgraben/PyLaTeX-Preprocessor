@@ -14,8 +14,8 @@ from pytex.helpers.sanitize import escape_latex
 from pytex.model.concat import Concat
 from pytex.model.empty import Empty
 from pytex.model.raw import Raw
-from pytex_protocol.convert import _join, _leaf_texts
-from pytex_protocol.shortcodes import (
+from pytex_markdown.protocol.convert import _join, _leaf_texts
+from pytex_markdown.protocol.shortcodes import (
     SHORTCODE_RE,
     expand_inline_shortcodes,
     expand_shortcode,
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from pytex.interface.tex import TeX
-    from pytex_protocol.frontmatter import FrontmatterValue
+    from pytex_markdown.frontmatter import FrontmatterValue
 
 
 def _node(children: object) -> SimpleNamespace:
