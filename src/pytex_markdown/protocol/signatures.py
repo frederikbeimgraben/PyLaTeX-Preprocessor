@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from pytex.interface.tex import TeX
 
-    from .frontmatter import FrontmatterValue
+    from ..frontmatter import FrontmatterValue
 
 __all__ = ["SignatureLines", "signature_block_from_meta"]
 

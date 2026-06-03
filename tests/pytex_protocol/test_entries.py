@@ -1,4 +1,10 @@
-from pytex_protocol.entries import ActionItem, Deadline, Decision, Timestamp, Vote
+from pytex_markdown.protocol.entries import (
+    ActionItem,
+    Deadline,
+    Decision,
+    Timestamp,
+    Vote,
+)
 
 
 def test_decision_box_has_label_and_gavel():

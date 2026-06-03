@@ -1,8 +1,8 @@
 import marko
 
-from pytex_protocol import render_protocol
-from pytex_protocol.convert import ProtocolConverter
-from pytex_protocol.signatures import SignatureLines, signature_block_from_meta
+from pytex_markdown.protocol import render_protocol
+from pytex_markdown.protocol.convert import ProtocolConverter
+from pytex_markdown.protocol.signatures import SignatureLines, signature_block_from_meta
 
 _PARSER = marko.Markdown()
 

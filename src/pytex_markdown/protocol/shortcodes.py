@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from pytex.interface.tex import TeX
 
-    from .frontmatter import FrontmatterValue
+    from ..frontmatter import FrontmatterValue
 
 __all__ = ["SHORTCODE_RE", "expand_inline_shortcodes", "expand_shortcode"]
 

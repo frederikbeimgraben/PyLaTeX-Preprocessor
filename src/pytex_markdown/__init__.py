@@ -20,13 +20,21 @@ from pytex.registry import Registry
 
 from .convert import MarkdownConverter
 from .escape import escape_latex
+from .frontmatter import FrontmatterValue, split_frontmatter
 
 if TYPE_CHECKING:
     from os import PathLike
 
     from pytex.interface.tex import TeX
 
-__all__ = ["IncludeMarkdown", "Markdown", "MarkdownConverter", "escape_latex"]
+__all__ = [
+    "FrontmatterValue",
+    "IncludeMarkdown",
+    "Markdown",
+    "MarkdownConverter",
+    "escape_latex",
+    "split_frontmatter",
+]
 
 # GFM enables pipe tables (and strikethrough/autolinks); images are core.
 PARSER = marko.Markdown(extensions=["gfm"])

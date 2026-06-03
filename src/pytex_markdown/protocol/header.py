@@ -22,7 +22,7 @@ from pytex_hsrtreport.boxes import ColoredBox
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from .frontmatter import FrontmatterValue
+    from ..frontmatter import FrontmatterValue
 
 __all__ = ["ProtocolHeader", "header_from_meta"]
 

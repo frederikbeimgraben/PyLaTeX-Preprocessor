@@ -1,4 +1,4 @@
-from pytex_protocol.frontmatter import split_frontmatter
+from pytex_markdown.frontmatter import split_frontmatter
 
 
 def test_no_frontmatter_returns_text_unchanged():

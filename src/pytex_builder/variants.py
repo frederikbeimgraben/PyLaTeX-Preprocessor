@@ -30,16 +30,15 @@ from pytex.model.raw import Raw
 from pytex_hsrtreport.document import HSRTReport
 from pytex_hsrtreport.titlepage import TitlePageDataLine
 from pytex_hsrtreport.variants import Variant
-from pytex_markdown import Markdown, escape_latex
-from pytex_protocol.document import build_protocol
-from pytex_protocol.frontmatter import split_frontmatter
+from pytex_markdown import Markdown, escape_latex, split_frontmatter
+from pytex_markdown.protocol import build_protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from pytex.interface.package import PackageOption
     from pytex.interface.tex import TeX
-    from pytex_protocol.frontmatter import FrontmatterValue
+    from pytex_markdown.frontmatter import FrontmatterValue
 
 __all__ = ["VARIANT_NAMES", "build_document"]
 
