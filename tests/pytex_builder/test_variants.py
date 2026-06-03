@@ -125,7 +125,10 @@ def test_report_makers_uses_makers_logos_and_footer():
     # MAKERS branding shows on the title page and in the page footer.
     assert report.show_footer_logos is True
     assert report.show_titlepage is True
-    assert "logos/MAKERS.pdf" in report.rendered
+    out = report.rendered
+    # Left-aligned logo on the title page, right-aligned in the footer.
+    assert "logos/MAKERS.pdf" in out
+    assert "logos/MAKERS-RAlign.pdf" in out
 
 
 def test_plain_report_keeps_inf_logos_and_no_footer():
