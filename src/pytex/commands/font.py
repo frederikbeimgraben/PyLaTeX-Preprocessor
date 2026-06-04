@@ -3,28 +3,28 @@ from ..model.control_sequence import ControlSequence, Parameter
 from ..registry import Registry
 
 __all__ = [
+    "LARGE",
     "Bfseries",
     "Fontsize",
-    "Footnotesize",
     "Huge",
-    "HugeBig",
     "Itshape",
     "Large",
-    "LargeBig",
-    "LargeMid",
     "Mdseries",
     "Normalfont",
-    "Normalsize",
     "Rmfamily",
-    "Scriptsize",
     "Scshape",
     "Selectfont",
     "Sffamily",
     "Slshape",
-    "Small",
-    "Tiny",
     "Ttfamily",
     "Upshape",
+    "footnotesize",
+    "huge",
+    "large",
+    "normalsize",
+    "scriptsize",
+    "small",
+    "tiny",
 ]
 
 
@@ -88,51 +88,55 @@ def Normalfont() -> TeX:
     return ControlSequence("normalfont", ())
 
 
+# Size switches use the LaTeX command spelling verbatim as the factory name:
+# `\large`/`\Large`/`\LARGE` and `\huge`/`\Huge` differ only by case, which
+# PascalCase cannot encode without a collision. Python identifiers are
+# case-sensitive, so `large`/`Large`/`LARGE` map one-to-one and predictably.
 @Registry.add
-def Tiny() -> TeX:
+def tiny() -> TeX:
     return ControlSequence("tiny", ())
 
 
 @Registry.add
-def Scriptsize() -> TeX:
+def scriptsize() -> TeX:
     return ControlSequence("scriptsize", ())
 
 
 @Registry.add
-def Footnotesize() -> TeX:
+def footnotesize() -> TeX:
     return ControlSequence("footnotesize", ())
 
 
 @Registry.add
-def Small() -> TeX:
+def small() -> TeX:
     return ControlSequence("small", ())
 
 
 @Registry.add
-def Normalsize() -> TeX:
+def normalsize() -> TeX:
     return ControlSequence("normalsize", ())
 
 
 @Registry.add
-def Large() -> TeX:
+def large() -> TeX:
     return ControlSequence("large", ())
 
 
 @Registry.add
-def LargeMid() -> TeX:
+def Large() -> TeX:
     return ControlSequence("Large", ())
 
 
 @Registry.add
-def LargeBig() -> TeX:
+def LARGE() -> TeX:
     return ControlSequence("LARGE", ())
 
 
 @Registry.add
-def Huge() -> TeX:
+def huge() -> TeX:
     return ControlSequence("huge", ())
 
 
 @Registry.add
-def HugeBig() -> TeX:
+def Huge() -> TeX:
     return ControlSequence("Huge", ())

@@ -543,7 +543,7 @@ def Verb(body: str, delim: str = "|") -> TeX:
 
 
 # Size switches moved to pytex/commands/font.py (zero-arg ControlSequence wrappers).
-# Compose with `Concat(Large(), " body")` for inline use.
+# Compose with `Concat(large(), " body")` for inline use.
 
 
 @Registry.add

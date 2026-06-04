@@ -3,9 +3,9 @@ from typing import Final
 from pytex.commands.colors import SelectColor
 from pytex.commands.font import (
     Bfseries,
-    Footnotesize,
-    Scriptsize,
     Ttfamily,
+    footnotesize,
+    scriptsize,
 )
 from pytex.commands.listings import Lstdefinestyle, Lstset
 from pytex.interface.tex import TeX
@@ -20,7 +20,7 @@ def _font(*parts: TeX) -> TeX:
 
 
 HSRT_LISTING_BASE: Final[dict[str, TeX | str]] = {
-    "basicstyle": _font(Footnotesize(), Ttfamily()),
+    "basicstyle": _font(footnotesize(), Ttfamily()),
     "breaklines": "true",
     "numbers": "left",
     "frame": "single",
@@ -31,7 +31,7 @@ HSRT_LISTING_BASE: Final[dict[str, TeX | str]] = {
 HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
     "htmlCode": {
         "language": "html",
-        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "basicstyle": _font(scriptsize(), Ttfamily()),
         "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
@@ -39,14 +39,14 @@ HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
     "phpCode": {
         "language": "php",
         "morekeywords": "{php}",
-        "basicstyle": _font(Footnotesize(), Ttfamily()),
+        "basicstyle": _font(footnotesize(), Ttfamily()),
         "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "jsCode": {
         "language": "javascript",
-        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "basicstyle": _font(scriptsize(), Ttfamily()),
         "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
@@ -55,7 +55,7 @@ HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
         "language": "sh",
         "deletekeywords": "{for,kill,cat}",
         "morekeywords": "{sudo}",
-        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "basicstyle": _font(scriptsize(), Ttfamily()),
         "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
@@ -64,13 +64,13 @@ HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
     "shellCode": {
         "language": "sh",
         "morekeywords": "{sudo,chmod,chown,cp,su,rm,python}",
-        "basicstyle": _font(Scriptsize(), Ttfamily()),
+        "basicstyle": _font(scriptsize(), Ttfamily()),
         "keywordstyle": _font(SelectColor("blue"), Bfseries(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
     },
     "URL": {
-        "basicstyle": _font(Footnotesize(), Ttfamily()),
+        "basicstyle": _font(footnotesize(), Ttfamily()),
         "commentstyle": _font(SelectColor("gray"), Ttfamily()),
         "escapechar": "|",
         "numbers": "none",

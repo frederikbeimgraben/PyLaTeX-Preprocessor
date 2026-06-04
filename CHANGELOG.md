@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - Unreleased
+
+### Changed
+- **BREAKING — font size switch factories renamed to the verbatim LaTeX
+  spelling.** The `\large`/`\Large`/`\LARGE` and `\huge`/`\Huge` escalations
+  cannot all fit strict PascalCase without colliding, which forced the awkward
+  `LargeMid` / `LargeBig` / `HugeBig` "Big"-suffix names. Python identifiers are
+  case-sensitive, so the factories (and their registry keys, exposed to inline
+  `pytex(...)` markers) now mirror the LaTeX command exactly:
+
+  | old             | new            | LaTeX command |
+  | --------------- | -------------- | ------------- |
+  | `Tiny`          | `tiny`         | `\tiny`       |
+  | `Scriptsize`    | `scriptsize`   | `\scriptsize` |
+  | `Footnotesize`  | `footnotesize` | `\footnotesize` |
+  | `Small`         | `small`        | `\small`      |
+  | `Normalsize`    | `normalsize`   | `\normalsize` |
+  | `Large`         | `large`        | `\large`      |
+  | `LargeMid`      | `Large`        | `\Large`      |
+  | `LargeBig`      | `LARGE`        | `\LARGE`      |
+  | `Huge`          | `huge`         | `\huge`       |
+  | `HugeBig`       | `Huge`         | `\Huge`       |
+
+  Note the semantic flip: the old `Large`/`Huge` emitted `\large`/`\huge`; they
+  now emit `\Large`/`\Huge`. No deprecation aliases are provided — an alias for
+  the reused `Large`/`Huge` names would silently change behaviour, so a clean
+  break is safer pre-1.0. Font family/series/shape switches are unchanged.
+
 ## [0.4.7] - 2026-06-04
 
 ### Added
