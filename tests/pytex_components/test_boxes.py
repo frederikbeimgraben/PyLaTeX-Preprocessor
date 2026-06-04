@@ -75,3 +75,36 @@ def test_top_level_renders_no_parent():
     b = InfoBox("hello")
     out = b.rendered
     assert "mdframed" in out and "hello" in out
+
+
+def test_concurrent_render_depth_isolation():
+    """Concurrent renders must not clobber each other's nesting depth.
+
+    The render-time depth counter is per-context (a ``ContextVar``), so a
+    top-level box always renders at level 1 even while other threads are
+    rendering deeply-nested boxes that drive the counter up. With a plain
+    module global this races: a sibling render's depth leaks in and the
+    top-level box gets a too-high opacity.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    # level 1 -> round((0.05 + 0.075) * 100) == 12 (banker's rounding of 12.5).
+    expected = f"backgroundcolor=blue!{round((0.05 + 0.075) * 100)}"
+    assert expected in InfoBox("x").rendered  # serial baseline
+
+    def render_top_level(_: int) -> str:
+        return InfoBox("x").rendered
+
+    def render_deeply_nested(_: int) -> str:
+        node: ColoredBox = InfoBox("inner")
+        for _ in range(8):
+            node = WarningBox(node)
+        return node.rendered  # spins the depth counter up to 9 while rendering
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        top_level = [pool.submit(render_top_level, i) for i in range(500)]
+        noise = [pool.submit(render_deeply_nested, i) for i in range(500)]
+        for future in noise:
+            future.result()
+        for future in top_level:
+            assert expected in future.result()

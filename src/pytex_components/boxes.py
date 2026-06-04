@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Final, override
 
@@ -31,7 +32,15 @@ PER_LEVEL: Final[float] = 0.075
 ICON_BOOST: Final[int] = 20
 
 # Render-time nesting depth, mirroring LaTeX's `coloredBoxLevel` counter.
-_render_depth: int = 0
+#
+# A `ContextVar` rather than a plain module global so concurrent renders do not
+# clobber each other's depth: each OS thread starts from the `default` and each
+# `asyncio` task inherits an independent copy of the context. A bare `int +=`
+# here is shared mutable state — under threaded/async rendering one render's
+# nested boxes bump the counter that a sibling render reads, silently producing
+# wrong opacities. Single-threaded behaviour is identical (default 0, +1 per
+# nesting level, restored on exit). See docs/render-depth-and-api-module.md.
+_render_depth: ContextVar[int] = ContextVar("coloredbox_render_depth", default=0)
 
 
 @Registry.add
@@ -95,13 +104,13 @@ class ColoredBox(TeX):
         # LaTeX `coloredBoxLevel`) rather than the parent chain: building the
         # wrapper nodes below re-`attach`es the body and would sever that chain
         # before the inner box renders.
-        global _render_depth
-        _render_depth += 1
+        depth = _render_depth.get() + 1
+        token = _render_depth.set(depth)
         try:
             # Prefer the render counter (correct for top-down rendering, where
             # building wrappers severs the parent chain); fall back to the
             # parent chain so an inner box rendered in isolation is still right.
-            level = max(_render_depth, self.nesting_level)
+            level = max(depth, self.nesting_level)
             bg = round((BASE_OPACITY + PER_LEVEL * level) * 100)
             icon_op = bg + ICON_BOOST
             return Concat(
@@ -157,7 +166,7 @@ class ColoredBox(TeX):
                 ),
             ).rendered
         finally:
-            _render_depth -= 1
+            _render_depth.reset(token)
 
 
 def _preset(
