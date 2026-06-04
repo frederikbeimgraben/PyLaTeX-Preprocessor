@@ -4,6 +4,8 @@ Covers every input kind get_tex_node accepts (.tex, .py, .md) plus the
 error paths in _render_python. No tectonic/compile involved.
 """
 
+import sys
+
 import pytest
 
 import pytex_builder.render as render_mod
@@ -88,6 +90,10 @@ def test_plain_syntaxerror_without_tstring_gets_no_hint(monkeypatch, tmp_path):
     assert "Python 3.14" not in str(exc.value)
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="needs a real >=3.14 interpreter where t-strings parse",
+)
 def test_tstring_no_hint_on_python_314_plus(tmp_path):
     # On the real (>=3.14) interpreter a t-string parses; force a different
     # syntax error and confirm no spurious downgrade hint is appended.
