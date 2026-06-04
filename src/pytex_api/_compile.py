@@ -32,6 +32,8 @@ from ._security import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from pytex_builder.console import Console
 
     from ._models import BuildLimits, BuildRequest
@@ -211,11 +213,14 @@ def compile_to_pdf(
     policy: TrustPolicy,
     workdir: Path,
     console: Console,
+    assets: Mapping[str, bytes],
 ) -> tuple[bytes, str]:
     """Compile ``latex`` to PDF bytes inside ``workdir``; return (pdf, log).
 
-    Caller-supplied ``assets`` (already name-validated) are written next to the
-    ``.tex`` so ``\\includegraphics`` can resolve them. Non-trusted builds run
+    ``assets`` is the *name-validated* mapping from :func:`filter_assets`; it is
+    written next to the ``.tex`` so ``\\includegraphics`` can resolve it. Writing
+    this checked dict - rather than re-iterating ``req.assets`` - keeps the
+    workdir-escape guarantee independent of call order. Non-trusted builds run
     inside a rootless Podman sandbox when ``podman`` is available; otherwise
     they fall back to the in-process ``setrlimit``/timeout floor (a warning is
     logged so the weaker confinement is never silent). The PDF is size-capped
@@ -225,7 +230,7 @@ def compile_to_pdf(
     _ = tex_file.write_text(latex, encoding="utf-8")
     build_dir = workdir / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
-    for name, data in req.assets.items():
+    for name, data in assets.items():
         _ = (workdir / name).write_bytes(data)
 
     config = SandboxConfig()

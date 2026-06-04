@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytex-preprocessor"
-version = "0.4.7"
+version = "0.5.0"
 authors = [
   { name="Frederik Beimgraben", email="frederik@beimgraben.net" },
 ]
@@ -43,7 +43,10 @@ target-version = "py313"
 src = ["src", "tests"]
 # Uses Python 3.14 t-string syntax; the py313 target cannot parse it. Excluded
 # from lint/format (it is exercised by pytest on 3.14).
-extend-exclude = ["tests/pytex/test_template.py"]
+# `examples/` is illustrative-only and not part of the CI lint scope (`ruff
+# {check,format} src tests`); excluding it keeps a bare `ruff check` matching CI
+# instead of choking on example-only files (some also use 3.14 t-strings).
+extend-exclude = ["tests/pytex/test_template.py", "examples"]
 
 [tool.ruff.lint]
 select = [

@@ -13,6 +13,7 @@ from pytex_api import (
     ApiError,
     BuildLimits,
     BuildRequest,
+    CompileError,
     InputKind,
     LimitError,
     OutputKind,
@@ -205,6 +206,59 @@ def test_unsafe_asset_name_rejected_at_request():
 def test_non_utf8_source_raises_api_error():
     with pytest.raises(ApiError, match="UTF-8"):
         _tex(b"\xff\xfe\x00bad", InputKind.TEX, TrustLevel.UNTRUSTED)
+
+
+# -- malformed source -> typed CompileError (Red-Team O1-O3) ----------------
+#
+# A broken document must surface as a CompileError (an ApiError), never a bare
+# Exception forcing a blanket 500. The message must stay generic: no temp path,
+# no stacktrace leaked to the caller.
+
+
+def _expect_clean_compile_error(
+    source: bytes, kind: InputKind, trust: TrustLevel
+) -> None:
+    with pytest.raises(CompileError) as exc_info:
+        _tex(source, kind, trust)
+    msg = str(exc_info.value)
+    assert "/tmp" not in msg
+    assert "input.py" not in msg
+    assert "Traceback" not in msg
+
+
+def test_python_syntax_error_becomes_compile_error(tmp_path, monkeypatch):
+    # O1: a Python SyntaxError in .tex.py source.
+    monkeypatch.chdir(tmp_path)
+    _expect_clean_compile_error(
+        b"def (:\n    pass\n", InputKind.TEX_PY, TrustLevel.TRUSTED
+    )
+
+
+def test_non_node_pytex_becomes_compile_error(tmp_path, monkeypatch):
+    # O2: __pytex__ is not a TeX node.
+    monkeypatch.chdir(tmp_path)
+    _expect_clean_compile_error(
+        b"__pytex__ = 42\n", InputKind.TEX_PY, TrustLevel.TRUSTED
+    )
+
+
+def test_missing_pytex_var_becomes_compile_error(tmp_path, monkeypatch):
+    # O2: module defines no __pytex__ at all.
+    monkeypatch.chdir(tmp_path)
+    _expect_clean_compile_error(b"x = 1\n", InputKind.TEX_PY, TrustLevel.TRUSTED)
+
+
+def test_eval_error_in_tex_replacement_becomes_compile_error():
+    # O3: a pytex(...) replacement that raises while being eval'd.
+    _expect_clean_compile_error(
+        rb"\iffalse{pytex(1 / 0)}\fi", InputKind.TEX, TrustLevel.TRUSTED
+    )
+
+
+def test_typed_errors_still_propagate_unchanged():
+    # The wrapper must not swallow our own ApiError subclasses into CompileError.
+    with pytest.raises(TrustError):
+        _tex(rb"\usepackage{minted}", InputKind.TEX, TrustLevel.UNTRUSTED)
 
 
 # -- async isolation (the Part 1 <-> Part 2 link) --------------------------

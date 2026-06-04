@@ -5,11 +5,14 @@ Hand it **source bytes** (Markdown, ``.tex``, or ``.tex.py``) and a declared
 PDF - without ever touching the filesystem yourself. All I/O happens inside a
 per-request temp directory that is removed when the call returns.
 
-The :class:`TrustLevel` on each request is the security axis: ``UNTRUSTED`` (the
-default) assumes hostile input and disables every code-execution surface
-(Python import, Markdown ``eval`` comments, ``.tex`` ``pytex(...)`` replacements,
-shell-escape), enforces a package allowlist, and caps build resources;
-``TRUSTED`` unlocks the full pipeline for first-party documents.
+The :class:`TrustLevel` on each request is the security axis, with three levels:
+``UNTRUSTED`` (the default) assumes hostile input and disables every
+code-execution surface (Python import, Markdown ``eval`` comments, ``.tex``
+``pytex(...)`` replacements, shell-escape), enforces the strict package
+allowlist, and caps build resources; ``SANDBOXED`` is semi-trusted - still no
+code or shell surface, but a wider package allowlist
+(:data:`SANDBOXED_EXTRA_PACKAGES`); ``TRUSTED`` unlocks the full pipeline for
+first-party documents.
 
 ``render_blob`` is synchronous; ``render_blob_async`` offloads the blocking work
 under a copied context so concurrent async requests stay isolated (the
@@ -57,6 +60,7 @@ from ._models import (
 from ._policy import (
     DANGEROUS_PACKAGES,
     PACKAGE_ALLOWLIST,
+    SANDBOXED_EXTRA_PACKAGES,
     TrustPolicy,
     policy_for,
 )
@@ -71,6 +75,7 @@ from ._security import (
 __all__ = [
     "DANGEROUS_PACKAGES",
     "PACKAGE_ALLOWLIST",
+    "SANDBOXED_EXTRA_PACKAGES",
     "ApiError",
     "BuildLimits",
     "BuildRequest",
@@ -97,6 +102,32 @@ def _collect_warnings(log: str) -> tuple[str, ...]:
     )
 
 
+def _render_or_compile_error(
+    req: BuildRequest, policy: TrustPolicy, workdir: Path
+) -> str:
+    """Render to LaTeX, mapping malformed-source failures to ``CompileError``.
+
+    The render machinery raises raw exceptions on hostile or broken input - a
+    Python ``SyntaxError`` or a non-node ``__pytex__`` (surfaced as a
+    ``pytex_builder`` ``BuildError``), an ``eval`` failure in a ``pytex(...)``
+    replacement, or a Markdown parse error. Those would otherwise reach the
+    caller as a bare :class:`Exception`, forcing a blanket 500. We translate
+    them to a :class:`CompileError` carrying a generic message - the underlying
+    exception is chained for server-side logs but never embedded in the
+    message, so no temp path or stacktrace leaks to the client. Our own typed
+    :class:`ApiError`s (trust gate, limits, package allowlist) pass through
+    unchanged.
+    """
+    try:
+        return render_to_latex(req, policy, workdir)
+    except ApiError:
+        raise
+    except Exception as exc:
+        raise CompileError(
+            "source could not be rendered: malformed or invalid input"
+        ) from exc
+
+
 def render_blob(req: BuildRequest) -> BuildResult:
     """Render a :class:`BuildRequest` to a :class:`BuildResult`, synchronously.
 
@@ -107,13 +138,16 @@ def render_blob(req: BuildRequest) -> BuildResult:
     start = perf_counter()
     enforce_input_size(req.source, req.limits)
     policy = policy_for(req.trust)
-    _ = filter_assets(req.assets)  # validate asset names up front (raises on bad)
+    # Validate asset names once, up front, and carry the checked dict forward -
+    # the compile step writes *this*, never the raw `req.assets`, so safety no
+    # longer hinges on call order.
+    assets = filter_assets(req.assets)
 
     stream = io.StringIO()
     console = Console(stream=stream)
     workdir = Path(tempfile.mkdtemp(prefix="pytex-api-"))
     try:
-        latex = render_to_latex(req, policy, workdir)
+        latex = _render_or_compile_error(req, policy, workdir)
         if req.output_kind is OutputKind.TEX:
             output = latex.encode("utf-8")
             enforce_output_size(output, req.limits)
@@ -125,13 +159,16 @@ def render_blob(req: BuildRequest) -> BuildResult:
                 warnings=_collect_warnings(stream.getvalue()),
                 duration_s=perf_counter() - start,
             )
-        pdf, compile_log = compile_to_pdf(latex, req, policy, workdir, console)
-        log = truncate_log(stream.getvalue() + compile_log, req.limits)
+        pdf, compile_log = compile_to_pdf(latex, req, policy, workdir, console, assets)
+        full_log = stream.getvalue() + compile_log
+        log = truncate_log(full_log, req.limits)
         return BuildResult(
             output=pdf,
             output_kind=OutputKind.PDF,
             log=log,
-            warnings=_collect_warnings(stream.getvalue()),
+            # Include tectonic's own `warning:` lines, consistent with the TEX
+            # path (which only has the console stream to draw from).
+            warnings=_collect_warnings(full_log),
             duration_s=perf_counter() - start,
         )
     finally:
