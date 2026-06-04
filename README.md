@@ -286,6 +286,27 @@ pytex examples/replacements.py.tex --build
 pytex examples/notes.md --build
 ```
 
+## Stability
+
+From 1.0 the project follows [Semantic Versioning](https://semver.org). The
+public API is what each package exports through its top-level `__all__`:
+everything reachable as `from pytex import X` (and the same for `pytex_koma`,
+`pytex_tikz`, `pytex_components`, `pytex_markdown`, `pytex_analyze`,
+`pytex_hsrtreport`). Breaking those names needs a major version bump.
+
+Also part of the contract: the registry keys exposed to `\iffalse{pytex(...)}\fi`
+markers — they are the factory names, so renaming a registered factory is a
+breaking change (which is why the `\fill` length is `Fill_len`, leaving the bare
+`Fill` key to the TikZ path command).
+
+Internal and not covered by the guarantee: any name with a leading underscore,
+modules whose name starts with an underscore (e.g. `pytex_api._policy`,
+`pytex_api._compile`), and anything not listed in a package's `__all__`. Import
+those at your own risk.
+
+Deprecated shims (`pytex_protocol`, the `pytex.commands.lengths.Fill` alias) keep
+working with a `DeprecationWarning` and may be removed in the next major release.
+
 ## License
 
 GNU General Public License v3.0 or later (GPL-3.0-or-later). See

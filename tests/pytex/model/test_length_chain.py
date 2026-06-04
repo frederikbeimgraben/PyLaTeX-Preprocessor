@@ -1,6 +1,6 @@
 from pytex.commands.lengths import (
     Baselineskip,
-    Fill,
+    Fill_len,
     Linewidth,
     Parindent,
     Textwidth,
@@ -40,7 +40,7 @@ def test_baselineskip_arithmetic():
 
 
 def test_fill_factory():
-    assert Fill().rendered == r"\fill"
+    assert Fill_len().rendered == r"\fill"
 
 
 def test_explicit_length_renders_as_is():
