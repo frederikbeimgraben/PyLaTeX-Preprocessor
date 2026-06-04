@@ -26,6 +26,7 @@ sandbox-agnostic; the wrapper is selected by the :class:`TrustPolicy`.
 from __future__ import annotations
 
 import os
+import platform
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -68,23 +69,70 @@ _BASE_IMAGE = (
 # shared libs it links (graphite2 + openssl; harfbuzz/freetype are statically
 # bundled) and fontconfig (for fontspec docs) come from the distro.
 _TECTONIC_VERSION = "0.16.9"
-_TECTONIC_SHA256 = "f3c825128095dc3399ea11c08c18035b33050a216930c295c79e8eb11bd21de4"
-_TECTONIC_URL = (
-    "https://github.com/tectonic-typesetting/tectonic/releases/download/"
-    f"tectonic%40{_TECTONIC_VERSION}/"
-    f"tectonic-{_TECTONIC_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-)
-_CONTAINERFILE = (
-    f"FROM {_BASE_IMAGE}\n"
-    "RUN microdnf install -y graphite2 openssl-libs libstdc++ libgcc zlib "
-    "fontconfig curl ca-certificates tar gzip && microdnf clean all\n"
-    f"RUN cd /tmp && curl --proto '=https' --tlsv1.2 -fsSL -o tectonic.tar.gz "
-    f"'{_TECTONIC_URL}' "
-    f'&& echo "{_TECTONIC_SHA256}  tectonic.tar.gz" | sha256sum -c - '
-    "&& tar xzf tectonic.tar.gz "
-    "&& install -m 0755 tectonic /usr/local/bin/tectonic "
-    "&& rm -f tectonic tectonic.tar.gz\n"
-)
+# Per-arch upstream release asset + its sha256. The image is built natively on
+# the host, so the asset must match the build host's CPU arch: x86_64 uses the
+# glibc build (its shared libs come from the distro install line below);
+# aarch64 ships only a statically-linked musl build upstream. A hard-coded
+# x86_64 asset produced an "exec format error" when the image was built on ARM.
+_TECTONIC_ASSETS: dict[str, tuple[str, str]] = {
+    "x86_64": (
+        "x86_64-unknown-linux-gnu",
+        "f3c825128095dc3399ea11c08c18035b33050a216930c295c79e8eb11bd21de4",
+    ),
+    "aarch64": (
+        "aarch64-unknown-linux-musl",
+        "f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1",
+    ),
+}
+# platform.machine() spelling -> a key in _TECTONIC_ASSETS.
+_ARCH_ALIASES: dict[str, str] = {
+    "x86_64": "x86_64",
+    "amd64": "x86_64",
+    "aarch64": "aarch64",
+    "arm64": "aarch64",
+}
+
+
+def _tectonic_url(target: str) -> str:
+    """The upstream release URL for a ``<arch>-<vendor>-<os>-<abi>`` *target*."""
+    return (
+        "https://github.com/tectonic-typesetting/tectonic/releases/download/"
+        f"tectonic%40{_TECTONIC_VERSION}/"
+        f"tectonic-{_TECTONIC_VERSION}-{target}.tar.gz"
+    )
+
+
+def _containerfile(machine: str | None = None) -> str:
+    """Render the sandbox Containerfile for *machine* (default: host arch).
+
+    The tectonic download URL + sha256 are chosen by architecture so the image
+    builds correctly on both x86_64 and aarch64 hosts. The musl aarch64 binary
+    is static, so the extra ``graphite2``/``openssl-libs`` packages it does not
+    link are harmless there; ``fontconfig`` is needed by both for fontspec.
+    """
+    raw = (machine or platform.machine()).lower()
+    arch = _ARCH_ALIASES.get(raw)
+    if arch is None:
+        supported = ", ".join(sorted(set(_ARCH_ALIASES.values())))
+        raise RuntimeError(
+            f"unsupported architecture for the tectonic sandbox image: {raw!r}"
+            + f" (supported: {supported})"
+        )
+    target, sha = _TECTONIC_ASSETS[arch]
+    url = _tectonic_url(target)
+    return (
+        f"FROM {_BASE_IMAGE}\n"
+        "RUN microdnf install -y graphite2 openssl-libs libstdc++ libgcc zlib "
+        "fontconfig curl ca-certificates tar gzip && microdnf clean all\n"
+        f"RUN cd /tmp && curl --proto '=https' --tlsv1.2 -fsSL -o tectonic.tar.gz "
+        f"'{url}' "
+        f'&& echo "{sha}  tectonic.tar.gz" | sha256sum -c - '
+        "&& tar xzf tectonic.tar.gz "
+        "&& install -m 0755 tectonic /usr/local/bin/tectonic "
+        "&& rm -f tectonic tectonic.tar.gz\n"
+    )
+
+
 _DEFAULT_PIDS_LIMIT = 256
 _DEFAULT_MAX_CPUS = "2"
 _DEFAULT_TMPFS_SIZE = "256m"
@@ -154,14 +202,15 @@ def build_sandbox_image(
 ) -> None:
     """Build the tectonic sandbox image (privileged warm-up; needs network).
 
-    Installs ``tectonic`` + ``fontconfig`` into a Fedora base. Run this once, out
+    Installs ``tectonic`` + ``fontconfig`` into a Fedora base, selecting the
+    tectonic binary for the build host's CPU architecture. Run this once, out
     of band, never from an untrusted request path. Raises on failure.
     """
     # "-" reads the Containerfile from stdin with no build context (there is no
     # COPY/ADD), so the whole repo is not sent to the builder.
     proc = subprocess.run(
         ["podman", "build", "-t", image, "-"],
-        input=_CONTAINERFILE,
+        input=_containerfile(),
         capture_output=True,
         text=True,
         timeout=timeout_s,
@@ -173,6 +222,98 @@ def build_sandbox_image(
         )
 
 
+# Representative warm-up documents: one per offline-relevant variant, each
+# carrying that variant's *real* preamble (HSRT report fonts, protocol header
+# packages). Warming with these - rather than a bare "# Warm" stub - pulls the
+# exact bundle resources the offline (--network none + --only-cached) builds
+# need, so a real report or protocol does not cache-miss on its first compile.
+_WARM_SAMPLES: tuple[tuple[str | None, bytes], ...] = (
+    (None, b"# Warm\n\nWarm-up body.\n"),
+    ("report", b"---\ntitle: Warm Report\nauthor: PyTeX\n---\n# Intro\n\nBody.\n"),
+    (
+        "protocol-asta",
+        b"---\ngremium: AStA\ndatum: 2026-01-01\nanwesend: [A, B]\n---\n"
+        + b"# TOP 1\n\n> [!beschluss] Beschluss\n> Warm-up decision.\n",
+    ),
+    (
+        "protocol-stupa",
+        b"---\ngremium: StuPa\ndatum: 2026-01-01\nanwesend: [A, B]\n---\n"
+        + b"# TOP 1\n\n> [!abstimmung] Abstimmung\n> Warm-up vote.\n",
+    ),
+)
+
+
+def _write_warm_documents(work: Path) -> list[str]:
+    """Render each warm sample to LaTeX in *work*; return the ``.tex`` names.
+
+    Renders through the TRUSTED policy so the variant preambles come out exactly
+    as a real build would emit them. Pure rendering - no network, no container.
+    """
+    from ._models import BuildRequest, InputKind, TrustLevel
+    from ._policy import policy_for
+    from ._render import render_to_latex
+
+    policy = policy_for(TrustLevel.TRUSTED)
+    rendered = [
+        (
+            f"warm-{index}.tex",
+            render_to_latex(
+                BuildRequest(
+                    source=source,
+                    input_kind=InputKind.MARKDOWN,
+                    trust=TrustLevel.TRUSTED,
+                    variant=variant,
+                ),
+                policy,
+                work,
+            ),
+        )
+        for index, (variant, source) in enumerate(_WARM_SAMPLES)
+    ]
+    for name, latex in rendered:
+        _ = (work / name).write_text(latex, encoding="utf-8")
+    return [name for name, _ in rendered]
+
+
+def _warm_podman_cmd(config: SandboxConfig, work: Path, tex_name: str) -> list[str]:
+    """``podman run`` argv that warms the cache from *tex_name* (pure; testable).
+
+    Network ON (default), cache mounted read-write with a *shared* (:z) relabel
+    - NOT private (:Z). The cache is the shared lower layer that later request
+    containers read via :O and that the host-side TRUSTED build reads directly;
+    a private MCS category (:Z) would deny those readers under enforcing
+    SELinux. :z is allowed here because the cache lives in the user's $HOME (he
+    owns it), unlike shared system dirs.
+    """
+    return [
+        "podman",
+        "run",
+        "--rm",
+        # Host netns for the one-time privileged warm-up so the bundle can be
+        # fetched even where rootless slirp/pasta networking is unavailable.
+        # This is NOT the untrusted path (which always runs --network none).
+        "--network",
+        "host",
+        "-v",
+        f"{config.cache_dir}:{CONTAINER_CACHE}:z",
+        "-v",
+        f"{work}:{CONTAINER_WORKDIR}:rw,Z",
+        "--workdir",
+        CONTAINER_WORKDIR,
+        "--tmpfs",
+        f"{_CONTAINER_HOME}:rw",
+        "-e",
+        f"HOME={_CONTAINER_HOME}",
+        "-e",
+        f"TECTONIC_CACHE_DIR={CONTAINER_CACHE}",
+        config.image,
+        "tectonic",
+        "--outdir",
+        CONTAINER_WORKDIR,
+        tex_name,
+    ]
+
+
 def warm_sandbox_cache(
     config: SandboxConfig | None = None, *, timeout_s: float = 600.0
 ) -> None:
@@ -180,71 +321,31 @@ def warm_sandbox_cache(
 
     A privileged warm-up: runs the sandbox image online with the cache mounted
     read-write so the fetched bundle is written to the host cache by the exact
-    tectonic version that the confined builds use. Without this, a cache warmed
-    by a differently-versioned host tectonic can miss, and the offline
-    (``--network none`` + ``--only-cached``) request would then fail. Never call
-    from an untrusted request path. Raises on failure.
+    tectonic version that the confined builds use. One compile per representative
+    variant (plain, report, protocol-*) so the offline (``--network none`` +
+    ``--only-cached``) request does not cache-miss on a real document's preamble.
+    Without this, a cache warmed by a differently-versioned host tectonic - or by
+    a minimal stub missing the report/protocol fonts - can miss, and the offline
+    request would then fail. Never call from an untrusted request path. Raises on
+    failure.
     """
     cfg = config or SandboxConfig()
     cfg.cache_dir.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="pytex-warm-"))
     try:
-        # Warm with the *actual* rendered LaTeX of a representative PyTeX build
-        # (same preamble/fonts as a real markdown render), so the bundle cache
-        # covers exactly what the offline builds need - a hand-written stub
-        # would miss the fonts fontspec pulls for the real preamble.
-        from ._models import BuildRequest, InputKind, TrustLevel
-        from ._policy import policy_for
-        from ._render import render_to_latex
-
-        warm_latex = render_to_latex(
-            BuildRequest(
-                source=b"# Warm\n\nWarm-up body.",
-                input_kind=InputKind.MARKDOWN,
-                trust=TrustLevel.TRUSTED,
-            ),
-            policy_for(TrustLevel.TRUSTED),
-            work,
-        )
-        _ = (work / "warm.tex").write_text(warm_latex, encoding="utf-8")
-        # Network ON (default), cache mounted read-write with a *shared* (:z)
-        # relabel - NOT private (:Z). The cache is the shared lower layer that
-        # later request containers read via :O and that the host-side TRUSTED
-        # build reads directly; a private MCS category (:Z) would deny those
-        # readers under enforcing SELinux. :z is allowed here because the cache
-        # lives in the user's $HOME (he owns it), unlike shared system dirs.
-        cmd = [
-            "podman",
-            "run",
-            "--rm",
-            # Host netns for the one-time privileged warm-up so the bundle can be
-            # fetched even where rootless slirp/pasta networking is unavailable.
-            # This is NOT the untrusted path (which always runs --network none).
-            "--network",
-            "host",
-            "-v",
-            f"{cfg.cache_dir}:{CONTAINER_CACHE}:z",
-            "-v",
-            f"{work}:{CONTAINER_WORKDIR}:rw,Z",
-            "--workdir",
-            CONTAINER_WORKDIR,
-            "--tmpfs",
-            f"{_CONTAINER_HOME}:rw",
-            "-e",
-            f"HOME={_CONTAINER_HOME}",
-            "-e",
-            f"TECTONIC_CACHE_DIR={CONTAINER_CACHE}",
-            cfg.image,
-            "tectonic",
-            "--outdir",
-            CONTAINER_WORKDIR,
-            "warm.tex",
-        ]
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout_s, check=False
-        )
-        if proc.returncode != 0:
-            raise RuntimeError(f"failed to warm sandbox cache:\n{proc.stderr.strip()}")
+        for tex_name in _write_warm_documents(work):
+            proc = subprocess.run(
+                _warm_podman_cmd(cfg, work, tex_name),
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                check=False,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"failed to warm sandbox cache for {tex_name}:\n"
+                    + proc.stderr.strip()
+                )
     finally:
         rmtree(work, ignore_errors=True)
 
