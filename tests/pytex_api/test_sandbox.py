@@ -351,7 +351,7 @@ def test_fallback_warns_when_sandbox_not_required(monkeypatch, tmp_path):
         trust=TrustLevel.UNTRUSTED,
     )
     pdf, _log = compile_mod.compile_to_pdf(
-        rb"\section{x}".decode(), req, policy, tmp_path, console
+        rb"\section{x}".decode(), req, policy, tmp_path, console, {}
     )
     assert pdf[:5] == b"%PDF-"
     assert any("falling back" in w for w in console.warnings)
@@ -397,7 +397,7 @@ def test_symlinked_output_rejected(monkeypatch, tmp_path):
     )
     with pytest.raises(CompileError, match="symlink"):
         compile_mod.compile_to_pdf(
-            rb"\section{x}".decode(), req, policy, tmp_path, _Console()
+            rb"\section{x}".decode(), req, policy, tmp_path, _Console(), {}
         )
 
 

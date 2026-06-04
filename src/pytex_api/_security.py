@@ -25,10 +25,15 @@ if TYPE_CHECKING:
     from ._policy import TrustPolicy
 
 __all__ = [
+    "enforce_input_size",
+    "enforce_output_file_size",
+    "enforce_output_size",
     "enforce_packages",
     "extract_packages",
+    "filter_assets",
     "make_rlimit_preexec",
     "strip_markdown_eval_comments",
+    "truncate_log",
     "validate_asset_name",
 ]
 
