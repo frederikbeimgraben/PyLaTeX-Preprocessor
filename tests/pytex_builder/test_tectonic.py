@@ -13,12 +13,14 @@ import pytest
 import pytex_builder.tectonic as tec
 from pytex_builder.console import Console
 from pytex_builder.tectonic import (
+    INSTALL_HINT,
     BuildError,
     _biber_candidates,
     _biber_for_build,
     _biber_sources,
     _download_to,
     _extract_biber_binary,
+    _resolve_cache_dir,
     ensure_tectonic,
     run_makeindex,
 )
@@ -26,6 +28,78 @@ from pytex_builder.tectonic import (
 
 def _console() -> Console:
     return Console(StringIO())
+
+
+# -- persistent binary cache dir (P4) --------------------------------------
+
+
+def test_cache_dir_prefers_xdg(monkeypatch):
+    monkeypatch.setenv("XDG_CACHE_HOME", "/xdg")
+    path, warning = _resolve_cache_dir()
+    assert path == Path("/xdg/pytex")
+    assert warning is None
+
+
+def test_cache_dir_falls_back_to_home_cache(monkeypatch):
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.setattr(tec.Path, "home", classmethod(lambda _cls: Path("/home/u")))
+    path, warning = _resolve_cache_dir()
+    assert path == Path("/home/u/.cache/pytex")
+    assert warning is None
+
+
+def test_cache_dir_home_unset_falls_back_to_tempdir_with_warning(monkeypatch):
+    # HOME unset -> Path.home() raises; cache must degrade, never crash.
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+
+    def _boom(_cls):
+        raise RuntimeError("Could not determine home directory")
+
+    monkeypatch.setattr(tec.Path, "home", classmethod(_boom))
+    monkeypatch.setattr(tec.tempfile, "gettempdir", lambda: "/tmp")
+    path, warning = _resolve_cache_dir()
+    assert path == Path("/tmp/pytex-tectonic")
+    assert warning is not None
+    assert "HOME" in warning
+
+
+def test_cache_dir_not_under_tempdir_by_default(monkeypatch):
+    # The whole point of P4: a normal session caches in $HOME, not /tmp.
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.setattr(tec.Path, "home", classmethod(lambda _cls: Path("/home/u")))
+    path, _warning = _resolve_cache_dir()
+    assert "/tmp" not in str(path)
+
+
+# -- download failure hint (P5a) -------------------------------------------
+
+
+def test_ensure_tectonic_missing_curl_hints_manual_install(monkeypatch):
+    monkeypatch.setattr(tec.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(tec, "_cached_binary", lambda: Path("/nope/tectonic"))
+    with pytest.raises(BuildError) as exc:
+        ensure_tectonic(_console())
+    assert INSTALL_HINT in str(exc.value)
+
+
+def test_ensure_tectonic_download_failure_hints_manual_install(monkeypatch, tmp_path):
+    # tectonic absent (so it downloads), curl+sh present, script exits non-zero.
+    monkeypatch.setattr(
+        tec.shutil,
+        "which",
+        lambda name: None if name == "tectonic" else f"/usr/bin/{name}",
+    )
+    monkeypatch.setattr(tec, "_cached_binary", lambda: tmp_path / "tectonic")
+    monkeypatch.setattr(tec, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(
+        tec.subprocess,
+        "run",
+        lambda *a, **k: SimpleNamespace(returncode=1, stdout="", stderr="boom"),
+    )
+    with pytest.raises(BuildError) as exc:
+        ensure_tectonic(_console())
+    assert INSTALL_HINT in str(exc.value)
+    assert "boom" in str(exc.value)
 
 
 def test_builderror_is_runtimeerror():

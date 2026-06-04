@@ -21,14 +21,18 @@ from pytex_api import (
     render_blob,
 )
 from pytex_api import _compile as compile_mod
+from pytex_api import _sandbox as sandbox_mod
 from pytex_api._policy import policy_for
 from pytex_api._sandbox import (
     CONTAINER_CACHE,
     CONTAINER_WORKDIR,
     MEMORY_FLOOR_BYTES,
     SandboxConfig,
+    _containerfile,
+    _warm_podman_cmd,
     build_podman_cmd,
     podman_available,
+    warm_sandbox_cache,
 )
 
 _INNER = ["/work/tectonic-bin", "--outdir", "/work/build", "--only-cached", "doc.tex"]
@@ -399,6 +403,135 @@ def test_symlinked_output_rejected(monkeypatch, tmp_path):
         compile_mod.compile_to_pdf(
             rb"\section{x}".decode(), req, policy, tmp_path, _Console(), {}
         )
+
+
+# -- arch-aware Containerfile (P3) -----------------------------------------
+
+# Pinned upstream sha256s (must match _TECTONIC_ASSETS); a wrong asset on ARM
+# is the "exec format error" footgun this guards against.
+_X86_SHA = "f3c825128095dc3399ea11c08c18035b33050a216930c295c79e8eb11bd21de4"
+_ARM_SHA = "f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1"
+
+
+def test_containerfile_x86_64_uses_gnu_asset_and_sha():
+    out = _containerfile("x86_64")
+    assert "tectonic-0.16.9-x86_64-unknown-linux-gnu.tar.gz" in out
+    assert _X86_SHA in out
+    assert "aarch64" not in out
+
+
+def test_containerfile_aarch64_uses_musl_asset_and_sha():
+    out = _containerfile("aarch64")
+    assert "tectonic-0.16.9-aarch64-unknown-linux-musl.tar.gz" in out
+    assert _ARM_SHA in out
+    assert "x86_64" not in out
+
+
+@pytest.mark.parametrize(
+    ("machine", "needle"),
+    [
+        ("AMD64", "x86_64-unknown-linux-gnu"),  # platform.machine() casing varies
+        ("arm64", "aarch64-unknown-linux-musl"),  # macOS/BSD spelling of aarch64
+    ],
+)
+def test_containerfile_machine_aliases(machine, needle):
+    assert needle in _containerfile(machine)
+
+
+def test_containerfile_unsupported_arch_raises():
+    with pytest.raises(RuntimeError, match="unsupported architecture"):
+        _containerfile("pdp11")
+
+
+def test_containerfile_defaults_to_host_arch(monkeypatch):
+    monkeypatch.setattr(sandbox_mod.platform, "machine", lambda: "aarch64")
+    assert "aarch64-unknown-linux-musl" in _containerfile()
+
+
+def test_build_sandbox_image_feeds_arch_containerfile(monkeypatch):
+    monkeypatch.setattr(sandbox_mod.platform, "machine", lambda: "x86_64")
+    captured: dict[str, object] = {}
+
+    def _fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        captured["input"] = kwargs.get("input")
+
+        class _P:
+            returncode = 0
+            stderr = ""
+
+        return _P()
+
+    monkeypatch.setattr(sandbox_mod.subprocess, "run", _fake_run)
+    sandbox_mod.build_sandbox_image("img:test")
+    assert captured["cmd"][:3] == ["podman", "build", "-t"]
+    assert _X86_SHA in str(captured["input"])
+
+
+# -- warm-up: representative preambles (P2) --------------------------------
+
+
+def test_warm_podman_cmd_flags():
+    cmd = _warm_podman_cmd(
+        SandboxConfig(cache_dir=Path("/host/cache"), image="img:test"),
+        Path("/work"),
+        "warm-2.tex",
+    )
+    # One-time privileged warm-up runs WITH host network (not the untrusted
+    # path); cache is shared-relabelled :z; the workdir is the rw mount.
+    assert cmd[cmd.index("--network") + 1] == "host"
+    assert f"/host/cache:{CONTAINER_CACHE}:z" in cmd
+    assert f"/work:{CONTAINER_WORKDIR}:rw,Z" in cmd
+    assert cmd[-1] == "warm-2.tex"
+    assert cmd[-4:-1] == ["tectonic", "--outdir", CONTAINER_WORKDIR]
+
+
+def test_warm_cache_compiles_every_variant_sample(monkeypatch, tmp_path):
+    # Mock the render+write step and podman so no real build/network is needed;
+    # assert one compile per representative sample, each on its own .tex.
+    names = ["warm-0.tex", "warm-1.tex", "warm-2.tex", "warm-3.tex"]
+    monkeypatch.setattr(sandbox_mod, "_write_warm_documents", lambda _work: names)
+    runs: list[list[str]] = []
+
+    def _fake_run(cmd, **_kwargs):
+        runs.append(cmd)
+
+        class _P:
+            returncode = 0
+            stderr = ""
+
+        return _P()
+
+    monkeypatch.setattr(sandbox_mod.subprocess, "run", _fake_run)
+    warm_sandbox_cache(SandboxConfig(cache_dir=tmp_path / "cache"))
+    assert len(runs) == len(names)
+    assert [cmd[-1] for cmd in runs] == names
+
+
+def test_warm_cache_raises_with_failing_tex_name(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        sandbox_mod, "_write_warm_documents", lambda _work: ["warm-0.tex"]
+    )
+
+    def _fail_run(_cmd, **_kwargs):
+        class _P:
+            returncode = 1
+            stderr = "tectonic exploded"
+
+        return _P()
+
+    monkeypatch.setattr(sandbox_mod.subprocess, "run", _fail_run)
+    with pytest.raises(RuntimeError, match=r"warm-0\.tex"):
+        warm_sandbox_cache(SandboxConfig(cache_dir=tmp_path / "cache"))
+
+
+def test_write_warm_documents_renders_all_variants(tmp_path):
+    # Real render (no network): every sample produces a full document preamble.
+    names = sandbox_mod._write_warm_documents(tmp_path)
+    assert len(names) == len(sandbox_mod._WARM_SAMPLES)
+    for name in names:
+        text = (tmp_path / name).read_text(encoding="utf-8")
+        assert r"\documentclass" in text
 
 
 # -- live confined build (opt-in) ------------------------------------------

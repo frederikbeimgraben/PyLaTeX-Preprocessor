@@ -1,8 +1,10 @@
 """Locate, download and drive the ``tectonic`` engine plus ``makeindex``.
 
-The tectonic binary is fetched once into a stable temp folder so repeated
-builds reuse it. The official install script drops a self-contained binary into
-its working directory - we point that at the cache dir.
+The tectonic binary is fetched once into a persistent user cache
+(``$XDG_CACHE_HOME/pytex`` or ``~/.cache/pytex``) so it survives a reboot
+instead of being re-downloaded out of ``/tmp``. The official install script
+drops a self-contained binary into its working directory - we point that at the
+cache dir.
 """
 
 from __future__ import annotations
@@ -25,7 +27,38 @@ if TYPE_CHECKING:
     from .console import Console
 
 INSTALL_URL = "https://drop-sh.fullyjustified.net"
-CACHE_DIR = Path(tempfile.gettempdir()) / "pytex-tectonic"
+# Where to put a manually-installed tectonic if the auto-download cannot run.
+INSTALL_HINT = (
+    "install tectonic manually and put it on PATH"
+    " (see https://tectonic-typesetting.github.io/install.html)"
+)
+
+
+def _resolve_cache_dir() -> tuple[Path, str | None]:
+    """Return ``(cache_dir, warning)`` for the persistent binary cache.
+
+    Prefers ``$XDG_CACHE_HOME/pytex``, else ``~/.cache/pytex``. When neither is
+    resolvable - e.g. ``HOME`` unset on a headless/RDP session, where
+    ``Path.home()`` raises ``RuntimeError`` - it falls back to the system temp
+    dir and returns a warning, so the cache degrades to non-persistent instead
+    of crashing the build.
+    """
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    if xdg:
+        return Path(xdg) / "pytex", None
+    try:
+        home = Path.home()
+    except RuntimeError:
+        fallback = Path(tempfile.gettempdir()) / "pytex-tectonic"
+        return fallback, (
+            "no home directory found (HOME unset?); caching tectonic/biber in "
+            + f"{fallback}, which a reboot may clear. Set HOME or XDG_CACHE_HOME"
+            + " for a persistent cache"
+        )
+    return home / ".cache" / "pytex", None
+
+
+CACHE_DIR, _CACHE_WARNING = _resolve_cache_dir()
 
 # BCF control-file format version -> compatible biber release.
 # Pattern: BCF minor = biber minor - 9  (holds for biber 2.14+)
@@ -121,11 +154,14 @@ def ensure_tectonic(console: Console) -> Path:
     if not (shutil.which("curl") and shutil.which("sh")):
         raise BuildError(
             "tectonic is not installed and cannot be downloaded without"
-            + " 'curl' and 'sh' on PATH"
+            + " 'curl' and 'sh' on PATH;\n"
+            + INSTALL_HINT
         )
 
     console.step("Downloading tectonic")
     console.detail(f"target: {cached}")
+    if _CACHE_WARNING is not None:
+        console.warn(_CACHE_WARNING)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
         f"curl --proto '=https' --tlsv1.2 -fsSL {INSTALL_URL} | sh",
@@ -138,6 +174,8 @@ def ensure_tectonic(console: Console) -> Path:
         raise BuildError(
             "failed to download tectonic:\n"
             + (proc.stderr.strip() or "no output from install script")
+            + "\n"
+            + INSTALL_HINT
         )
     cached.chmod(0o755)
     return cached

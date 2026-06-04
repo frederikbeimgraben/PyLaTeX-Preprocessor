@@ -11,6 +11,7 @@ Two input kinds are supported:
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from typing import TYPE_CHECKING, cast
 
@@ -27,6 +28,39 @@ if TYPE_CHECKING:
 
 PYTEX_VAR = "__pytex__"
 
+# t-string literal prefix (PEP 750): optional r before/after t, then a quote.
+# Used only to add a friendly hint when such a file fails to parse on < 3.14.
+_TSTRING_PREFIX = re.compile(r"""(?<![A-Za-z0-9_])[rR]?[tT][rR]?['"]""")
+
+
+def _import_error_message(path: Path, exc: SyntaxError) -> str:
+    """Map a ``.tex.py`` ``SyntaxError`` to a message, hinting at t-strings.
+
+    PyTeX documents use 3.14 t-string syntax (``t"..."``); importing one on an
+    older interpreter fails with a bare ``SyntaxError``. When the running
+    Python predates 3.14 and the source looks like it uses a t-string, say so
+    explicitly instead of leaving the user with a cryptic parse error.
+    """
+    base = f"error while importing {path.name}: {exc}"
+    # Read the running version through indexing (not the `sys.version_info`
+    # tuple itself) so the type checker does not statically prune one branch as
+    # unreachable - which interpreter runs the checker would otherwise dead-code
+    # the other half of this function.
+    major, minor = sys.version_info[0], sys.version_info[1]
+    if (major, minor) >= (3, 14):
+        return base
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError:
+        return base
+    if _TSTRING_PREFIX.search(source) is None:
+        return base
+    return (
+        base
+        + '\nthis file appears to use t-string syntax (t"..."), which needs '
+        + f"Python 3.14; you are on Python {major}.{minor}"
+    )
+
 
 def _render_python(path: Path) -> TeX:
     spec = importlib.util.spec_from_file_location(path.stem, path)
@@ -38,6 +72,8 @@ def _render_python(path: Path) -> TeX:
     sys.path.insert(0, str(path.resolve().parent))
     try:
         spec.loader.exec_module(module)
+    except SyntaxError as exc:
+        raise BuildError(_import_error_message(path, exc)) from exc
     except Exception as exc:
         raise BuildError(f"error while importing {path.name}: {exc}") from exc
     finally:

@@ -4,8 +4,11 @@ Covers every input kind get_tex_node accepts (.tex, .py, .md) plus the
 error paths in _render_python. No tectonic/compile involved.
 """
 
+import sys
+
 import pytest
 
+import pytex_builder.render as render_mod
 from pytex_builder.render import _render_python, get_tex_node, render_input
 from pytex_builder.tectonic import BuildError
 
@@ -52,6 +55,54 @@ def test_py_import_error_is_wrapped(tmp_path):
     _ = src.write_text("raise RuntimeError('boom')\n")
     with pytest.raises(BuildError, match=r"error while importing doc\.py: boom"):
         _render_python(src)
+
+
+# -- t-string SyntaxError hint (P5b) ---------------------------------------
+
+
+def _force_py313(monkeypatch):
+    monkeypatch.setattr(
+        render_mod.sys, "version_info", (3, 13, 0, "final", 0), raising=False
+    )
+
+
+def test_tstring_syntaxerror_hints_python_314(monkeypatch, tmp_path):
+    # A t-string plus a trailing parse error -> SyntaxError on any interpreter.
+    # On <3.14 the message must point at the t-string / Python 3.14 requirement.
+    src = tmp_path / "doc.py"
+    _ = src.write_text('__pytex__ = t"{x}"\n(\n')
+    _force_py313(monkeypatch)
+    with pytest.raises(BuildError) as exc:
+        _render_python(src)
+    message = str(exc.value)
+    assert "Python 3.14" in message
+    assert "t-string" in message
+    assert "3.13" in message
+
+
+def test_plain_syntaxerror_without_tstring_gets_no_hint(monkeypatch, tmp_path):
+    # A syntax error with no t-string must not gain the (misleading) 3.14 hint.
+    src = tmp_path / "doc.py"
+    _ = src.write_text("def (:\n")
+    _force_py313(monkeypatch)
+    with pytest.raises(BuildError) as exc:
+        _render_python(src)
+    assert "Python 3.14" not in str(exc.value)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="needs a real >=3.14 interpreter where t-strings parse",
+)
+def test_tstring_no_hint_on_python_314_plus(tmp_path):
+    # On the real (>=3.14) interpreter a t-string parses; force a different
+    # syntax error and confirm no spurious downgrade hint is appended.
+    src = tmp_path / "doc.py"
+    _ = src.write_text('__pytex__ = t"{x}"\n(\n')
+    with pytest.raises(BuildError) as exc:
+        _render_python(src)
+    assert "needs\nPython 3.14" not in str(exc.value)
+    assert "you are on Python" not in str(exc.value)
 
 
 def test_markdown_input_becomes_document(tmp_path):
