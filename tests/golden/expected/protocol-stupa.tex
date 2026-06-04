@@ -1,0 +1,141 @@
+\documentclass{scrbook}\PassOptionsToPackage{hyperfootnotes=false}{hyperref}\usepackage{amsmath}\usepackage{array}\usepackage[ngerman]{babel}\usepackage{biblatex}\usepackage{calc}\usepackage{hyperref}\usepackage{cleveref}\usepackage{csquotes}\usepackage{etoolbox}\usepackage{eurosym}\usepackage{fontawesome}\usepackage{fontspec}\usepackage{geometry}\usepackage[acronym]{glossaries}\usepackage{graphicx}\usepackage{listings}\usepackage{lmodern}\usepackage{longtable}\usepackage[framemethod=tikz]{mdframed}\usepackage{multicol}\usepackage{needspace}\usepackage{pgf}\usepackage{pgffor}\usepackage{ragged2e}\usepackage{scrlayer-scrpage}\usepackage{setspace}\usepackage{tikz}\usepackage{xcolor}\KOMAoptions{open=any,twoside=false}\geometry{a4paper=,top=2cm,bottom=2cm,left=2cm,right=2cm}\definecolor{britishracinggreen}{rgb}{0.0,0.26,0.15}\definecolor{eggplant}{rgb}{0.38,0.25,0.32}\definecolor{hanblue}{rgb}{0.27,0.42,0.81}\definecolor{navyblue}{rgb}{0.0,0.0,0.5}\definecolor{pansypurple}{rgb}{0.47,0.09,0.29}\definecolor{shockingpink}{rgb}{0.99,0.06,0.75}\definecolor{lightgray}{rgb}{0.8,0.8,0.8}\definecolor{hsrtcite}{rgb}{0.286,0.427,0.537}\definecolor{hsrtlink}{rgb}{0.161,0.31,0.427}\definecolor{hsrturl}{rgb}{0.071,0.212,0.322}\hypersetup{pdfpagemode=UseOutlines,bookmarksopen=true,bookmarksopenlevel=0,plainpages=false,hypertexnames=true,colorlinks=true,citecolor=hsrtcite,linkcolor=hsrtlink,urlcolor=hsrturl,pdfstartview=FitV,unicode=true,breaklinks=true}\crefname{figure}{Abbildung}{Abbildungen}\Crefname{figure}{Abbildung}{Abbildungen}\crefname{table}{Tabelle}{Tabellen}\Crefname{table}{Tabelle}{Tabellen}\crefname{equation}{Gleichung}{Gleichungen}\Crefname{equation}{Gleichung}{Gleichungen}\crefname{chapter}{Kapitel}{Kapitel}\Crefname{chapter}{Kapitel}{Kapitel}\crefname{section}{Abschnitt}{Abschnitte}\Crefname{section}{Abschnitt}{Abschnitte}\crefname{subsection}{Unterabschnitt}{Unterabschnitte}\Crefname{subsection}{Unterabschnitt}{Unterabschnitte}\crefname{subsubsection}{Unterunterabschnitt}{Unterunterabschnitte}\Crefname{subsubsection}{Unterunterabschnitt}{Unterunterabschnitte}\crefname{listing}{Listing}{Codeblock}\Crefname{listing}{Listing}{Codeblock}\crefname{appendix}{Anhang}{Anhänge}\Crefname{appendix}{Anhang}{Anhänge}\crefname{algorithm}{Algorithmus}{Algorithmen}\Crefname{algorithm}{Algorithmus}{Algorithmen}\crefname{theorem}{Theorem}{Theoreme}\Crefname{theorem}{Theorem}{Theoreme}\crefname{lemma}{Lemma}{Lemmata}\Crefname{lemma}{Lemma}{Lemmata}\crefname{corollary}{Korollar}{Korollare}\Crefname{corollary}{Korollar}{Korollare}\crefname{proposition}{Proposition}{Propositionen}\Crefname{proposition}{Proposition}{Propositionen}\crefname{definition}{Definition}{Definitionen}\Crefname{definition}{Definition}{Definitionen}\crefname{example}{Beispiel}{Beispiele}\Crefname{example}{Beispiel}{Beispiele}\crefname{remark}{Bemerkung}{Bemerkungen}\Crefname{remark}{Bemerkung}{Bemerkungen}\crefname{footnote}{Fußnote}{Fußnoten}\Crefname{footnote}{Fußnote}{Fußnoten}\crefname{enumi}{Punkt}{Punkte}\Crefname{enumi}{Punkt}{Punkte}\crefname{enumii}{Punkt}{Punkte}\Crefname{enumii}{Punkt}{Punkte}\crefname{enumiii}{Punkt}{Punkte}\Crefname{enumiii}{Punkt}{Punkte}\crefname{enumiv}{Punkt}{Punkte}\Crefname{enumiv}{Punkt}{Punkte}\crefname{page}{Seite}{Seiten}\Crefname{page}{Seite}{Seiten}\crefname{line}{Zeile}{Zeilen}\Crefname{line}{Zeile}{Zeilen}\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true,numbers=left,frame=single,float=H}\lstdefinestyle{htmlCode}{language=html,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{phpCode}{language=php,morekeywords={php},basicstyle=\footnotesize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{jsCode}{language=javascript,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{shellCodeNOPASSWD}{language=sh,deletekeywords={for,kill,cat},morekeywords={sudo},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}\lstdefinestyle{shellCode}{language=sh,morekeywords={sudo,chmod,chown,cp,su,rm,python},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{URL}{basicstyle=\footnotesize\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}\newcommand{\acr}{\acrshort}\usepackage{lastpage}
+\makeatletter
+\def\@title{}
+\def\@author{}
+\newif\ifHSRTBackMatter
+\newif\ifHSRTTitlePage
+% True from \mainmatter onward (and stays true through \backmatter): gates the
+% "von \pageref{LastPage}" suffix so it shows on main- AND back-matter pages
+% (e.g. the bibliography) but not on roman-numbered front matter.
+\newif\ifHSRTNumberedBody
+% Minimum space \Smartsection/\Smartsubsection demand before breaking a page.
+\newlength{\sectionminspace}\setlength{\sectionminspace}{4\baselineskip}
+\newlength{\subsectionminspace}\setlength{\subsectionminspace}{3\baselineskip}
+\providecommand{\blenderfont}{\sffamily}
+\providecommand{\dinfont}{\rmfamily}
+\let\Chaptermark\chaptermark
+\def\chaptermark#1{\def\Chaptername{#1}\Chaptermark{#1}}
+\let\Sectionmark\sectionmark
+\def\sectionmark#1{\def\Sectionname{#1}\Sectionmark{#1}}
+\clearpairofpagestyles
+\setkomafont{pageheadfoot}{\color{gray}\blenderfont}
+\setkomafont{pagenumber}{\color{gray}\blenderfont}
+\setlength{\footskip}{20pt}
+\ohead*{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\Roman{\thechapter}~–~\Chaptername\fi\fi}
+\ifoot{\@author}
+% Centre footer "Seite N von M" must appear on every numbered page, including
+% the bibliography and other back-matter pages. It is NOT gated by
+% \ifHSRTBackMatter (that only suppresses chapter-name headers) and uses
+% \ifHSRTNumberedBody rather than \if@mainmatter so the "von LastPage" suffix
+% survives \backmatter (which sets \@mainmatterfalse).
+\cfoot{Seite~\thepage\ifHSRTNumberedBody~von~\pageref{LastPage}\fi}
+\ohead{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\thechapter~–~\Chaptername\fi\fi}
+\ihead{\@title}
+\pagestyle{scrheadings}
+\renewcommand*{\chapterpagestyle}{scrheadings}
+\setkomafont{disposition}{\blenderfont\bfseries}
+% ToC consistency: section entries default to the main font (DIN), and their
+% page numbers are wrapped in \normalfont by \@dottedtocline (also DIN), giving
+% the ToC two families. Force the whole ToC into \blenderfont after its heading
+% and alias \normalfont to it (locally to the ToC group) so entries, leaders and
+% page numbers all match the headings. Chapter entry/number keep an explicit
+% bold komafont.
+\AfterTOCHead{\blenderfont\let\normalfont\blenderfont}
+\setkomafont{chapterentry}{\blenderfont\bfseries}
+\setkomafont{chapterentrypagenumber}{\blenderfont\bfseries}
+\setkomafont{chapter}{\LARGE\blenderfont\bfseries}
+\setkomafont{section}{\Large\blenderfont\bfseries}
+\setkomafont{subsection}{\large\blenderfont\bfseries}
+\setkomafont{subsubsection}{\large\blenderfont\bfseries}
+\RedeclareSectionCommand[beforeskip=3ex plus 1ex minus 0.5ex,afterskip=1.5ex plus 0.3ex,style=section]{chapter}
+\RedeclareSectionCommand[beforeskip=4.5ex plus 1.5ex minus 0.5ex,afterskip=1.5ex plus 0.3ex]{section}
+\RedeclareSectionCommand[beforeskip=3.5ex plus 1ex minus 0.5ex,afterskip=1ex plus 0.2ex]{subsection}
+\RedeclareSectionCommand[beforeskip=2ex plus 0.5ex minus 0.3ex,afterskip=0.8ex plus 0.1ex]{subsubsection}
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+\counterwithout{equation}{chapter}
+\renewcommand{\thefigure}{\thechapter.\arabic{figure}}
+\renewcommand{\thetable}{\thechapter.\arabic{table}}
+\renewcommand{\baselinestretch}{1}
+\renewcommand{\arraystretch}{1.5}
+\hyphenpenalty=500
+\exhyphenpenalty=500
+\tolerance=1000
+\emergencystretch=3em
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+\setlength{\parskip}{0.5em plus 0.2em minus 0.1em}
+\setlength{\parindent}{0pt}
+% Prevent \mainmatter from inserting a blank page via \cleardoublepage.
+% scrbook's \mainmatter calls \cleardoublepage to force chapters onto a
+% right-hand page; for single-sided reports that just produces an unwanted
+% blank page between the ToC and the first chapter.
+\renewcommand{\mainmatter}{%
+  \clearpage
+  \@mainmattertrue
+  \HSRTNumberedBodytrue
+  \pagenumbering{arabic}%
+}
+% The running head is set in \blenderfont, which is taller than the default
+% 17pt \headheight; the surplus spilled into the body and triggered an overfull
+% \vbox "while \output is active" on every page. Enlarge \headheight to fit.
+% Done at begin-document so it survives geometry's deferred layout pass, and it
+% leaves the 2cm horizontal margins untouched.
+\AtBeginDocument{\setlength{\headheight}{22pt}}
+\makeatother
+\AddToHook{shipout/background}{%
+  \begin{tikzpicture}[overlay, remember picture]
+  \ifHSRTTitlePage\else
+  \node[anchor=south east, inner sep=0pt, xshift=-2cm, yshift=1.5em, opacity=0] (fllogo0) at (current page.south east) {\rule{0pt}{0.8cm}};
+  \node[anchor=east, inner sep=0pt, xshift=-0.3cm, yshift=2pt] (fllogo1) at (fllogo0.west) {\includegraphics[height=0.8cm]{logos/STUPA.pdf}};
+  \fi
+  \node[anchor=south west, inner sep=0pt, yshift=0em] at (current page.south west) {\includegraphics[width=1.5\paperwidth]{logos/Skyline.pdf}};
+  \end{tikzpicture}%
+}\newfontfamily{\BlenderFont}{Blender}[Path=fonts/Blender/,Extension=.ttf,UprightFont=*-Medium,BoldFont=*-Bold,ItalicFont=*-MediumItalic,BoldItalicFont=*-BoldItalic]\newfontfamily{\DINFont}{DIN}[Path=fonts/DIN/,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]\renewcommand{\blenderfont}{\BlenderFont}\renewcommand{\dinfont}{\DINFont}\setsansfont{Blender}[Path=fonts/Blender/,Extension=.ttf,UprightFont=*-Medium,BoldFont=*-Bold,ItalicFont=*-MediumItalic,BoldItalicFont=*-BoldItalic]\setmainfont{DIN}[Path=fonts/DIN/,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]\title{Protokoll der Sitzung des STUPA vom 15.06.2026}\renewcommand*{\thesection}{TOP~\arabic{section}}\begin{document}\frontmatter
+\HSRTTitlePagetrue\begin{titlepage}\begin{tikzpicture}[overlay, remember picture]
+  \node[anchor=north west, inner sep=0pt, xshift=1.5cm, yshift=-1.5cm, opacity=0] (tplogo0) at (current page.north west) {\rule{0pt}{1.4cm}};
+  \node[anchor=west, inner sep=0pt, xshift=0.5cm] (tplogo1) at (tplogo0.east) {\includegraphics[height=1.4cm]{logos/STUPA.pdf}};
+\end{tikzpicture}\vspace{4cm}\begin{flushleft}\hyphenpenalty=10000\exhyphenpenalty=10000\noindent\color{black}\textbf{\blenderfont\Huge Protokoll der Sitzung des STUPA vom 15.06.2026}\par\vspace{-0.5em}\rule{\textwidth}{0.5mm}\end{flushleft}\vspace{2em}\setstretch{1.0}\vfill\noindent\setstretch{1.0}\begin{tabular}{@{} p{30mm} p{\dimexpr\textwidth-30mm-2\tabcolsep\relax} @{}}&\\\textbf{Datum} & 2026-06-15\\\textbf{Zeit} & 18:30 – 20:05\\\textbf{Ort} & Aula, Gebäude 9\\\textbf{Sitzungsleitung} & A. Muster\\\textbf{Protokoll} & B. Beispiel\\\textbf{Anwesend (5)} & A. Muster, B. Beispiel, C. Schmidt, D. Klein, E. Lang\\\textbf{Entschuldigt (1)} & F. Kurz\\\textbf{Abwesend (1)} & G. Fehlend\\\textbf{Gäste (1)} & H. Gast\end{tabular}\end{titlepage}\HSRTTitlePagefalse\mainmatter
+\section{Begrüßung und Beschlussfähigkeit}
+
+Die Sitzungsleitung eröffnet die Sitzung um \textcolor{hanblue}{\faicon{clock} \textbf{18:30}}. Es sind
+5 stimmberechtigte Mitglieder anwesend, die Sitzung ist
+\textbf{beschlussfähig}.
+
+Anwesend: A. Muster, B. Beispiel, C. Schmidt, D. Klein, E. Lang.
+
+\section{Einführung von PyTeX für Protokolle}
+
+C. Schmidt stellt den Vorschlag vor, Protokolle künftig mit \emph{PyTeX} zu setzen.
+Kennzahlen: Beitrag 50\euro{}, Quote x $\leq$ y $\geq$ z, Verweis a $\leftrightarrow$ b, Punkt a $\cdot$ b,
+Ablauf a $\rightarrow$ b.
+
+| TOP | Thema  | Status  |
+|:----|:------:|--------:|
+| 1   | Vorlage| offen   |
+| 2   | Schulung| geplant |
+
+\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=britishracinggreen!12,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{britishracinggreen!32}\faicon{gavel}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Beschluss: }Protokolle ab sofort mit PyTeX setzen
+Mehrheitlich angenommen.\end{minipage}\end{mdframed}\end{minipage}
+
+\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=britishracinggreen!12,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(-0.2cm+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{britishracinggreen!32}\faicon{vote-yea}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}Antrag: Vorlage beauftragen\vspace*{-2em}\begin{multicols}{3}\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=britishracinggreen!20,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{britishracinggreen!40}\faicon{thumbs-up}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Ja:} 12\end{minipage}\end{mdframed}\end{minipage}\columnbreak\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=red!20,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{red!40}\faicon{thumbs-down}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Nein:} 3\end{minipage}\end{mdframed}\end{minipage}\columnbreak\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=eggplant!20,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{eggplant!40}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Enthaltung:} 2\end{minipage}\end{mdframed}\end{minipage}\end{multicols}\end{minipage}\end{mdframed}\end{minipage}
+
+\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=navyblue!12,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{navyblue!32}\faicon{clipboard-check}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Aufgabe: }Vorlage und Kurzanleitung erstellen
+Zuständig ist C. Schmidt.\end{minipage}\end{mdframed}\end{minipage}
+
+\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=orange!12,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,0pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{orange!32}\faicon{hourglass-half}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}\textbf{Frist: }Rückmeldungen zur Vorlage einsammeln
+Bis zum 30.06.2026.\end{minipage}\end{mdframed}\end{minipage}
+
+\section{Verschiedenes}
+
+\begin{itemize}\item Nächster Termin: \textcolor{hanblue}{\faicon{clock} \textbf{19:00}} am 29.06.2026.\item Hinweis auf die \texttt{pytex}-Vorlage.\end{itemize}
+
+\vspace*{0.5\baselineskip}~\\\noindent\begin{minipage}{\linewidth}\begin{mdframed}[backgroundcolor=blue!12,hidealllines=true,skipabove=0.7\baselineskip,skipbelow=0.7\baselineskip,innertopmargin=0.45cm,innerbottommargin=0.45cm,splitbottomskip=2pt,splittopskip=4pt,roundcorner=5pt]\begin{picture}(0,0)(0,0)\put(1.5pt+0.2cm-24pt,2pt){$\vcenter{\hbox{\fontsize{24pt}{24pt}\selectfont\color{blue!32}\faicon{info-circle}}}$}\end{picture}\hspace*{0.25cm+2pt}\begin{minipage}[t]{\linewidth-0.5cm-2pt}Hinweis
+Das Protokoll wird im Wiki veröffentlicht.\end{minipage}\end{mdframed}\end{minipage}
+
+Die Sitzungsleitung schließt die Sitzung um \textcolor{hanblue}{\faicon{clock} \textbf{20:05}}.
+
+Ergebnis der Schlussabstimmung: \textbf{Abstimmung: }\textcolor{britishracinggreen}{Ja 15 · Nein 0 · Enthaltung 2}.
+
+\par\vspace{2em}\section*{Unterschriften}\par\vspace{3em}\noindent \begin{minipage}[t]{0.46\linewidth}\centering\rule{5cm}{0.4pt}\\[0.4em]B. Beispiel\\{\small Schriftführung}\end{minipage}\hfill\begin{minipage}[t]{0.46\linewidth}\centering\rule{5cm}{0.4pt}\\[0.4em]A. Muster\\{\small Vorstand}\end{minipage}\end{document}

@@ -1,0 +1,48 @@
+\documentclass{article}\usepackage{biblatex}\usepackage{booktabs}\usepackage{eurosym}\usepackage{listings}\usepackage{tabularx}\begin{document}\section{Plain Sample}
+
+Intro paragraph with \textbf{bold}, \emph{emphasis}, and \texttt{inline code}.
+
+\subsection{Lists}
+
+\begin{itemize}\item alpha\item beta
+
+\begin{itemize}\item nested gamma\end{itemize}\item delta\end{itemize}
+
+\begin{enumerate}\item first\item second
+
+\begin{enumerate}\item sub-second\end{enumerate}\end{enumerate}
+
+\subsection{Callouts}
+
+An informational note spanning
+two source lines.
+
+A warning callout.
+
+\subsection{Citation}
+
+See \autocite{knuth1984} and, narratively, \textcite{einstein1905}.
+
+\subsection{Table}
+
+\par\addvspace{0.8\baselineskip}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\raggedleft\arraybackslash}X}
+\toprule
+Name & Age & City \\
+\midrule
+Bob & 30 & NYC \\
+Ann & 25 & LA \\
+\bottomrule
+\end{tabularx}
+\par\addvspace{0.8\baselineskip}
+
+\subsection{Unicode}
+
+Price 50\euro{}, range x $\leq$ y $\geq$ z, link a $\leftrightarrow$ b, dot a $\cdot$ b, flow a $\rightarrow$ b.
+
+\subsection{Code}
+
+\begin{lstlisting}[breaklines=true]
+def demo():
+    return 42
+\end{lstlisting}\end{document}

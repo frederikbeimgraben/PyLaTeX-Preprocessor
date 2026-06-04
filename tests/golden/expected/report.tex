@@ -1,0 +1,152 @@
+\documentclass[oneside]{scrbook}\PassOptionsToPackage{hyperfootnotes=false}{hyperref}\usepackage{amsmath}\usepackage{array}\usepackage[ngerman]{babel}\usepackage{biblatex}\usepackage{booktabs}\usepackage{hyperref}\usepackage{cleveref}\usepackage{csquotes}\usepackage{etoolbox}\usepackage{eurosym}\usepackage{fontawesome}\usepackage{fontspec}\usepackage{geometry}\usepackage[acronym]{glossaries}\usepackage{graphicx}\usepackage{listings}\usepackage{lmodern}\usepackage{longtable}\usepackage[framemethod=tikz]{mdframed}\usepackage{needspace}\usepackage{pgf}\usepackage{pgffor}\usepackage{ragged2e}\usepackage{scrlayer-scrpage}\usepackage{setspace}\usepackage{tabularx}\usepackage{tikz}\usepackage{xcolor}\KOMAoptions{open=any,twoside=false}\geometry{a4paper=,top=2cm,bottom=2cm,left=2cm,right=2cm}\definecolor{britishracinggreen}{rgb}{0.0,0.26,0.15}\definecolor{eggplant}{rgb}{0.38,0.25,0.32}\definecolor{hanblue}{rgb}{0.27,0.42,0.81}\definecolor{navyblue}{rgb}{0.0,0.0,0.5}\definecolor{pansypurple}{rgb}{0.47,0.09,0.29}\definecolor{shockingpink}{rgb}{0.99,0.06,0.75}\definecolor{lightgray}{rgb}{0.8,0.8,0.8}\definecolor{hsrtcite}{rgb}{0.286,0.427,0.537}\definecolor{hsrtlink}{rgb}{0.161,0.31,0.427}\definecolor{hsrturl}{rgb}{0.071,0.212,0.322}\hypersetup{pdfpagemode=UseOutlines,bookmarksopen=true,bookmarksopenlevel=0,plainpages=false,hypertexnames=true,colorlinks=true,citecolor=hsrtcite,linkcolor=hsrtlink,urlcolor=hsrturl,pdfstartview=FitV,unicode=true,breaklinks=true}\crefname{figure}{Abbildung}{Abbildungen}\Crefname{figure}{Abbildung}{Abbildungen}\crefname{table}{Tabelle}{Tabellen}\Crefname{table}{Tabelle}{Tabellen}\crefname{equation}{Gleichung}{Gleichungen}\Crefname{equation}{Gleichung}{Gleichungen}\crefname{chapter}{Kapitel}{Kapitel}\Crefname{chapter}{Kapitel}{Kapitel}\crefname{section}{Abschnitt}{Abschnitte}\Crefname{section}{Abschnitt}{Abschnitte}\crefname{subsection}{Unterabschnitt}{Unterabschnitte}\Crefname{subsection}{Unterabschnitt}{Unterabschnitte}\crefname{subsubsection}{Unterunterabschnitt}{Unterunterabschnitte}\Crefname{subsubsection}{Unterunterabschnitt}{Unterunterabschnitte}\crefname{listing}{Listing}{Codeblock}\Crefname{listing}{Listing}{Codeblock}\crefname{appendix}{Anhang}{Anhänge}\Crefname{appendix}{Anhang}{Anhänge}\crefname{algorithm}{Algorithmus}{Algorithmen}\Crefname{algorithm}{Algorithmus}{Algorithmen}\crefname{theorem}{Theorem}{Theoreme}\Crefname{theorem}{Theorem}{Theoreme}\crefname{lemma}{Lemma}{Lemmata}\Crefname{lemma}{Lemma}{Lemmata}\crefname{corollary}{Korollar}{Korollare}\Crefname{corollary}{Korollar}{Korollare}\crefname{proposition}{Proposition}{Propositionen}\Crefname{proposition}{Proposition}{Propositionen}\crefname{definition}{Definition}{Definitionen}\Crefname{definition}{Definition}{Definitionen}\crefname{example}{Beispiel}{Beispiele}\Crefname{example}{Beispiel}{Beispiele}\crefname{remark}{Bemerkung}{Bemerkungen}\Crefname{remark}{Bemerkung}{Bemerkungen}\crefname{footnote}{Fußnote}{Fußnoten}\Crefname{footnote}{Fußnote}{Fußnoten}\crefname{enumi}{Punkt}{Punkte}\Crefname{enumi}{Punkt}{Punkte}\crefname{enumii}{Punkt}{Punkte}\Crefname{enumii}{Punkt}{Punkte}\crefname{enumiii}{Punkt}{Punkte}\Crefname{enumiii}{Punkt}{Punkte}\crefname{enumiv}{Punkt}{Punkte}\Crefname{enumiv}{Punkt}{Punkte}\crefname{page}{Seite}{Seiten}\Crefname{page}{Seite}{Seiten}\crefname{line}{Zeile}{Zeilen}\Crefname{line}{Zeile}{Zeilen}\lstset{basicstyle=\footnotesize\ttfamily,breaklines=true,numbers=left,frame=single,float=H}\lstdefinestyle{htmlCode}{language=html,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{phpCode}{language=php,morekeywords={php},basicstyle=\footnotesize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{jsCode}{language=javascript,basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{shellCodeNOPASSWD}{language=sh,deletekeywords={for,kill,cat},morekeywords={sudo},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}\lstdefinestyle{shellCode}{language=sh,morekeywords={sudo,chmod,chown,cp,su,rm,python},basicstyle=\scriptsize\ttfamily,keywordstyle=\color{blue}\bfseries\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|}\lstdefinestyle{URL}{basicstyle=\footnotesize\ttfamily,commentstyle=\color{gray}\ttfamily,escapechar=|,numbers=none}\newcommand{\acr}{\acrshort}\usepackage{lastpage}
+\makeatletter
+\def\@title{}
+\def\@author{}
+\newif\ifHSRTBackMatter
+\newif\ifHSRTTitlePage
+% True from \mainmatter onward (and stays true through \backmatter): gates the
+% "von \pageref{LastPage}" suffix so it shows on main- AND back-matter pages
+% (e.g. the bibliography) but not on roman-numbered front matter.
+\newif\ifHSRTNumberedBody
+% Minimum space \Smartsection/\Smartsubsection demand before breaking a page.
+\newlength{\sectionminspace}\setlength{\sectionminspace}{4\baselineskip}
+\newlength{\subsectionminspace}\setlength{\subsectionminspace}{3\baselineskip}
+\providecommand{\blenderfont}{\sffamily}
+\providecommand{\dinfont}{\rmfamily}
+\let\Chaptermark\chaptermark
+\def\chaptermark#1{\def\Chaptername{#1}\Chaptermark{#1}}
+\let\Sectionmark\sectionmark
+\def\sectionmark#1{\def\Sectionname{#1}\Sectionmark{#1}}
+\clearpairofpagestyles
+\setkomafont{pageheadfoot}{\color{gray}\blenderfont}
+\setkomafont{pagenumber}{\color{gray}\blenderfont}
+\setlength{\footskip}{20pt}
+\ohead*{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\Roman{\thechapter}~–~\Chaptername\fi\fi}
+\ifoot{\@author}
+% Centre footer "Seite N von M" must appear on every numbered page, including
+% the bibliography and other back-matter pages. It is NOT gated by
+% \ifHSRTBackMatter (that only suppresses chapter-name headers) and uses
+% \ifHSRTNumberedBody rather than \if@mainmatter so the "von LastPage" suffix
+% survives \backmatter (which sets \@mainmatterfalse).
+\cfoot{Seite~\thepage\ifHSRTNumberedBody~von~\pageref{LastPage}\fi}
+\ohead{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\thechapter~–~\Chaptername\fi\fi}
+\ihead{\@title}
+\pagestyle{scrheadings}
+\renewcommand*{\chapterpagestyle}{scrheadings}
+\setkomafont{disposition}{\blenderfont\bfseries}
+% ToC consistency: section entries default to the main font (DIN), and their
+% page numbers are wrapped in \normalfont by \@dottedtocline (also DIN), giving
+% the ToC two families. Force the whole ToC into \blenderfont after its heading
+% and alias \normalfont to it (locally to the ToC group) so entries, leaders and
+% page numbers all match the headings. Chapter entry/number keep an explicit
+% bold komafont.
+\AfterTOCHead{\blenderfont\let\normalfont\blenderfont}
+\setkomafont{chapterentry}{\blenderfont\bfseries}
+\setkomafont{chapterentrypagenumber}{\blenderfont\bfseries}
+\setkomafont{chapter}{\LARGE\blenderfont\bfseries}
+\setkomafont{section}{\Large\blenderfont\bfseries}
+\setkomafont{subsection}{\large\blenderfont\bfseries}
+\setkomafont{subsubsection}{\large\blenderfont\bfseries}
+\RedeclareSectionCommand[beforeskip=3ex plus 1ex minus 0.5ex,afterskip=1.5ex plus 0.3ex,style=section]{chapter}
+\RedeclareSectionCommand[beforeskip=4.5ex plus 1.5ex minus 0.5ex,afterskip=1.5ex plus 0.3ex]{section}
+\RedeclareSectionCommand[beforeskip=3.5ex plus 1ex minus 0.5ex,afterskip=1ex plus 0.2ex]{subsection}
+\RedeclareSectionCommand[beforeskip=2ex plus 0.5ex minus 0.3ex,afterskip=0.8ex plus 0.1ex]{subsubsection}
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+\counterwithout{equation}{chapter}
+\renewcommand{\thefigure}{\thechapter.\arabic{figure}}
+\renewcommand{\thetable}{\thechapter.\arabic{table}}
+\renewcommand{\baselinestretch}{1}
+\renewcommand{\arraystretch}{1.5}
+\hyphenpenalty=500
+\exhyphenpenalty=500
+\tolerance=1000
+\emergencystretch=3em
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+\setlength{\parskip}{0.5em plus 0.2em minus 0.1em}
+\setlength{\parindent}{0pt}
+% Prevent \mainmatter from inserting a blank page via \cleardoublepage.
+% scrbook's \mainmatter calls \cleardoublepage to force chapters onto a
+% right-hand page; for single-sided reports that just produces an unwanted
+% blank page between the ToC and the first chapter.
+\renewcommand{\mainmatter}{%
+  \clearpage
+  \@mainmattertrue
+  \HSRTNumberedBodytrue
+  \pagenumbering{arabic}%
+}
+% The running head is set in \blenderfont, which is taller than the default
+% 17pt \headheight; the surplus spilled into the body and triggered an overfull
+% \vbox "while \output is active" on every page. Enlarge \headheight to fit.
+% Done at begin-document so it survives geometry's deferred layout pass, and it
+% leaves the 2cm horizontal margins untouched.
+\AtBeginDocument{\setlength{\headheight}{22pt}}
+\makeatother
+\AddToHook{shipout/background}{%
+  \begin{tikzpicture}[overlay, remember picture]
+  \node[anchor=south west, inner sep=0pt, yshift=0em] at (current page.south west) {\includegraphics[width=1.5\paperwidth]{logos/Skyline.pdf}};
+  \end{tikzpicture}%
+}\newfontfamily{\BlenderFont}{Blender}[Path=fonts/Blender/,Extension=.ttf,UprightFont=*-Medium,BoldFont=*-Bold,ItalicFont=*-MediumItalic,BoldItalicFont=*-BoldItalic]\newfontfamily{\DINFont}{DIN}[Path=fonts/DIN/,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]\renewcommand{\blenderfont}{\BlenderFont}\renewcommand{\dinfont}{\DINFont}\setsansfont{Blender}[Path=fonts/Blender/,Extension=.ttf,UprightFont=*-Medium,BoldFont=*-Bold,ItalicFont=*-MediumItalic,BoldItalicFont=*-BoldItalic]\setmainfont{DIN}[Path=fonts/DIN/,Extension=.ttf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]\title{PyTeX Golden Report}\author{Test Author}\begin{filecontents*}[overwrite,noheader]{pytex-md-refs.bib}
+@book{knuth1984,
+  author = {Knuth, Donald E.},
+  title  = {The TeXbook},
+  year   = {1984},
+}
+@article{einstein1905,
+  author = {Einstein, Albert},
+  title  = {Zur Elektrodynamik bewegter Koerper},
+  year   = {1905},
+}
+\end{filecontents*}
+\addbibresource{pytex-md-refs.bib}\begin{document}\frontmatter
+\HSRTTitlePagetrue\begin{titlepage}\begin{tikzpicture}[overlay, remember picture]
+  \node[anchor=north west, inner sep=0pt, xshift=1.5cm, yshift=-1.5cm, opacity=0] (tplogo0) at (current page.north west) {\rule{0pt}{1.4cm}};
+  \node[anchor=west, inner sep=0pt, xshift=0.5cm] (tplogo1) at (tplogo0.east) {\includegraphics[height=1.4cm]{logos/INF.pdf}};
+\end{tikzpicture}\vspace{4cm}\begin{flushleft}\hyphenpenalty=10000\exhyphenpenalty=10000\noindent\color{black}\textbf{\blenderfont\Huge PyTeX Golden Report}\par\vspace{-0.5em}\rule{\textwidth}{0.5mm}\end{flushleft}\vspace{2em}\setstretch{1.0}\section*{Abstract}\vspace{-1em}A fixed report exercising headings, lists, callouts, citations, tables, unicode, and code for golden-file regression coverage.\vspace*{1em}\par\noindent \textbf{Keywords}\par\noindent pytex, golden, regression\vfill\noindent\setstretch{1.0}\begin{tabular}{@{} p{30mm} p{\dimexpr\textwidth-30mm-2\tabcolsep\relax} @{}}&\\\textbf{Version} & 0.5.0\\\textbf{Course} & Regression Testing\end{tabular}\end{titlepage}\HSRTTitlePagefalse\newpage\tableofcontents\mainmatter
+\chapter{Introduction}
+
+Body paragraph with \textbf{bold}, \emph{emphasis}, and \texttt{inline code}.
+
+\chapter{Lists}
+
+\begin{itemize}\item alpha\item beta
+
+\begin{itemize}\item nested gamma\end{itemize}\end{itemize}
+
+\begin{enumerate}\item first\item second\end{enumerate}
+
+\chapter{Callouts}
+
+An informational note.
+
+An important callout.
+
+\chapter{Citation}
+
+See \autocite[p. 5]{knuth1984} and \autocite{einstein1905}.
+
+\chapter{Table}
+
+\par\addvspace{0.8\baselineskip}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\centering\arraybackslash}X>{\raggedleft\arraybackslash}X}
+\toprule
+Name & Age & City \\
+\midrule
+Bob & 30 & NYC \\
+Ann & 25 & LA \\
+\bottomrule
+\end{tabularx}
+\par\addvspace{0.8\baselineskip}
+
+\chapter{Unicode}
+
+Price 50\euro{}, range x $\leq$ y $\geq$ z, link a $\leftrightarrow$ b, dot a $\cdot$ b, flow a $\rightarrow$ b.
+
+\chapter{Code}
+
+\begin{lstlisting}[breaklines=true]
+def demo():
+    return 42
+\end{lstlisting}\newpage\appendix\backmatter\HSRTBackMattertrue\clearpage\chapter*{Literaturverzeichnis}\label{chap:bibliography}\printbibliography[heading=none,title={}]\end{document}

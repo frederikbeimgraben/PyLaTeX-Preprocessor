@@ -30,6 +30,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raises a `MissingGlyphWarning` (naming the char and its `U+XXXX` code point),
   so silent tofu never reaches the PDF. DIN coverage comes from parsing the
   bundled fonts' `cmap` tables directly (no new dependency).
+- **Golden-file regression tests for the `.tex` render layer
+  (`tests/golden/`).** Representative samples — one per Markdown variant
+  (`plain`, `report`, `protocol-asta`, `protocol-stupa`) covering headings,
+  lists, callouts, citations, tables, the font-independent Unicode set
+  (`€ → ↔ ≤ ≥ ·`) and code spans, plus a `.tex.py` node-tree document — are
+  rendered to a LaTeX *string* (deterministic, no tectonic/PDF) and compared
+  byte-for-byte against checked-in goldens, so a refactor cannot silently change
+  the output. Goldens are regenerated on purpose with
+  `PYTEX_UPDATE_GOLDEN=1 pytest tests/golden`. PDF builds are not hashed; an
+  opt-in `PYTEX_TEST_PODMAN=1` smoke only asserts a sample compiles to `%PDF-`.
 
 ### Changed
 - `eurosym` is now on the UNTRUSTED/SANDBOXED package allowlist, so a `€` in
