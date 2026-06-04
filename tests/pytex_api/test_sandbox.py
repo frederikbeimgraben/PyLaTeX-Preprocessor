@@ -107,9 +107,21 @@ def test_pids_and_cpu_caps_present():
     assert cmd[cmd.index("--cpus") + 1] == "1.5"
 
 
-def test_fsize_ulimit_present():
-    cmd = _cmd(max_fsize_bytes=7777)
-    assert cmd[cmd.index("--ulimit") + 1] == "fsize=7777:7777"
+def test_fsize_ulimit_present_above_floor():
+    big = 100 * 1024 * 1024
+    cmd = _cmd(max_fsize_bytes=big)
+    assert cmd[cmd.index("--ulimit") + 1] == f"fsize={big}:{big}"
+
+
+def test_fsize_floored_when_zero_or_negative():
+    # Mirrors --memory: a 0/negative limit is floored, never dropped.
+    from pytex_api._sandbox import FSIZE_FLOOR_BYTES
+
+    for bad in (0, -1):
+        cmd = _cmd(max_fsize_bytes=bad)
+        assert cmd[cmd.index("--ulimit") + 1] == (
+            f"fsize={FSIZE_FLOOR_BYTES}:{FSIZE_FLOOR_BYTES}"
+        )
 
 
 def test_tmpfs_scratch_is_mounted_noexec():
@@ -337,6 +349,38 @@ def test_output_file_size_checked_before_read(tmp_path):
     _ = big.write_bytes(b"x" * 5000)
     with pytest.raises(LimitError, match="output file is"):
         enforce_output_file_size(big, BuildLimits(max_output_bytes=1000))
+
+
+def test_symlinked_output_rejected(monkeypatch, tmp_path):
+    # A build whose document.pdf is a symlink must be refused before any read.
+    build_dir = tmp_path / "build"
+    build_dir.mkdir()
+    secret = tmp_path / "secret.bin"
+    _ = secret.write_bytes(b"%PDF-host-secret")
+
+    def _fake_run(_cmd, cwd, _limits, *, apply_rlimits):
+        (Path(cwd) / "build" / "document.pdf").symlink_to(secret)
+        return 0, "ok"
+
+    _patch_podman(monkeypatch, available=False, image_present=False)
+    monkeypatch.setattr(compile_mod, "_locate_tectonic", lambda *_a: Path("tectonic"))
+    monkeypatch.setattr(compile_mod, "_run_confined", _fake_run)
+
+    import dataclasses
+
+    policy = dataclasses.replace(
+        policy_for(TrustLevel.UNTRUSTED), require_sandbox=False
+    )
+    req = BuildRequest(
+        source=rb"\section{x}",
+        input_kind=InputKind.TEX,
+        output_kind=OutputKind.PDF,
+        trust=TrustLevel.UNTRUSTED,
+    )
+    with pytest.raises(CompileError, match="symlink"):
+        compile_mod.compile_to_pdf(
+            rb"\section{x}".decode(), req, policy, tmp_path, _Console()
+        )
 
 
 # -- live confined build (opt-in) ------------------------------------------

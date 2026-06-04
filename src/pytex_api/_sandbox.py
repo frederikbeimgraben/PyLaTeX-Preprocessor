@@ -67,8 +67,8 @@ _BASE_IMAGE = (
 # verify its sha256 (instead of piping the latest installer to a shell). The
 # shared libs it links (graphite2 + openssl; harfbuzz/freetype are statically
 # bundled) and fontconfig (for fontspec docs) come from the distro.
-_TECTONIC_VERSION = "0.15.0"
-_TECTONIC_SHA256 = "875fbbc9ab48560d7776088c608e0beee49197b57ab4a2f6c5385b2c661c842f"
+_TECTONIC_VERSION = "0.16.9"
+_TECTONIC_SHA256 = "f3c825128095dc3399ea11c08c18035b33050a216930c295c79e8eb11bd21de4"
 _TECTONIC_URL = (
     "https://github.com/tectonic-typesetting/tectonic/releases/download/"
     f"tectonic%40{_TECTONIC_VERSION}/"
@@ -88,9 +88,10 @@ _CONTAINERFILE = (
 _DEFAULT_PIDS_LIMIT = 256
 _DEFAULT_MAX_CPUS = "2"
 _DEFAULT_TMPFS_SIZE = "256m"
-# Floor enforced for non-trusted builds so a 0/negative limit cannot drop the
-# --memory cap entirely (an unbounded container is a host OOM vector).
+# Floors enforced for non-trusted builds so a 0/negative limit cannot drop a
+# cap entirely (an unbounded container is a host OOM/disk-DoS vector).
 MEMORY_FLOOR_BYTES = 256 * 1024 * 1024
+FSIZE_FLOOR_BYTES = 64 * 1024 * 1024
 
 # Host font / fontconfig dirs, mounted read-only when present so fontspec docs
 # can see system fonts. Basic (lmodern) builds need none of these - they come
@@ -206,14 +207,23 @@ def warm_sandbox_cache(
             work,
         )
         _ = (work / "warm.tex").write_text(warm_latex, encoding="utf-8")
-        # Network ON (default), cache mounted read-write (:Z relabel is allowed -
-        # the cache lives in the user's $HOME, unlike shared system dirs).
+        # Network ON (default), cache mounted read-write with a *shared* (:z)
+        # relabel - NOT private (:Z). The cache is the shared lower layer that
+        # later request containers read via :O and that the host-side TRUSTED
+        # build reads directly; a private MCS category (:Z) would deny those
+        # readers under enforcing SELinux. :z is allowed here because the cache
+        # lives in the user's $HOME (he owns it), unlike shared system dirs.
         cmd = [
             "podman",
             "run",
             "--rm",
+            # Host netns for the one-time privileged warm-up so the bundle can be
+            # fetched even where rootless slirp/pasta networking is unavailable.
+            # This is NOT the untrusted path (which always runs --network none).
+            "--network",
+            "host",
             "-v",
-            f"{cfg.cache_dir}:{CONTAINER_CACHE}:Z",
+            f"{cfg.cache_dir}:{CONTAINER_CACHE}:z",
             "-v",
             f"{work}:{CONTAINER_WORKDIR}:rw,Z",
             "--workdir",
@@ -277,10 +287,11 @@ def build_podman_cmd(
     launcher, its hardening flags, and the mounts. ``name`` gives the container
     a stable name so it can be force-removed if the wall-clock kill fires.
 
-    ``max_memory_bytes`` is floored at :data:`MEMORY_FLOOR_BYTES` and always
-    emitted (an unbounded container is a host OOM vector). ``max_fsize_bytes``
-    restores the per-file write cap lost with the in-process ``RLIMIT_FSIZE``
-    via the container's ``--ulimit fsize``.
+    ``max_memory_bytes`` is floored at :data:`MEMORY_FLOOR_BYTES` and
+    ``max_fsize_bytes`` at :data:`FSIZE_FLOOR_BYTES`; both caps are always
+    emitted (an unbounded container is a host OOM / disk-DoS vector).
+    ``--ulimit fsize`` restores the per-file write cap lost with the in-process
+    ``RLIMIT_FSIZE`` (its value is raw bytes, verified on Podman).
     """
     cmd: list[str] = [
         "podman",
@@ -300,13 +311,13 @@ def build_podman_cmd(
         cmd += ["--security-opt", f"seccomp={config.seccomp_profile}"]
     # else: Podman applies its default seccomp profile automatically.
 
-    # Always cap memory (floored), pids, cpu, and per-file write size.
+    # Always cap memory (floored), pids, cpu, and per-file write size (floored).
     memory = max(max_memory_bytes, MEMORY_FLOOR_BYTES)
     cmd += ["--memory", f"{memory}b"]
     cmd += ["--pids-limit", str(config.pids_limit)]
     cmd += ["--cpus", config.max_cpus]
-    if max_fsize_bytes > 0:
-        cmd += ["--ulimit", f"fsize={max_fsize_bytes}:{max_fsize_bytes}"]
+    fsize = max(max_fsize_bytes, FSIZE_FLOOR_BYTES)
+    cmd += ["--ulimit", f"fsize={fsize}:{fsize}"]
     cmd += [
         "--tmpfs",
         f"{_CONTAINER_HOME}:rw,nosuid,nodev,noexec,size={config.tmpfs_size}",

@@ -261,6 +261,11 @@ def compile_to_pdf(
         raise CompileError(
             f"tectonic failed to produce a PDF (exit {rc}).\n{log}".rstrip()
         )
+    # Refuse a symlinked output before touching it: defense-in-depth against a
+    # build that points document.pdf at a host file (not reachable today - no
+    # shell-escape, \openout only writes regular files - but cheap to deny).
+    if pdf.is_symlink():
+        raise CompileError("refusing to read a symlinked output file")
     # Size-check via stat() *before* reading, so an oversize PDF never lands in
     # memory; the in-memory check then guards the bytes once read.
     enforce_output_file_size(pdf, req.limits)
