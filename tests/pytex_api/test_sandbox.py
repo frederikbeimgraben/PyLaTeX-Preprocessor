@@ -54,6 +54,24 @@ def test_network_is_disabled():
     assert cmd[cmd.index("--network") + 1] == "none"
 
 
+def test_untrusted_path_never_gets_host_network():
+    # The untrusted compile argv must be offline-only: network none, and never
+    # the `host` netns that only the one-time privileged warm-up uses.
+    for cfg in (
+        SandboxConfig(mount_fonts=False),
+        SandboxConfig(mount_fonts=False, tectonic_in_image=False),
+    ):
+        cmd = build_podman_cmd(
+            Path("/w"),
+            _INNER,
+            cfg,
+            max_memory_bytes=0,
+            max_fsize_bytes=0,
+        )
+        assert cmd[cmd.index("--network") + 1] == "none"
+        assert "host" not in cmd
+
+
 def test_rootfs_is_read_only():
     assert "--read-only" in _cmd()
 
