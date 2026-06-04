@@ -58,6 +58,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now emit `\Large`/`\Huge`. No deprecation aliases are provided — an alias for
   the reused `Large`/`Huge` names would silently change behaviour, so a clean
   break is safer pre-1.0. Font family/series/shape switches are unchanged.
+- **BREAKING — the `\fill` length factory is renamed `Fill` -> `Fill_len`.**
+  `pytex.commands.lengths.Fill` (the rubber length `\fill`) and `pytex_tikz.Fill`
+  (the TikZ `\fill` path command) both registered under the single registry key
+  `"Fill"`, so the reverse lookup and the `pytex(...)` eval namespace resolved to
+  whichever module imported last. The length now uses the `_len` suffix already
+  established by `Arraystretch_len` (which dodges the `Arraystretch` table
+  command the same way), leaving the bare `Fill` key to the TikZ command. A
+  deprecated `pytex.commands.lengths.Fill` alias keeps importing and emits a
+  `DeprecationWarning`; it may be removed in a future major. The TikZ `Fill` is
+  unchanged.
+
+### Public API
+- **1.0 API surface frozen.** Every package now declares an explicit, consistent
+  `__all__`; the README gained a `Stability` section stating what is covered by
+  Semantic Versioning (the names a package exports, plus the registry keys
+  reachable from `pytex(...)` markers) and what is internal (leading-underscore
+  names, underscore-prefixed modules such as `pytex_api._policy` /
+  `pytex_api._compile`, and anything outside `__all__`).
 
 ## [0.4.7] - 2026-06-04
 

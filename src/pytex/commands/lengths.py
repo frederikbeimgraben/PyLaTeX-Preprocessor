@@ -1,3 +1,5 @@
+import warnings
+
 from ..interface.tex import TeX
 from ..model.control_sequence import ControlSequence, Parameter
 from ..model.length import Length
@@ -11,7 +13,7 @@ __all__ = [
     "Baselinestretch",
     "Columnsep",
     "Columnwidth",
-    "Fill",
+    "Fill_len",
     "Footskip",
     "Headheight",
     "Headsep",
@@ -196,5 +198,21 @@ def Arraystretch_len() -> Length:
 
 
 @Registry.add
-def Fill() -> Length:
+def Fill_len() -> Length:
     return _const("fill")
+
+
+def __getattr__(name: str) -> object:
+    # `Fill` (the ``\fill`` rubber length) was renamed to `Fill_len` so its
+    # registry key no longer collides with `pytex_tikz.Fill` (the ``\fill`` path
+    # command). The suffix mirrors `Arraystretch_len`, which already dodges the
+    # `Arraystretch` table command the same way. Kept as a deprecated alias.
+    if name == "Fill":
+        warnings.warn(
+            "pytex.commands.lengths.Fill was renamed to Fill_len to free the "
+            + "'Fill' registry key for pytex_tikz.Fill; import Fill_len instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return Fill_len
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
