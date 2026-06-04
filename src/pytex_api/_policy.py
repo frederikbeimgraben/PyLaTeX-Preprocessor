@@ -35,6 +35,9 @@ PACKAGE_ALLOWLIST: frozenset[str] = frozenset(
         "cleveref",
         "csquotes",
         "etoolbox",
+        # eurosym ships its own euro glyph so `\euro{}` renders under fonts
+        # (e.g. DIN) that lack one. The Markdown converter emits it for `€`.
+        "eurosym",
         "fontawesome",
         "fontspec",
         "geometry",

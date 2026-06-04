@@ -10,6 +10,7 @@ this module depends on ``pytex_hsrtreport``.
 from __future__ import annotations
 
 import re
+from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -19,7 +20,6 @@ from pytex.commands.builtin import (
     Chapter,
     Emph,
     Enumerate,
-    Euro,
     Itemize,
     Newline,
     Noindent,
@@ -44,6 +44,7 @@ from pytex.model.raw import Raw, pytex_namespace
 from pytex_components.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
 from .escape import escape_latex
+from .glyphs import glyph_node, is_special_char
 
 __all__ = ["MarkdownConverter"]
 
@@ -106,11 +107,6 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "DANGER": WarningBox,
     "ERROR": WarningBox,
 }
-
-# U+20AC EURO SIGN. The DIN text font has no euro glyph, so the raw char would
-# render as tofu; we splice in a real ``Euro`` node (eurosym ``\euro{}``) which
-# ships its own glyph and registers the package requirement.
-EURO_SIGN: Final[str] = "€"
 
 # Pandoc-style citations in prose. A bracketed ``[@key]`` / ``[@key, p. 5]`` /
 # ``[@a; @b]`` becomes ``\autocite``; a narrative ``@key`` becomes ``\textcite``.
@@ -177,26 +173,26 @@ def _escape_text(text: str) -> str:
 
 
 def _prose(text: str) -> TeX:
-    """Escape prose, splitting literal euro signs into ``Euro`` nodes.
+    """Escape prose, splicing font-independent nodes for special characters.
 
-    Each ``€`` becomes a real :func:`Euro` node (eurosym ``\\euro{}``) instead
-    of a raw char so the preamble auto-loads ``eurosym`` and the glyph renders
-    even under the DIN font. Text between the euros keeps its arrow/escape
-    handling, and the split preserves surrounding spacing exactly (e.g. ``50€``
-    stays glyph-adjacent, ``€ 50`` keeps its space).
+    The string is grouped into alternating runs of ordinary text and special
+    characters (:func:`~pytex_markdown.glyphs.is_special_char`). An ordinary run
+    keeps its arrow/escape handling as a single :class:`Raw`; each special char
+    becomes its own node -- a mapped glyph (``€ → ↔ ≤ ≥ ·``) via its
+    font-independent target, or a ``\\texttt{[missing glyph]}`` placeholder plus
+    a warning for a char the DIN font cannot render. Splicing per char preserves
+    surrounding spacing exactly (e.g. ``50€`` stays glyph-adjacent). See
+    :mod:`pytex_markdown.glyphs`.
     """
-    if EURO_SIGN not in text:
-        return Raw(_escape_text(text))
-    # Each split point gets a ``Euro`` node (all but the first segment); each
-    # non-empty segment its escaped text. Empty segments (``50€€`` / leading
-    # ``€``) drop their text but keep the euro, preserving spacing exactly.
     return Concat(
         *(
             node
-            for i, segment in enumerate(text.split(EURO_SIGN))
+            for special, group in groupby(text, is_special_char)
+            for run in ("".join(group),)
             for node in (
-                *((Euro(),) if i else ()),
-                *((Raw(_escape_text(segment)),) if segment else ()),
+                (glyph_node(ch) for ch in run)
+                if special
+                else ((Raw(_escape_text(run)),) if run else ())
             )
         )
     )

@@ -6,7 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.0] - Unreleased
 
+### Added
+- **Font-independent Unicode handling in Markdown prose.** tectonic (XeTeX) does
+  no font fallback, so a code point the DIN text font lacks would render as a
+  blank "tofu" box. A data-driven table now rewrites such characters to
+  font-independent constructs: `€` → eurosym `\euro{}`, and `→ ↔ ≤ ≥ ·` →
+  inline-math `\rightarrow \leftrightarrow \leq \geq \cdot` (the arrow targets
+  match the existing ASCII-arrow rewrites; `·` maps to the math `\cdot`, not the
+  font-dependent `\textperiodcentered`). The `€` fix is now the first table entry
+  rather than a special case; code spans/blocks are left verbatim.
+- A character that is neither mapped nor present in every bundled DIN weight is
+  genuinely unrenderable: it becomes a `\texttt{[missing glyph]}` placeholder and
+  raises a `MissingGlyphWarning` (naming the char and its `U+XXXX` code point),
+  so silent tofu never reaches the PDF. DIN coverage comes from parsing the
+  bundled fonts' `cmap` tables directly (no new dependency).
+
 ### Changed
+- `eurosym` is now on the UNTRUSTED/SANDBOXED package allowlist, so a `€` in
+  untrusted Markdown renders instead of being rejected with a `TrustError`.
 - **BREAKING — font size switch factories renamed to the verbatim LaTeX
   spelling.** The `\large`/`\Large`/`\LARGE` and `\huge`/`\Huge` escalations
   cannot all fit strict PascalCase without colliding, which forced the awkward

@@ -21,7 +21,6 @@ from pytex_markdown.convert import (
     ARROW_RE,
     ARROWS,
     COLUMN_ALIGN,
-    EURO_SIGN,
     PARBREAK,
     TABLE_VSPACE,
     MarkdownConverter,
@@ -37,6 +36,11 @@ if TYPE_CHECKING:
     from pytex.interface.tex import TeX
 
 PARSER = marko.Markdown(extensions=["gfm"])
+
+# The euro sign drove the original imperative `_prose`; the reference
+# implementation below still splits on it (it is now the first entry of the
+# data-driven glyph table, but the old code is reproduced verbatim here).
+EURO_SIGN = "€"
 
 # Prose covering arrows, euros, adjacency, edges, and LaTeX special chars.
 PROSE_SAMPLES = [
