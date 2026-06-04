@@ -4,6 +4,10 @@
 \def\@author{}
 \newif\ifHSRTBackMatter
 \newif\ifHSRTTitlePage
+% True from \mainmatter onward (and stays true through \backmatter): gates the
+% "von \pageref{LastPage}" suffix so it shows on main- AND back-matter pages
+% (e.g. the bibliography) but not on roman-numbered front matter.
+\newif\ifHSRTNumberedBody
 % Minimum space \Smartsection/\Smartsubsection demand before breaking a page.
 \newlength{\sectionminspace}\setlength{\sectionminspace}{4\baselineskip}
 \newlength{\subsectionminspace}\setlength{\subsectionminspace}{3\baselineskip}
@@ -19,7 +23,12 @@
 \setlength{\footskip}{20pt}
 \ohead*{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\Roman{\thechapter}~–~\Chaptername\fi\fi}
 \ifoot{\@author}
-\cfoot{\ifHSRTBackMatter\else Seite~\thepage\if@mainmatter~von~\pageref{LastPage}\fi\fi}
+% Centre footer "Seite N von M" must appear on every numbered page, including
+% the bibliography and other back-matter pages. It is NOT gated by
+% \ifHSRTBackMatter (that only suppresses chapter-name headers) and uses
+% \ifHSRTNumberedBody rather than \if@mainmatter so the "von LastPage" suffix
+% survives \backmatter (which sets \@mainmatterfalse).
+\cfoot{Seite~\thepage\ifHSRTNumberedBody~von~\pageref{LastPage}\fi}
 \ohead{\ifHSRTBackMatter\else\ifnum\value{chapter}>0\relax\thechapter~–~\Chaptername\fi\fi}
 \ihead{\@title}
 \pagestyle{scrheadings}
@@ -65,6 +74,7 @@
 \renewcommand{\mainmatter}{%
   \clearpage
   \@mainmattertrue
+  \HSRTNumberedBodytrue
   \pagenumbering{arabic}%
 }
 % The running head is set in \blenderfont, which is taller than the default

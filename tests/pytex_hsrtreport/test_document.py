@@ -74,6 +74,37 @@ def test_variant_default_inf():
     assert HSRTReport(Section("Hi")).variant is Variant.INF
 
 
+def test_center_footer_shows_on_all_pages_including_backmatter():
+    """The "Seite X von Y" centre footer must render on every numbered page.
+
+    Regression: it used to be wrapped in ``\\ifHSRTBackMatter\\else ... \\fi``,
+    so it vanished on back-matter pages (e.g. the bibliography, which is the
+    document's last page). The footer content must not be gated by
+    ``\\ifHSRTBackMatter``.
+    """
+    out = HSRTReport(Section("Hi")).rendered
+    assert r"\cfoot{Seite~\thepage\ifHSRTNumberedBody~von~\pageref{LastPage}\fi}" in out
+    # The centre footer must NOT be suppressed in back matter.
+    assert r"\cfoot{\ifHSRTBackMatter" not in out
+
+
+def test_lastpage_suffix_uses_numbered_body_flag():
+    """ "von \\pageref{LastPage}" must survive \\backmatter.
+
+    ``\\backmatter`` sets ``\\@mainmatterfalse``, so gating the suffix on
+    ``\\if@mainmatter`` dropped it on back-matter pages. ``\\ifHSRTNumberedBody``
+    is set at ``\\mainmatter`` and never reset, so it stays true through back
+    matter while remaining false in (roman) front matter.
+    """
+    out = HSRTReport(Section("Hi")).rendered
+    assert r"\newif\ifHSRTNumberedBody" in out
+    # The redefined \mainmatter turns the flag on.
+    assert r"\HSRTNumberedBodytrue" in out
+    # The suffix is gated on the new flag, not on \if@mainmatter.
+    assert r"\ifHSRTNumberedBody~von~\pageref{LastPage}" in out
+    assert r"\if@mainmatter~von~\pageref{LastPage}" not in out
+
+
 def test_extra_packages_include_required():
     from pytex.packages import BIBLATEX, CLEVEREF, GLOSSARIES, HYPERREF
 
