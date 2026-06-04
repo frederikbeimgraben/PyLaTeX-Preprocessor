@@ -26,6 +26,13 @@ def test_sandboxed_still_blocks_code_and_shell_but_widens_packages():
     assert policy_for(TrustLevel.UNTRUSTED).package_allowlist < p.package_allowlist
 
 
+def test_eurosym_allowlisted_so_euro_glyph_renders_untrusted():
+    # The Markdown converter emits eurosym's \euro{} for `€`; it must be allowed
+    # for non-trusted builds or such a document would be refused.
+    for level in (TrustLevel.UNTRUSTED, TrustLevel.SANDBOXED):
+        assert "eurosym" in policy_for(level).package_allowlist
+
+
 def test_trusted_unlocks_everything():
     p = policy_for(TrustLevel.TRUSTED)
     assert p.allow_python_exec
