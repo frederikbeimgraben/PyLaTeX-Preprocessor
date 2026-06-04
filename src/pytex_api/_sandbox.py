@@ -27,19 +27,22 @@ from __future__ import annotations
 
 import os
 import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from shutil import which
+from shutil import rmtree, which
 
 __all__ = [
     "CONTAINER_BINARY",
     "CONTAINER_CACHE",
     "CONTAINER_WORKDIR",
+    "MEMORY_FLOOR_BYTES",
     "SandboxConfig",
     "build_podman_cmd",
     "build_sandbox_image",
     "podman_available",
     "sandbox_image_present",
+    "warm_sandbox_cache",
 ]
 
 # Container-internal mount points / paths.
@@ -54,22 +57,40 @@ _CONTAINER_HOME = "/tmp"  # writable tmpfs; fontconfig / XDG scratch lands here
 # the network. tectonic comes from the image so no host binary - which may be
 # dynamically linked against libs the base image lacks - has to be smuggled in.
 _DEFAULT_IMAGE = "localhost/pytex-tectonic:latest"
-_BASE_IMAGE = "registry.fedoraproject.org/fedora-minimal:latest"
-# tectonic is not a Fedora package, so install its official self-contained
-# binary plus the shared libs it links (graphite2 + openssl; harfbuzz/freetype
-# are statically bundled) and fontconfig for fontspec docs.
+# Base pinned by digest (not a moving :latest tag) for a reproducible,
+# supply-chain-auditable build.
+_BASE_IMAGE = (
+    "registry.fedoraproject.org/fedora-minimal"
+    "@sha256:7d847227f0f90b4d45566c9a2ba67b5d36a286b798dbdf27f24d2c02a23b6489"
+)
+# tectonic is not a Fedora package, so install a pinned upstream release and
+# verify its sha256 (instead of piping the latest installer to a shell). The
+# shared libs it links (graphite2 + openssl; harfbuzz/freetype are statically
+# bundled) and fontconfig (for fontspec docs) come from the distro.
+_TECTONIC_VERSION = "0.15.0"
+_TECTONIC_SHA256 = "875fbbc9ab48560d7776088c608e0beee49197b57ab4a2f6c5385b2c661c842f"
+_TECTONIC_URL = (
+    "https://github.com/tectonic-typesetting/tectonic/releases/download/"
+    f"tectonic%40{_TECTONIC_VERSION}/"
+    f"tectonic-{_TECTONIC_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+)
 _CONTAINERFILE = (
     f"FROM {_BASE_IMAGE}\n"
     "RUN microdnf install -y graphite2 openssl-libs libstdc++ libgcc zlib "
-    "fontconfig bash curl ca-certificates tar gzip && microdnf clean all\n"
-    "RUN cd /tmp && curl --proto '=https' --tlsv1.2 -fsSL "
-    "https://drop-sh.fullyjustified.net | sh "
-    "&& install -m 0755 /tmp/tectonic /usr/local/bin/tectonic "
-    "&& rm -f /tmp/tectonic\n"
+    "fontconfig curl ca-certificates tar gzip && microdnf clean all\n"
+    f"RUN cd /tmp && curl --proto '=https' --tlsv1.2 -fsSL -o tectonic.tar.gz "
+    f"'{_TECTONIC_URL}' "
+    f'&& echo "{_TECTONIC_SHA256}  tectonic.tar.gz" | sha256sum -c - '
+    "&& tar xzf tectonic.tar.gz "
+    "&& install -m 0755 tectonic /usr/local/bin/tectonic "
+    "&& rm -f tectonic tectonic.tar.gz\n"
 )
 _DEFAULT_PIDS_LIMIT = 256
 _DEFAULT_MAX_CPUS = "2"
 _DEFAULT_TMPFS_SIZE = "256m"
+# Floor enforced for non-trusted builds so a 0/negative limit cannot drop the
+# --memory cap entirely (an unbounded container is a host OOM vector).
+MEMORY_FLOOR_BYTES = 256 * 1024 * 1024
 
 # Host font / fontconfig dirs, mounted read-only when present so fontspec docs
 # can see system fonts. Basic (lmodern) builds need none of these - they come
@@ -151,7 +172,85 @@ def build_sandbox_image(
         )
 
 
+def warm_sandbox_cache(
+    config: SandboxConfig | None = None, *, timeout_s: float = 600.0
+) -> None:
+    """Populate the bundle cache using the *image's own* tectonic (one-time).
+
+    A privileged warm-up: runs the sandbox image online with the cache mounted
+    read-write so the fetched bundle is written to the host cache by the exact
+    tectonic version that the confined builds use. Without this, a cache warmed
+    by a differently-versioned host tectonic can miss, and the offline
+    (``--network none`` + ``--only-cached``) request would then fail. Never call
+    from an untrusted request path. Raises on failure.
+    """
+    cfg = config or SandboxConfig()
+    cfg.cache_dir.mkdir(parents=True, exist_ok=True)
+    work = Path(tempfile.mkdtemp(prefix="pytex-warm-"))
+    try:
+        # Warm with the *actual* rendered LaTeX of a representative PyTeX build
+        # (same preamble/fonts as a real markdown render), so the bundle cache
+        # covers exactly what the offline builds need - a hand-written stub
+        # would miss the fonts fontspec pulls for the real preamble.
+        from ._models import BuildRequest, InputKind, TrustLevel
+        from ._policy import policy_for
+        from ._render import render_to_latex
+
+        warm_latex = render_to_latex(
+            BuildRequest(
+                source=b"# Warm\n\nWarm-up body.",
+                input_kind=InputKind.MARKDOWN,
+                trust=TrustLevel.TRUSTED,
+            ),
+            policy_for(TrustLevel.TRUSTED),
+            work,
+        )
+        _ = (work / "warm.tex").write_text(warm_latex, encoding="utf-8")
+        # Network ON (default), cache mounted read-write (:Z relabel is allowed -
+        # the cache lives in the user's $HOME, unlike shared system dirs).
+        cmd = [
+            "podman",
+            "run",
+            "--rm",
+            "-v",
+            f"{cfg.cache_dir}:{CONTAINER_CACHE}:Z",
+            "-v",
+            f"{work}:{CONTAINER_WORKDIR}:rw,Z",
+            "--workdir",
+            CONTAINER_WORKDIR,
+            "--tmpfs",
+            f"{_CONTAINER_HOME}:rw",
+            "-e",
+            f"HOME={_CONTAINER_HOME}",
+            "-e",
+            f"TECTONIC_CACHE_DIR={CONTAINER_CACHE}",
+            cfg.image,
+            "tectonic",
+            "--outdir",
+            CONTAINER_WORKDIR,
+            "warm.tex",
+        ]
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout_s, check=False
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"failed to warm sandbox cache:\n{proc.stderr.strip()}")
+    finally:
+        rmtree(work, ignore_errors=True)
+
+
 def _existing_font_mounts(config: SandboxConfig) -> list[str]:
+    """Read-only mounts of host font dirs that exist.
+
+    SELinux caveat: these are mounted plain ``:ro``, *not* relabelled. A ``:z``
+    relabel of shared system dirs (``/usr/share/fonts`` ...) is rejected rootless
+    (``lsetxattr ... operation not permitted`` - the user does not own those
+    files), so relabelling is not an option here. Under strict enforcing policy a
+    denial would mean system fonts are invisible to the build; the common path is
+    unaffected because PyTeX's default (lmodern) fonts ship inside the tectonic
+    bundle. A fontspec doc needing a specific system font should bake it into the
+    sandbox image or pass it as a caller asset.
+    """
     mounts: list[str] = []
     if not config.mount_fonts:
         return mounts
@@ -167,6 +266,7 @@ def build_podman_cmd(
     config: SandboxConfig,
     *,
     max_memory_bytes: int,
+    max_fsize_bytes: int,
     name: str | None = None,
 ) -> list[str]:
     """Assemble the full ``podman run ...`` argv wrapping ``inner_cmd``.
@@ -176,6 +276,11 @@ def build_podman_cmd(
     :data:`CONTAINER_WORKDIR`); this function only prepends the container
     launcher, its hardening flags, and the mounts. ``name`` gives the container
     a stable name so it can be force-removed if the wall-clock kill fires.
+
+    ``max_memory_bytes`` is floored at :data:`MEMORY_FLOOR_BYTES` and always
+    emitted (an unbounded container is a host OOM vector). ``max_fsize_bytes``
+    restores the per-file write cap lost with the in-process ``RLIMIT_FSIZE``
+    via the container's ``--ulimit fsize``.
     """
     cmd: list[str] = [
         "podman",
@@ -195,13 +300,20 @@ def build_podman_cmd(
         cmd += ["--security-opt", f"seccomp={config.seccomp_profile}"]
     # else: Podman applies its default seccomp profile automatically.
 
-    if max_memory_bytes > 0:
-        cmd += ["--memory", f"{max_memory_bytes}b"]
+    # Always cap memory (floored), pids, cpu, and per-file write size.
+    memory = max(max_memory_bytes, MEMORY_FLOOR_BYTES)
+    cmd += ["--memory", f"{memory}b"]
     cmd += ["--pids-limit", str(config.pids_limit)]
     cmd += ["--cpus", config.max_cpus]
-    cmd += ["--tmpfs", f"{_CONTAINER_HOME}:rw,nosuid,nodev,size={config.tmpfs_size}"]
+    if max_fsize_bytes > 0:
+        cmd += ["--ulimit", f"fsize={max_fsize_bytes}:{max_fsize_bytes}"]
+    cmd += [
+        "--tmpfs",
+        f"{_CONTAINER_HOME}:rw,nosuid,nodev,noexec,size={config.tmpfs_size}",
+    ]
 
     cmd += ["-e", f"HOME={_CONTAINER_HOME}"]
+    cmd += ["-e", f"XDG_CACHE_HOME={_CONTAINER_HOME}/.cache"]
     cmd += ["-e", f"TECTONIC_CACHE_DIR={CONTAINER_CACHE}"]
 
     # Pre-warmed bundle cache as an ephemeral overlay: tectonic gets a writable

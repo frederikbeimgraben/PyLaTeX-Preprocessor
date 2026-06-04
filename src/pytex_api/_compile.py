@@ -24,7 +24,12 @@ from ._sandbox import (
     podman_available,
     sandbox_image_present,
 )
-from ._security import enforce_output_size, make_rlimit_preexec, truncate_log
+from ._security import (
+    enforce_output_file_size,
+    enforce_output_size,
+    make_rlimit_preexec,
+    truncate_log,
+)
 
 if TYPE_CHECKING:
     from pytex_builder.console import Console
@@ -184,6 +189,7 @@ def _run_sandboxed(
         inner,
         config,
         max_memory_bytes=req.limits.max_memory_bytes,
+        max_fsize_bytes=req.limits.max_fsize_bytes,
         name=name,
     )
     try:
@@ -225,12 +231,23 @@ def compile_to_pdf(
     config = SandboxConfig()
     if _should_sandbox(policy, config):
         rc, out = _run_sandboxed(workdir, build_dir, req, policy, config, console)
+    elif policy.require_sandbox:
+        # Fail closed: without the OS sandbox the in-process floor does NOT block
+        # \input/\include/\openin of host files, so a downgrade would let
+        # untrusted LaTeX read /etc/passwd into the PDF. Refuse instead.
+        raise CompileError(
+            f"the OS sandbox is required for {policy.level.value} PDF builds "
+            + "but is unavailable (podman missing, or the image "
+            + f"{config.image!r} is not pre-built); refusing to downgrade to "
+            + "the weaker in-process confinement"
+        )
     else:
-        if policy.apply_rlimits:  # non-trusted, but no usable sandbox
+        if policy.apply_rlimits:  # non-trusted, sandbox not required: warn loudly
             console.warn(
                 "Podman sandbox unavailable (no podman, or image "
                 + f"{config.image!r} not built); falling back to in-process "
-                + "rlimits/timeout confinement (weaker than the OS sandbox)"
+                + "rlimits/timeout confinement, which does NOT block "
+                + "\\input/\\openin of host files"
             )
         binary = _locate_tectonic(policy, console)
         cmd = build_tectonic_cmd(binary, tex_file, build_dir, policy)
@@ -244,6 +261,9 @@ def compile_to_pdf(
         raise CompileError(
             f"tectonic failed to produce a PDF (exit {rc}).\n{log}".rstrip()
         )
+    # Size-check via stat() *before* reading, so an oversize PDF never lands in
+    # memory; the in-memory check then guards the bytes once read.
+    enforce_output_file_size(pdf, req.limits)
     data = pdf.read_bytes()
     enforce_output_size(data, req.limits)
     return data, log

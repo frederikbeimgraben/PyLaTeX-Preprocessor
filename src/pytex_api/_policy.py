@@ -133,6 +133,10 @@ class TrustPolicy:
     allow_network: bool  # tectonic bundle / biber auto-download
     enforce_package_allowlist: bool
     apply_rlimits: bool
+    # Refuse to compile a PDF if the OS sandbox is unavailable, rather than
+    # downgrading to the in-process floor (which does NOT block \input/\openin
+    # of host files). Fail-closed for non-trusted input.
+    require_sandbox: bool
     package_allowlist: frozenset[str]
 
 
@@ -148,6 +152,7 @@ def policy_for(level: TrustLevel) -> TrustPolicy:
             allow_network=True,
             enforce_package_allowlist=False,
             apply_rlimits=False,
+            require_sandbox=False,
             package_allowlist=frozenset(),
         )
     if level is TrustLevel.SANDBOXED:
@@ -160,6 +165,7 @@ def policy_for(level: TrustLevel) -> TrustPolicy:
             allow_network=False,
             enforce_package_allowlist=True,
             apply_rlimits=True,
+            require_sandbox=True,
             package_allowlist=PACKAGE_ALLOWLIST | SANDBOXED_EXTRA_PACKAGES,
         )
     # UNTRUSTED - the strict default.
@@ -172,5 +178,6 @@ def policy_for(level: TrustLevel) -> TrustPolicy:
         allow_network=False,
         enforce_package_allowlist=True,
         apply_rlimits=True,
+        require_sandbox=True,
         package_allowlist=PACKAGE_ALLOWLIST,
     )
