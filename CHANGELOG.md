@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.5.0] - Unreleased
 
 ### Added
+- **CLI trust gating (`--untrusted` / `--trust-level`).** The `pytex` CLI is now
+  explicitly a **trusted** context: by default it still executes `.py` inputs,
+  evaluates `.tex` `pytex(...)` replacements and Markdown `eval` comments, and
+  enables shell-escape — safe only for your own documents. To render foreign
+  input, `--untrusted` (shorthand for `--trust-level untrusted`) or
+  `--trust-level sandboxed` route the build through the existing `pytex_api`
+  trust policy: no Python exec, inert `.tex`/Markdown code surfaces, shell-escape
+  forced off, the package allowlist, resource limits, and (sandboxed) the Podman
+  sandbox. The default stays `trusted`, so existing invocations are unchanged.
+  The help text and README now state the trust model explicitly.
 - **Font-independent Unicode handling in Markdown prose.** tectonic (XeTeX) does
   no font fallback, so a code point the DIN text font lacks would render as a
   blank "tofu" box. A data-driven table now rewrites such characters to

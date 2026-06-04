@@ -8,7 +8,8 @@ from io import StringIO
 
 import pytest
 
-from pytex_builder.build import Config, _run, main
+from pytex_api import TrustLevel
+from pytex_builder.build import Config, _parse_args, _run, main
 from pytex_builder.console import Console
 from pytex_builder.tectonic import BuildError
 
@@ -130,6 +131,78 @@ def test_run_creates_output_parent_dirs(tmp_path):
     )
     _run(cfg, _console())
     assert out.exists()
+
+
+def test_default_trust_level_is_trusted():
+    cfg = _parse_args(["doc.tex"])
+    assert cfg.trust is TrustLevel.TRUSTED
+
+
+def test_untrusted_flag_selects_untrusted():
+    cfg = _parse_args(["doc.tex", "--untrusted"])
+    assert cfg.trust is TrustLevel.UNTRUSTED
+
+
+def test_trust_level_selects_sandboxed():
+    cfg = _parse_args(["doc.tex", "--trust-level", "sandboxed"])
+    assert cfg.trust is TrustLevel.SANDBOXED
+
+
+def test_untrusted_and_trust_level_are_mutually_exclusive():
+    with pytest.raises(SystemExit):
+        _ = _parse_args(["doc.tex", "--untrusted", "--trust-level", "trusted"])
+
+
+def test_untrusted_blocks_python_exec(tmp_path, capsys):
+    # A .py input executes arbitrary code on import; --untrusted must refuse it
+    # at the trust gate, before exec_module ever runs.
+    src = tmp_path / "evil.py"
+    _ = src.write_text(
+        "import pathlib\n"
+        f"pathlib.Path({str(tmp_path / 'pwned')!r}).write_text('x')\n"
+        "__pytex__ = ...\n"
+    )
+    out = tmp_path / "out.tex"
+    code = main([str(src), "-o", str(out), "--untrusted"])
+    assert code == 1
+    assert not out.exists()
+    # The malicious import side effect never ran.
+    assert not (tmp_path / "pwned").exists()
+    err = capsys.readouterr().err
+    assert "error:" in err
+    assert "TRUSTED" in err
+
+
+def test_untrusted_blocks_shell_escape_package(tmp_path):
+    # `minted` is the shell-escape vector; the untrusted policy rejects every
+    # code/shell-surface package regardless of the allowlist.
+    src = tmp_path / "in.tex"
+    _ = src.write_text("\\usepackage{minted}\nhi\n")
+    out = tmp_path / "out.tex"
+    code = main([str(src), "-o", str(out), "--untrusted"])
+    assert code == 1
+    assert not out.exists()
+
+
+def test_untrusted_tex_renders_with_replacements_inert(tmp_path):
+    # A benign .tex still renders untrusted, but the pytex(...) replacement is
+    # NOT evaluated - the marker survives verbatim instead of running code.
+    src = tmp_path / "in.tex"
+    _ = src.write_text(r"Today \iffalse{pytex(Today())}\fi.")
+    out = tmp_path / "out.tex"
+    code = main([str(src), "-o", str(out), "--untrusted"])
+    assert code == 0
+    text = out.read_text()
+    assert "pytex(Today())" in text
+
+
+def test_trusted_default_still_executes_py(tmp_path):
+    # Regression guard: the default (no flag) path is unchanged and runs .py.
+    src = tmp_path / "in.py"
+    _ = src.write_text("from pytex.model.raw import Raw\n__pytex__ = Raw(r'\\hi')\n")
+    out = tmp_path / "in.out.tex"
+    assert main([str(src), "-o", str(out)]) == 0
+    assert out.read_text() == r"\hi"
 
 
 def test_run_render_only_skips_build_dir(tmp_path):
