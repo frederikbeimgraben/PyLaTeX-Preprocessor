@@ -15,7 +15,7 @@ from pytex.commands.builtin import (
 )
 from pytex.commands.colors import SelectColor
 from pytex.commands.floats import Titlepage as TitlepageEnv
-from pytex.commands.font import HugeBig
+from pytex.commands.font import Huge
 from pytex.commands.setspace import Setstretch
 from pytex.commands.tables import Tabular
 from pytex.helpers.parenting import attach
@@ -98,7 +98,7 @@ class TitlePage(TeX):
                 Textbf(
                     Concat(
                         Blenderfont(),
-                        HugeBig(),
+                        Huge(),
                         # A plain control-word terminator, not an optical kern:
                         # the old \hspace*{-2.5pt} shifted only the first line,
                         # leaving a wrapped title's later lines misaligned with

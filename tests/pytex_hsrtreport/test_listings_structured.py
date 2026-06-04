@@ -1,4 +1,4 @@
-from pytex.commands.font import Footnotesize, Scriptsize, Ttfamily
+from pytex.commands.font import Ttfamily, footnotesize, scriptsize
 from pytex.interface.tex import TeX
 from pytex_hsrtreport.listings import (
     HSRT_LISTING_BASE,
@@ -52,6 +52,6 @@ def test_rendered_emits_all_styles():
 
 def test_font_objects_render_zero_arg():
     # Sanity that the building blocks are bare switches, not wrappers
-    assert Footnotesize().rendered == r"\footnotesize"
-    assert Scriptsize().rendered == r"\scriptsize"
+    assert footnotesize().rendered == r"\footnotesize"
+    assert scriptsize().rendered == r"\scriptsize"
     assert Ttfamily().rendered == r"\ttfamily"

@@ -1,26 +1,26 @@
 from pytex.commands.font import (
+    LARGE,
     Bfseries,
     Fontsize,
-    Footnotesize,
     Huge,
-    HugeBig,
     Itshape,
     Large,
-    LargeBig,
-    LargeMid,
     Mdseries,
     Normalfont,
-    Normalsize,
     Rmfamily,
-    Scriptsize,
     Scshape,
     Selectfont,
     Sffamily,
     Slshape,
-    Small,
-    Tiny,
     Ttfamily,
     Upshape,
+    footnotesize,
+    huge,
+    large,
+    normalsize,
+    scriptsize,
+    small,
+    tiny,
 )
 
 
@@ -55,13 +55,20 @@ def test_normalfont():
 
 
 def test_size_switches():
-    assert Tiny().rendered == r"\tiny"
-    assert Scriptsize().rendered == r"\scriptsize"
-    assert Footnotesize().rendered == r"\footnotesize"
-    assert Small().rendered == r"\small"
-    assert Normalsize().rendered == r"\normalsize"
-    assert Large().rendered == r"\large"
-    assert LargeMid().rendered == r"\Large"
-    assert LargeBig().rendered == r"\LARGE"
-    assert Huge().rendered == r"\huge"
-    assert HugeBig().rendered == r"\Huge"
+    assert tiny().rendered == r"\tiny"
+    assert scriptsize().rendered == r"\scriptsize"
+    assert footnotesize().rendered == r"\footnotesize"
+    assert small().rendered == r"\small"
+    assert normalsize().rendered == r"\normalsize"
+    assert large().rendered == r"\large"
+    assert Large().rendered == r"\Large"
+    assert LARGE().rendered == r"\LARGE"
+    assert huge().rendered == r"\huge"
+    assert Huge().rendered == r"\Huge"
+
+
+def test_size_switch_names_match_latex_spelling():
+    # The factory name is the LaTeX command spelling verbatim, case-exact:
+    # this is what makes the case-distinct sizes unambiguous in the registry.
+    for factory in (large, Large, LARGE, huge, Huge):
+        assert factory().rendered == f"\\{factory.__name__}"
