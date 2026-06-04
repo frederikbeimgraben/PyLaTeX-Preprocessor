@@ -274,16 +274,12 @@ def _data_lines(options: Mapping[str, object]) -> tuple[TitlePageDataLine, ...]:
         items = [raw]
     else:
         return ()
-    lines: list[TitlePageDataLine] = []
-    for item in items:
-        label, sep, value = item.partition(":")
-        if sep and label.strip():
-            lines.append(
-                TitlePageDataLine(
-                    escape_latex(label.strip()), escape_latex(value.strip())
-                )
-            )
-    return tuple(lines)
+    partitioned = (item.partition(":") for item in items)
+    return tuple(
+        TitlePageDataLine(escape_latex(label.strip()), escape_latex(value.strip()))
+        for label, sep, value in partitioned
+        if sep and label.strip()
+    )
 
 
 def _derive_title(body: str) -> tuple[str | None, str]:

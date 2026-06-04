@@ -362,13 +362,14 @@ def _existing_font_mounts(config: SandboxConfig) -> list[str]:
     bundle. A fontspec doc needing a specific system font should bake it into the
     sandbox image or pass it as a caller asset.
     """
-    mounts: list[str] = []
     if not config.mount_fonts:
-        return mounts
-    for src in config.font_dirs:
-        if Path(src).is_dir():
-            mounts += ["-v", f"{src}:{src}:ro"]
-    return mounts
+        return []
+    return [
+        flag
+        for src in config.font_dirs
+        if Path(src).is_dir()
+        for flag in ("-v", f"{src}:{src}:ro")
+    ]
 
 
 def build_podman_cmd(

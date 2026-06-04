@@ -87,8 +87,6 @@ class Package(PackageProtocol, TeX):
     @property
     @override
     def rendered(self) -> str:
-        """Render this object to a valid LaTeX-String"""
-
         return f"\\usepackage{self._options_string}{{{self.name}}}"
 
     @property

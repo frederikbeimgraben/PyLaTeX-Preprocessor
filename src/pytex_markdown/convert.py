@@ -163,9 +163,10 @@ def _escape_text(text: str) -> str:
 
     Only used for running text (not code spans/blocks), so ``->`` and friends
     become ``$\\rightarrow$`` etc. while the surrounding text is escaped.
+
+    ``re.split`` on the capturing group alternates prose / arrow / prose / ...,
+    so odd pieces are the matched arrows and even pieces the text between them.
     """
-    # ``re.split`` with the capturing group alternates prose / arrow / prose /
-    # ...; odd pieces are the matched arrows, even pieces the text around them.
     return "".join(
         f"${ARROWS[piece]}$" if index % 2 else escape_latex(piece)
         for index, piece in enumerate(ARROW_SPLIT_RE.split(text))
@@ -408,8 +409,7 @@ class MarkdownConverter:
 
     def _table_row(self, node: object) -> TeX:
         cells = [self.inlines(c) for c in _children(node) if _kind(c) == "TableCell"]
-        # ``&`` between cells, ``\\`` after the last one. The genexp emits each
-        # cell, prefixing every cell after the first with the column separator.
+        # ``&`` between cells, ``\\`` after the last one.
         return Concat(
             *(
                 part

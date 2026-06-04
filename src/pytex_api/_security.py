@@ -80,13 +80,12 @@ def strip_markdown_eval_comments(text: str) -> str:
 
 def extract_packages(latex: str) -> set[str]:
     """All package names requested via ``\\usepackage``/``\\RequirePackage``."""
-    names: set[str] = set()
-    for match in _PACKAGE_RE.finditer(latex):
-        for raw in match.group(1).split(","):
-            name = raw.strip()
-            if name:
-                names.add(name)
-    return names
+    return {
+        name
+        for match in _PACKAGE_RE.finditer(latex)
+        for raw in match.group(1).split(",")
+        if (name := raw.strip())
+    }
 
 
 def enforce_packages(latex: str, policy: TrustPolicy) -> None:

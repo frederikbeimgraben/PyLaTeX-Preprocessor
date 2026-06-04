@@ -36,8 +36,6 @@ class Parameter[T: ParameterType = ParameterType](TeX):
     @property
     @override
     def rendered(self) -> str:
-        """Render this Node to a valid LaTeX-String"""
-
         content: str | TeX = ""
 
         if isinstance(self.value, (TeX, str)):
