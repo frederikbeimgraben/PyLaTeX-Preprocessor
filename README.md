@@ -131,10 +131,37 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `-f`, `--force` | off | skip the optimize + analysis pass and build even if problems are found |
 | `--variant STYLE` | auto-detect | Markdown output style (`plain`, `report`, `report-makers`, `protocol-asta`, `protocol-stupa`) |
 | `--config JSON` | none | JSON object of document-class params, merged over the frontmatter |
+| `--untrusted` | off (trusted) | render foreign input through the trust policy (see [Security](#security-and-trust)) |
+| `--trust-level LEVEL` | `trusted` | `trusted`, `sandboxed`, or `untrusted` (see [Security](#security-and-trust)) |
 
 Shell-escape is on by default because inline images decode their base64
 payloads at compile time. The build runs tectonic, then `makeindex` (for
 `glossaries`/acronyms), then reruns tectonic when an index changed.
+
+### Security and trust
+
+By default the CLI runs in a **trusted** context: it imports and executes `.py`
+inputs, evaluates `.tex` `pytex(...)` replacements and Markdown `eval`
+comments, and enables shell-escape. That is code execution by design — it is
+how PyTeX documents work — and is safe **only for documents you wrote
+yourself**. Do not run the default CLI on a file from a source you do not
+trust.
+
+To render input from a foreign or untrusted source, pass `--untrusted` (or
+`--trust-level {sandboxed,untrusted}`). These route the build through the
+`pytex_api` trust policy, which:
+
+- refuses `.py` / `.tex.py` inputs (no Python execution),
+- leaves `.tex` `pytex(...)` markers and Markdown `eval` comments inert,
+- forces shell-escape **off** and rejects code-/file-surface packages
+  (`minted`, `shellesc`, `pythontex`, …) and anything off the package
+  allowlist,
+- applies CPU/memory/output resource limits, and
+- for `sandboxed`, additionally requires the Podman OS sandbox for PDF builds.
+
+`--untrusted` is shorthand for `--trust-level untrusted`. The two flags are
+mutually exclusive; `trusted` is the default, so existing invocations are
+unchanged.
 
 Output is minimal and color-tagged (`==>`, `note:`, `warning:`, `error:`),
 following tectonic's style; on failure it points at the likely cause and the
