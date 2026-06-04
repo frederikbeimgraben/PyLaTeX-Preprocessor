@@ -19,6 +19,7 @@ from ._policy import DANGEROUS_PACKAGES
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+    from pathlib import Path
 
     from ._models import BuildLimits
     from ._policy import TrustPolicy
@@ -120,6 +121,20 @@ def enforce_output_size(output: bytes, limits: BuildLimits) -> None:
     if len(output) > limits.max_output_bytes:
         raise LimitError(
             f"output is {len(output)} bytes; the limit is {limits.max_output_bytes}"
+        )
+
+
+def enforce_output_file_size(path: Path, limits: BuildLimits) -> None:
+    """Reject an output file larger than the cap before it is read.
+
+    Checks ``stat().st_size`` so a multi-gigabyte PDF is never loaded into the
+    process (which would OOM); the in-memory check is the second line for the
+    bytes once read.
+    """
+    size = path.stat().st_size
+    if size > limits.max_output_bytes:
+        raise LimitError(
+            f"output file is {size} bytes; the limit is {limits.max_output_bytes}"
         )
 
 
