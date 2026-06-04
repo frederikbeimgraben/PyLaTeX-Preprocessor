@@ -47,10 +47,14 @@ class TitlePageDataLine:
 
 
 def _data_table_body(lines: tuple[TitlePageDataLine, ...]) -> TeX:
-    parts: list[TeX | str] = ["&"]
-    for line in lines:
-        parts.extend((Newline(), Textbf(line.label), " & ", line.value))
-    return Concat(*parts)
+    return Concat(
+        "&",
+        *(
+            part
+            for line in lines
+            for part in (Newline(), Textbf(line.label), " & ", line.value)
+        ),
+    )
 
 
 @Registry.add

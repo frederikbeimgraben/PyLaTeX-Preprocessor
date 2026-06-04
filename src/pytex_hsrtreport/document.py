@@ -221,7 +221,6 @@ class HSRTReport(KomaDocument):
         return Concat(*self._body_parts())
 
     def _body_parts(self) -> Iterator[TeX | str]:
-        # -- Front matter --
         # Trailing newlines keep these matter macros from running into whatever
         # follows: a body that starts with plain text would otherwise produce
         # e.g. `\mainmatterThis ...` (an undefined control sequence).
@@ -239,11 +238,9 @@ class HSRTReport(KomaDocument):
         if self.show_toc:
             yield Raw(r"\newpage\tableofcontents")
 
-        # -- Main matter --
         yield Raw("\\mainmatter\n")
         yield coerce_tex(self.body)
 
-        # -- Back matter --
         # The header is only emitted when there is actual back-matter content:
         # \backmatter calls hyperref's \bookmarksetup which fires \@ in vertical
         # mode and crashes, so skip it entirely when there is nothing to show.

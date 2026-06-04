@@ -171,12 +171,12 @@ class ProtocolConverter(MarkdownConverter):
         lines = [frag for k in kids for frag in _leaf_texts(k)]
         if lines:
             lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
-        signers: list[tuple[str, str]] = []
-        for line in (entry.strip() for entry in lines):
-            if not line:
-                continue
-            role, _, person = line.partition(":")
-            signers.append((role.strip(), person.strip()))
+        signers = [
+            (role.strip(), person.strip())
+            for entry in lines
+            if (line := entry.strip())
+            for role, _, person in (line.partition(":"),)
+        ]
         return SignatureLines(*signers)
 
     def _vote_callout(self, kids: list[object]) -> TeX:

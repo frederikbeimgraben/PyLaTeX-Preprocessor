@@ -65,13 +65,14 @@ _CONVERSIONS = {"r": repr, "s": str, "a": ascii}
 
 def tex(template: _Template) -> TeX:
     """Render a t-string into a `TeX` tree (see the module docstring)."""
-    parts: list[TeX] = []
-    for item in template:
-        if isinstance(item, str):
-            parts.append(Raw(item))  # literal LaTeX
-        else:
-            parts.append(_coerce(item.value, item.conversion, item.format_spec))
-    return Concat(*parts)
+    return Concat(
+        *(
+            Raw(item)  # literal LaTeX
+            if isinstance(item, str)
+            else _coerce(item.value, item.conversion, item.format_spec)
+            for item in template
+        )
+    )
 
 
 def _coerce(value: object, conversion: str | None = None, spec: object = "") -> TeX:
