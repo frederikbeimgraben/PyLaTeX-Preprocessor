@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-06-10
+
+### Fixed
+- **Logo materialisation is best-effort and no longer crashes converter-less
+  renders.** 1.0.2 made the Markdown render path materialise logos, but SVG
+  logos are converted via `inkscape`; a render without it on PATH (e.g. the
+  sandbox warm-up that renders every variant) then failed hard. Logo/image
+  materialisation now logs and continues on a missing converter / conversion
+  error, so PDF-logo report/protocol builds work and SVG variants degrade
+  gracefully instead of aborting the render.
+
 ## [1.0.2] - 2026-06-10
 
 ### Fixed

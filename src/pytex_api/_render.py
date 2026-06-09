@@ -66,14 +66,31 @@ def _render_markdown_source(
     # Same for the (svg->pdf converted) logos and any inline images: the tikz
     # title/footer overlays reference them by the relative ``logos/<file>`` path,
     # so the files must exist next to the .tex or tectonic fails with
-    # "Unable to load picture or PDF file 'logos/...'". Plain documents skip these.
-    write_inline_logos = getattr(document, "write_inline_logos", None)
-    if callable(write_inline_logos):
-        write_inline_logos(str(workdir))
-    write_inline_images = getattr(document, "write_inline_images", None)
-    if callable(write_inline_images):
-        write_inline_images(str(workdir))
+    # "Unable to load picture or PDF file 'logos/...'". Best-effort: SVG logos are
+    # converted via ``inkscape``; if it is absent (e.g. a warm-up render with no
+    # converter on PATH) we log and continue rather than failing the whole render —
+    # PDF logos (the common report/protocol case) need no converter and still
+    # materialise. ``OSError`` covers a missing inkscape binary; ``CalledProcessError``
+    # a conversion error.
+    _materialise_best_effort(document, "write_inline_logos", workdir)
+    _materialise_best_effort(document, "write_inline_images", workdir)
     return document.rendered
+
+
+def _materialise_best_effort(document: object, method: str, workdir: Path) -> None:
+    """Call ``document.<method>(workdir)`` if present; swallow converter errors."""
+    import logging
+    import subprocess
+
+    fn = getattr(document, method, None)
+    if not callable(fn):
+        return
+    try:
+        fn(str(workdir))
+    except (OSError, subprocess.CalledProcessError) as exc:  # pragma: no cover - infra
+        logging.getLogger("pytex_api").warning(
+            "%s could not materialise assets (%s); continuing without them", method, exc
+        )
 
 
 def render_to_latex(req: BuildRequest, policy: TrustPolicy, workdir: Path) -> str:
