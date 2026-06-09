@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-06-10
+
+### Fixed
+- **biber download now verifies the binary actually runs and falls back.** The
+  Linux x86_64 candidate list offers the *musl* build first, but it is
+  dynamically linked against the musl loader, so on a glibc-only host (e.g.
+  Debian-slim) it cannot exec at all (`No such file or directory`) — tectonic
+  then failed with "Running external tool biber … No such file or directory"
+  even though biber was on PATH. `_ensure_biber` now test-runs each downloaded
+  candidate and falls back to the next (glibc) one when it doesn't execute.
+
 ## [1.0.5] - 2026-06-10
 
 ### Fixed

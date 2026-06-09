@@ -262,26 +262,6 @@ def _biber_cached(version: str) -> Path:
     return CACHE_DIR / "biber" / version / name
 
 
-def _biber_sources(version: str) -> list[tuple[str, str | None]]:
-    """``(url, expected_sha256 or None)`` to try in order.
-
-    For each platform candidate the mirror is tried first, then SourceForge.
-    """
-    sources: list[tuple[str, str | None]] = []
-    for sf_dir, filename, asset in _biber_candidates(version):
-        sha = BIBER_SHA256.get(asset)
-        sources.append((BIBER_MIRROR_URL.format(asset=asset), sha))
-        sources.append(
-            (
-                BIBER_RELEASE_URL.format(
-                    version=version, sf_dir=sf_dir, filename=filename
-                ),
-                sha,
-            )
-        )
-    return sources
-
-
 def _is_biber_member(name: str) -> bool:
     """Whether an archive member is the biber executable.
 
@@ -343,11 +323,36 @@ def _download_to(url: str, dest: Path, sha: str | None, console: Console) -> boo
     return True
 
 
+def _biber_runs(binary: Path) -> bool:
+    """``True`` if ``binary`` actually executes here (``biber --version`` exits 0).
+
+    The musl build is offered first (no glibc shared-lib deps) but is *dynamically*
+    linked against the musl loader; on a glibc-only host (e.g. Debian-slim) it
+    cannot exec at all ("No such file or directory"). Running it is the only
+    reliable cross-check, so we verify and fall back to the glibc build."""
+    try:
+        proc = subprocess.run(
+            [str(binary), "--version"], capture_output=True, timeout=30
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
 def _ensure_biber(version: str, console: Console) -> Path:
-    """Return a path to biber *version*, downloading from the mirror or SourceForge."""
+    """Return a path to biber *version*, downloading from the mirror or SourceForge.
+
+    Each platform candidate (musl first, then glibc) is downloaded, extracted and
+    **test-run**; the first one that actually executes here is cached. This makes
+    the choice robust on hosts that lack the musl loader or a glibc dependency."""
     cached = _biber_cached(version)
     if cached.exists():
-        return cached
+        # Re-validate: a cache poisoned by an earlier release (e.g. a musl binary
+        # that cannot exec here) must be replaced, not blindly reused.
+        if _biber_runs(cached):
+            return cached
+        console.detail("cached biber does not execute here; re-downloading")
+        cached.unlink(missing_ok=True)
 
     if not shutil.which("curl"):
         raise BuildError(
@@ -357,28 +362,46 @@ def _ensure_biber(version: str, console: Console) -> Path:
     console.step(f"Downloading biber {version}")
     cached.parent.mkdir(parents=True, exist_ok=True)
     tmp = cached.parent / "biber.download"
+    cand = cached.parent / "biber.candidate"
+    last: str | None = None
     try:
-        downloaded = False
-        for url, sha in _biber_sources(version):
-            console.detail(f"source: {url}")
-            if _download_to(url, tmp, sha, console):
-                downloaded = True
-                break
-        if not downloaded:
-            raise BuildError(
-                f"failed to download biber {version} from the mirror or SourceForge"
-            )
-        cached.write_bytes(_extract_biber_binary(tmp, version))
+        for sf_dir, filename, asset in _biber_candidates(version):
+            sha = BIBER_SHA256.get(asset)
+            urls = [
+                BIBER_MIRROR_URL.format(asset=asset),
+                BIBER_RELEASE_URL.format(
+                    version=version, sf_dir=sf_dir, filename=filename
+                ),
+            ]
+            downloaded = False
+            for url in urls:
+                console.detail(f"source: {url}")
+                if _download_to(url, tmp, sha, console):
+                    downloaded = True
+                    break
+            if not downloaded:
+                last = f"{asset}: download failed"
+                continue
+            try:
+                cand.write_bytes(_extract_biber_binary(tmp, version))
+                cand.chmod(0o755)
+            except Exception as exc:
+                last = f"{asset}: extract failed ({exc})"
+                continue
+            if _biber_runs(cand):
+                cand.replace(cached)
+                cached.chmod(0o755)
+                return cached
+            last = f"{asset}: does not execute on this platform"
+            cand.unlink(missing_ok=True)
+        raise BuildError(f"failed to obtain a working biber {version} ({last})")
     except Exception:
         if cached.exists():
             cached.unlink()
         raise
     finally:
-        if tmp.exists():
-            tmp.unlink()
-
-    cached.chmod(0o755)
-    return cached
+        tmp.unlink(missing_ok=True)
+        cand.unlink(missing_ok=True)
 
 
 def biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:

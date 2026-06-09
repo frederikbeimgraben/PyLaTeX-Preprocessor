@@ -16,7 +16,6 @@ from pytex_builder.tectonic import (
     INSTALL_HINT,
     BuildError,
     _biber_candidates,
-    _biber_sources,
     _download_to,
     _extract_biber_binary,
     _resolve_cache_dir,
@@ -147,21 +146,33 @@ def test_biber_candidates_unsupported_raises(monkeypatch):
         _biber_candidates("2.17")
 
 
-def test_biber_sources_mirror_before_sourceforge_per_candidate(monkeypatch):
+def test_ensure_biber_falls_back_when_first_candidate_does_not_execute(
+    monkeypatch, tmp_path
+):
+    """The musl build is offered first but cannot exec on a glibc host; ensure the
+    download loop verifies execution and falls back to the glibc candidate."""
     monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
     monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
-    sources = _biber_sources("2.17")
-    # musl (mirror, SourceForge) then glibc (mirror, SourceForge)
-    assert len(sources) == 4
-    urls = [url for url, _ in sources]
-    assert "github.com" in urls[0] and "musl" in urls[0]
-    assert "sourceforge.net" in urls[1]
-    assert "github.com" in urls[2] and urls[2].endswith(
-        "biber-2.17-linux_x86_64.tar.gz"
-    )
-    assert "sourceforge.net" in urls[3]
-    # every mirrored platform now carries a pinned checksum
-    assert all(sha for _, sha in sources)
+    monkeypatch.setattr(tec, "_biber_cached", lambda v: tmp_path / v / "biber")
+    monkeypatch.setattr(tec.shutil, "which", lambda _name: "/usr/bin/curl")
+
+    downloaded: list[str] = []
+
+    def _fake_download(url, dest, _sha, _console):
+        downloaded.append(url)
+        dest.write_bytes(b"musl-bytes" if "musl" in url else b"glibc-bytes")
+        return True
+
+    monkeypatch.setattr(tec, "_download_to", _fake_download)
+    monkeypatch.setattr(tec, "_extract_biber_binary", lambda tmp, _v: tmp.read_bytes())
+    # Only the glibc binary "runs" here.
+    monkeypatch.setattr(tec, "_biber_runs", lambda p: p.read_bytes() == b"glibc-bytes")
+
+    out = tec._ensure_biber("2.17", _console())
+    assert out.read_bytes() == b"glibc-bytes"
+    # the musl candidate was tried first (and rejected), then glibc
+    assert any("musl" in u for u in downloaded)
+    assert any(u.endswith("biber-2.17-linux_x86_64.tar.gz") for u in downloaded)
 
 
 def test_is_biber_member_selects_binary_skips_appledouble():
