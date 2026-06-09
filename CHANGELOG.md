@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-09
+
+### Fixed
+- **Markdown report/protocol builds now materialise their bundled fonts.** The
+  report/protocol variants (`report`, `report-makers`, `protocol-asta`,
+  `protocol-stupa`) embed the bundled DIN/Blender fonts via fontspec's
+  `Path=fonts/...`, but the Markdown render path never wrote those TTFs into the
+  compile workdir — XeTeX then failed with `Package fontspec Error: The font
+  "Blender-Medium" cannot be found`. `_render_markdown_source` now receives the
+  workdir and writes the document's inline fonts into it (mirroring the Python
+  render path); plain documents are unaffected.
+
 ## [1.0.0] - 2026-06-04
 
 First stable release. The public API is now frozen under Semantic Versioning —
