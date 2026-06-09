@@ -311,6 +311,26 @@ def test_markdown_report_variant_materialises_inline_fonts(tmp_path):
     assert "fonts/Blender/" in latex
 
 
+def test_markdown_report_variant_materialises_inline_logos(tmp_path):
+    """The tikz title/footer overlays reference logos by the relative ``logos/<file>``
+    path, so the (svg->pdf) logo files must be written into the compile workdir, or
+    tectonic fails with "Unable to load picture or PDF file 'logos/...'"."""
+    from pytex_api._policy import policy_for
+    from pytex_api._render import _render_markdown_source
+
+    req = BuildRequest(
+        source=b"---\ntyp: protokoll\ngremium: stupa\ntitle: T\n---\n\n# H\n\nx\n",
+        input_kind=InputKind.MARKDOWN,
+        output_kind=OutputKind.TEX,
+        trust=TrustLevel.TRUSTED,
+        variant="protocol-stupa",
+    )
+    latex = _render_markdown_source(req, policy_for(req.trust), tmp_path)
+    written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("logos/*")}
+    assert written, "no logo files materialised next to the .tex"
+    assert "logos/" in latex
+
+
 def test_markdown_plain_variant_writes_no_fonts(tmp_path):
     """``plain`` documents have no bundled fonts — nothing is written (no-op)."""
     from pytex_api._policy import policy_for

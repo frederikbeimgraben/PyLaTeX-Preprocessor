@@ -63,6 +63,16 @@ def _render_markdown_source(
     write_inline_fonts = getattr(document, "write_inline_fonts", None)
     if callable(write_inline_fonts):
         write_inline_fonts(str(workdir))
+    # Same for the (svg->pdf converted) logos and any inline images: the tikz
+    # title/footer overlays reference them by the relative ``logos/<file>`` path,
+    # so the files must exist next to the .tex or tectonic fails with
+    # "Unable to load picture or PDF file 'logos/...'". Plain documents skip these.
+    write_inline_logos = getattr(document, "write_inline_logos", None)
+    if callable(write_inline_logos):
+        write_inline_logos(str(workdir))
+    write_inline_images = getattr(document, "write_inline_images", None)
+    if callable(write_inline_images):
+        write_inline_images(str(workdir))
     return document.rendered
 
 

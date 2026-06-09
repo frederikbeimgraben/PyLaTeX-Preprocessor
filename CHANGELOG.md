@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-10
+
+### Fixed
+- **Markdown report/protocol builds now materialise their logos (and inline
+  images).** The tikz title/footer overlays reference logos by the relative
+  `logos/<file>` path, but the Markdown render path only wrote the inline fonts
+  into the compile workdir — tectonic then failed with `Unable to load picture
+  or PDF file 'logos/...'`. `_render_markdown_source` now also calls the
+  document's `write_inline_logos`/`write_inline_images` when present (mirroring
+  the builder/Python render path); plain documents are unaffected.
+
 ## [1.0.1] - 2026-06-09
 
 ### Fixed
