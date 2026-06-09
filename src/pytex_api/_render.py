@@ -47,13 +47,23 @@ def _render_python_source(source: bytes, workdir: Path) -> str:
     return get_tex_node(path).rendered
 
 
-def _render_markdown_source(req: BuildRequest, policy: TrustPolicy) -> str:
+def _render_markdown_source(
+    req: BuildRequest, policy: TrustPolicy, workdir: Path
+) -> str:
     from pytex_builder.variants import build_document
 
     text = _decode(req.source)
     if not policy.allow_markdown_eval:
         text = strip_markdown_eval_comments(text)
-    return build_document(text, variant=req.variant, config=req.config).rendered
+    document = build_document(text, variant=req.variant, config=req.config)
+    # Report/protocol variants embed bundled fonts via fontspec's ``Path=fonts/...``
+    # (HSRTFontSetup). Those TTFs must be materialised into the compile workdir,
+    # or XeTeX fails with "the font ... cannot be found". Plain documents lack the
+    # method and skip this no-op.
+    write_inline_fonts = getattr(document, "write_inline_fonts", None)
+    if callable(write_inline_fonts):
+        write_inline_fonts(str(workdir))
+    return document.rendered
 
 
 def render_to_latex(req: BuildRequest, policy: TrustPolicy, workdir: Path) -> str:
@@ -78,7 +88,7 @@ def render_to_latex(req: BuildRequest, policy: TrustPolicy, workdir: Path) -> st
             allow_replacements=policy.allow_tex_replacements,
         ).rendered
     elif kind is InputKind.MARKDOWN:
-        latex = _render_markdown_source(req, policy)
+        latex = _render_markdown_source(req, policy, workdir)
     else:  # pragma: no cover - exhaustive over InputKind
         raise ApiError(f"unsupported input kind: {kind}")
 

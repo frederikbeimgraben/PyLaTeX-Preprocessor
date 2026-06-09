@@ -290,3 +290,38 @@ def test_concurrent_async_renders_are_isolated():
     # Every concurrent render must match the single-threaded reference: if the
     # depth ContextVar leaked across tasks, box opacities would diverge.
     assert all(out == reference for out in outputs)
+
+
+def test_markdown_report_variant_materialises_inline_fonts(tmp_path):
+    """Report/protocol variants embed ``Path=fonts/...``; the bundled TTFs must be
+    written into the compile workdir, or XeTeX cannot find e.g. ``Blender-Medium``."""
+    from pytex_api._policy import policy_for
+    from pytex_api._render import _render_markdown_source
+
+    req = BuildRequest(
+        source=b"---\ntyp: protokoll\ngremium: stupa\ntitle: T\n---\n\n# H\n\nx\n",
+        input_kind=InputKind.MARKDOWN,
+        output_kind=OutputKind.TEX,
+        trust=TrustLevel.TRUSTED,
+        variant="protocol-stupa",
+    )
+    latex = _render_markdown_source(req, policy_for(req.trust), tmp_path)
+    written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*.ttf")}
+    assert "fonts/Blender/Blender-Medium.ttf" in written
+    assert "fonts/Blender/" in latex
+
+
+def test_markdown_plain_variant_writes_no_fonts(tmp_path):
+    """``plain`` documents have no bundled fonts — nothing is written (no-op)."""
+    from pytex_api._policy import policy_for
+    from pytex_api._render import _render_markdown_source
+
+    req = BuildRequest(
+        source=b"# Hi\n\nplain.\n",
+        input_kind=InputKind.MARKDOWN,
+        output_kind=OutputKind.TEX,
+        trust=TrustLevel.UNTRUSTED,
+        variant="plain",
+    )
+    _render_markdown_source(req, policy_for(req.trust), tmp_path)
+    assert not list(tmp_path.rglob("*.ttf"))
