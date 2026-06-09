@@ -339,7 +339,7 @@ def test_fallback_warns_when_sandbox_not_required(monkeypatch, tmp_path):
 
     monkeypatch.setattr(compile_mod, "_locate_tectonic", lambda *_a: Path("tectonic"))
 
-    def _fake_run(_cmd, cwd, _limits, *, apply_rlimits):
+    def _fake_run(_cmd, cwd, _limits, *, apply_rlimits, env=None):
         # apply_rlimits stays on for the in-process floor.
         assert apply_rlimits is True
         (Path(cwd) / "build" / "document.pdf").write_bytes(b"%PDF-1.5\n")
@@ -380,7 +380,7 @@ def test_symlinked_output_rejected(monkeypatch, tmp_path):
     secret = tmp_path / "secret.bin"
     _ = secret.write_bytes(b"%PDF-host-secret")
 
-    def _fake_run(_cmd, cwd, _limits, *, apply_rlimits):
+    def _fake_run(_cmd, cwd, _limits, *, apply_rlimits, env=None):
         (Path(cwd) / "build" / "document.pdf").symlink_to(secret)
         return 0, "ok"
 

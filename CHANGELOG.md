@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-10
+
+### Fixed
+- **biblatex documents render via the API without a pre-installed biber.** The
+  report/protocol preamble always loads `biblatex`, so tectonic shells out to
+  `biber`; the API compile path (unlike the builder's `run_tectonic`) never set
+  it up, so a container with only tectonic failed with `Running external tool
+  biber … No such file or directory`. The API compile now probes the BCF and
+  puts a version-matched biber on the child's PATH (download+cached), but only
+  when the document actually uses biblatex — plain docs skip the extra pass.
+
 ## [1.0.3] - 2026-06-10
 
 ### Fixed

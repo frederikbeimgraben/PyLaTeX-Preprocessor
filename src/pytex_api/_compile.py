@@ -102,18 +102,59 @@ def _kill_group(proc: subprocess.Popen[str]) -> None:  # pragma: no cover - timi
         proc.kill()
 
 
+def _biber_env(
+    cmd: list[str], build_dir: Path, policy: TrustPolicy, console: Console
+) -> dict[str, str] | None:
+    """A child env whose PATH includes the biber matching the document's BCF.
+
+    Mirrors ``pytex_builder.tectonic.run_tectonic``: read the BCF (probing with a
+    no-op biber if it is not written yet) to pick the right biber release, then
+    ensure it (download+cache). Returns ``None`` (inherit env) for documents
+    without biblatex, or when biber can't be obtained (e.g. network disabled) —
+    tectonic then surfaces its own error rather than us masking it.
+    """
+    tex = build_dir.parent / f"{_JOB}.tex"
+    try:
+        source = tex.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    # No biblatex → tectonic never invokes biber; skip the extra probe pass.
+    if "biblatex" not in source:
+        return None
+    try:
+        from pytex_builder.tectonic import (  # pyright: ignore[reportPrivateUsage]
+            _biber_for_build,
+            _env_with_biber,
+            _probe_bcf,
+        )
+    except Exception:  # pragma: no cover - import guard
+        return None
+    job = _JOB
+    try:
+        biber = _biber_for_build(build_dir, job, console)
+        if biber is None and policy.allow_network:
+            _probe_bcf(cmd)
+            biber = _biber_for_build(build_dir, job, console)
+    except Exception as exc:  # pragma: no cover - infra
+        console.warn(f"biber setup skipped: {exc}")
+        return None
+    return _env_with_biber(biber) if biber is not None else None
+
+
 def _run_confined(
     cmd: list[str],
     cwd: Path,
     limits: BuildLimits,
     *,
     apply_rlimits: bool,
+    env: Mapping[str, str] | None = None,
 ) -> tuple[int, str]:
     """Run ``cmd`` with rlimits + a hard wall-clock kill; return (rc, output).
 
     ``apply_rlimits`` is the in-process ``setrlimit`` floor; it is switched off
     for the Podman path, where the container's cgroup flags do the capping (an
     rlimit on the ``podman`` *client* would not reach the build inside).
+    ``env`` overrides the child environment (e.g. a PATH that includes biber).
     """
     posix = os.name == "posix"
     preexec = make_rlimit_preexec(limits) if (apply_rlimits and posix) else None
@@ -126,6 +167,7 @@ def _run_confined(
             text=True,
             start_new_session=posix,
             preexec_fn=preexec,
+            env=dict(env) if env is not None else None,
         )
     except OSError as exc:
         raise CompileError(f"could not start tectonic: {exc}") from exc
@@ -256,8 +298,17 @@ def compile_to_pdf(
             )
         binary = _locate_tectonic(policy, console)
         cmd = build_tectonic_cmd(binary, tex_file, build_dir, policy)
+        # biblatex docs (report/protocol) make tectonic shell out to ``biber``;
+        # it is not bundled, so provide a version-matched one on PATH (probe the
+        # BCF, then download+cache the matching biber). Without it tectonic dies
+        # with "Running external tool biber ... No such file or directory".
+        biber_env = _biber_env(cmd, build_dir, policy, console)
         rc, out = _run_confined(
-            cmd, workdir, req.limits, apply_rlimits=policy.apply_rlimits
+            cmd,
+            workdir,
+            req.limits,
+            apply_rlimits=policy.apply_rlimits,
+            env=biber_env,
         )
 
     log = truncate_log(out, req.limits)
