@@ -16,11 +16,11 @@ from pytex_builder.tectonic import (
     INSTALL_HINT,
     BuildError,
     _biber_candidates,
-    _biber_for_build,
     _biber_sources,
     _download_to,
     _extract_biber_binary,
     _resolve_cache_dir,
+    biber_for_build,
     ensure_tectonic,
     run_makeindex,
 )
@@ -261,19 +261,19 @@ def test_ensure_tectonic_uses_cached_binary(monkeypatch, tmp_path):
     assert ensure_tectonic(_console()) == cached
 
 
-def test_biber_for_build_no_bcf_returns_none(tmp_path):
-    assert _biber_for_build(tmp_path, "job", _console()) is None
+def testbiber_for_build_no_bcf_returns_none(tmp_path):
+    assert biber_for_build(tmp_path, "job", _console()) is None
 
 
-def test_biber_for_build_unknown_version_warns(tmp_path):
+def testbiber_for_build_unknown_version_warns(tmp_path):
     bcf = tmp_path / "job.bcf"
     _ = bcf.write_text('<controlfile version="9.99"/>')
     console = Console(StringIO())
-    assert _biber_for_build(tmp_path, "job", console) is None
+    assert biber_for_build(tmp_path, "job", console) is None
     assert "unknown BCF version" in console.stream.getvalue()
 
 
-def test_biber_for_build_matches_system_biber(monkeypatch, tmp_path):
+def testbiber_for_build_matches_system_biber(monkeypatch, tmp_path):
     bcf = tmp_path / "job.bcf"
     _ = bcf.write_text('<controlfile version="3.8"/>')  # -> biber 2.17
     monkeypatch.setattr(tec.shutil, "which", lambda name: "/usr/bin/biber")
@@ -282,13 +282,13 @@ def test_biber_for_build_matches_system_biber(monkeypatch, tmp_path):
         "run",
         lambda *a, **k: SimpleNamespace(stdout="biber version: 2.17\n", returncode=0),
     )
-    assert _biber_for_build(tmp_path, "job", _console()) == Path("/usr/bin/biber")
+    assert biber_for_build(tmp_path, "job", _console()) == Path("/usr/bin/biber")
 
 
-def test_biber_for_build_malformed_bcf_returns_none(tmp_path):
+def testbiber_for_build_malformed_bcf_returns_none(tmp_path):
     bcf = tmp_path / "job.bcf"
     _ = bcf.write_text("not xml <<<")
-    assert _biber_for_build(tmp_path, "job", _console()) is None
+    assert biber_for_build(tmp_path, "job", _console()) is None
 
 
 def test_run_makeindex_no_targets_returns_false(tmp_path):

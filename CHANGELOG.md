@@ -6,7 +6,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.0.4] - 2026-06-10
+## [1.0.5] - 2026-06-10
 
 ### Fixed
 - **biblatex documents render via the API without a pre-installed biber.** The

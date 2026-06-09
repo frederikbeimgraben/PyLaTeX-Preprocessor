@@ -122,23 +122,19 @@ def _biber_env(
     if "biblatex" not in source:
         return None
     try:
-        from pytex_builder.tectonic import (  # pyright: ignore[reportPrivateUsage]
-            _biber_for_build,
-            _env_with_biber,
-            _probe_bcf,
-        )
+        from pytex_builder.tectonic import biber_for_build, env_with_biber, probe_bcf
     except Exception:  # pragma: no cover - import guard
         return None
     job = _JOB
     try:
-        biber = _biber_for_build(build_dir, job, console)
+        biber = biber_for_build(build_dir, job, console)
         if biber is None and policy.allow_network:
-            _probe_bcf(cmd)
-            biber = _biber_for_build(build_dir, job, console)
+            probe_bcf(cmd)
+            biber = biber_for_build(build_dir, job, console)
     except Exception as exc:  # pragma: no cover - infra
         console.warn(f"biber setup skipped: {exc}")
         return None
-    return _env_with_biber(biber) if biber is not None else None
+    return env_with_biber(biber) if biber is not None else None
 
 
 def _run_confined(

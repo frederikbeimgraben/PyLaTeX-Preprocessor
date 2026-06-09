@@ -21,7 +21,15 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-__all__ = ["BuildError", "ensure_tectonic", "run_makeindex", "run_tectonic"]
+__all__ = [
+    "BuildError",
+    "biber_for_build",
+    "ensure_tectonic",
+    "env_with_biber",
+    "probe_bcf",
+    "run_makeindex",
+    "run_tectonic",
+]
 
 if TYPE_CHECKING:
     from .console import Console
@@ -373,7 +381,7 @@ def _ensure_biber(version: str, console: Console) -> Path:
     return cached
 
 
-def _biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:
+def biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:
     """Return a correctly-versioned biber if the BCF file reveals a mismatch."""
     bcf = build_dir / f"{job}.bcf"
     if not bcf.exists():
@@ -400,13 +408,13 @@ def _biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None
     return _ensure_biber(biber_ver, console)
 
 
-def _env_with_biber(biber: Path) -> dict[str, str]:
+def env_with_biber(biber: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["PATH"] = str(biber.parent) + os.pathsep + env.get("PATH", "")
     return env
 
 
-def _probe_bcf(cmd: list[str]) -> None:
+def probe_bcf(cmd: list[str]) -> None:
     """Run tectonic with a no-op biber so the BCF file is written to build_dir.
 
     Tectonic cleans up intermediates when biber fails, so the BCF is never
@@ -419,7 +427,7 @@ def _probe_bcf(cmd: list[str]) -> None:
         fake = tmpdir / "biber"
         fake.write_text("#!/bin/sh\nexit 0\n")
         fake.chmod(0o755)
-        subprocess.run(cmd, env=_env_with_biber(fake), capture_output=True)
+        subprocess.run(cmd, env=env_with_biber(fake), capture_output=True)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -453,12 +461,12 @@ def run_tectonic(
     # Determine the right biber from the BCF. If no BCF exists yet (first build
     # or after a clean), run a silent probe pass with a no-op biber so tectonic
     # writes the BCF to build_dir without actually needing biber installed.
-    biber = _biber_for_build(build_dir, job, console)
+    biber = biber_for_build(build_dir, job, console)
     if biber is None:
-        _probe_bcf(cmd)
-        biber = _biber_for_build(build_dir, job, console)
+        probe_bcf(cmd)
+        biber = biber_for_build(build_dir, job, console)
 
-    env = _env_with_biber(biber) if biber is not None else None
+    env = env_with_biber(biber) if biber is not None else None
     proc = subprocess.run(cmd, env=env)
     if proc.returncode != 0:
         log = build_dir / f"{tex_file.stem}.log"
