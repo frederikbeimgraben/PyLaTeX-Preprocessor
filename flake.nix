@@ -50,6 +50,9 @@
         shellHook = ''
           echo "PyTeX-Preprocessor dev shell — python ${python.version}, ruff, basedpyright, pytest"
           echo "Install the package editable with: pip install -e . (in a venv) — or use the provided interpreter."
+          # Drop into the user's interactive zsh (loads ~/.zshrc); guarded so
+          # `nix develop -c <cmd>` and non-interactive uses still run in bash.
+          [[ $- == *i* ]] && exec ${pkgs.zsh}/bin/zsh
         '';
       };
     };
