@@ -163,8 +163,8 @@ class Color(TeX):
         if "!" in self.name:
             raise ValueError(
                 f"cannot tint {self.name!r}; it already mixes or tints a "
-                "colour, and xcolor reads the token after a second '!' as "
-                "another colour name"
+                + "colour, and xcolor reads the token after a second '!' as "
+                + "another colour name"
             )
         new = Color(name=f"{self.name}!{percent}", spec=None)
         new._bases = (self,)

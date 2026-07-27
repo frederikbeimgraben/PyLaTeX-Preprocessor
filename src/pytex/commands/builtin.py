@@ -562,7 +562,7 @@ def Verb(body: str, delim: str = "|") -> TeX:
     if delim in body or delim in {"*", " "}:
         raise ValueError(
             "Verb needs a delim character absent from body, and delim must"
-            ' not be "*" or " ".'
+            + ' not be "*" or " ".'
         )
     return Raw(f"\\verb{delim}{body}{delim}")
 
