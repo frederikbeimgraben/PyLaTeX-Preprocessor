@@ -1,10 +1,10 @@
 # pyright: reportAny=false, reportExplicitAny=false
-"""Convert a marko Markdown AST into native PyTeX ``TeX`` nodes.
+"""Convert a marko parse tree into TeX nodes.
 
-Block elements map to the standard pytex library (headings, lists, quotes,
-code, rules); inline elements map to text-formatting commands. GitHub-style
-callouts (``> [!NOTE]`` ...) become HSRT ``ColoredBox`` presets, which is why
-this module depends on ``pytex_hsrtreport``.
+The converter maps a block element to a factory of the `pytex` library. A block
+element is a heading, a list, a quote, a code block or a rule. The converter
+maps an inline element to a text-formatting factory. A GitHub-style callout
+(`> [!NOTE]` and the other markers) becomes a `pytex_components` colored box.
 """
 
 from __future__ import annotations
@@ -51,8 +51,8 @@ __all__ = ["MarkdownConverter"]
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-# Heading commands ordered from the broadest division downward. The default
-# `base_level` of 0 maps Markdown ``#`` (level 1) to ``Section``.
+# Heading commands, ordered from the broadest division downward. The default
+# `base_level` of 0 maps a Markdown `#` (level 1) to `Section`.
 HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
     Part,
     Chapter,
@@ -62,22 +62,22 @@ HEADINGS: Final[tuple[Callable[..., TeX], ...]] = (
     Paragraph,
     Subparagraph,
 )
-SECTION_INDEX: Final[int] = 2  # index of Section in HEADINGS
+SECTION_INDEX: Final[int] = 2  # the position of Section in HEADINGS
 
 CALLOUT_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[!(\w+)\]\s*", re.IGNORECASE)
 
-# Links with a URL scheme (``https:``, ``mailto:`` ...) or protocol-relative
-# ``//`` are the only ones that survive as clickable ``\href``. A relative or
-# in-document target (``LICENSE``, ``docs/x.md``, ``#section``) points at a
-# repo file that does not exist in the rendered PDF -- hyperref would turn it
-# into a dead ``LICENSE.pdf`` link -- so those keep their text and drop the URL.
+# Only a link with a URL scheme (`https:`, `mailto:` and so on) or with a
+# protocol-relative `//` stays a clickable `\href`. A relative or in-document
+# target (`LICENSE`, `docs/x.md`, `#section`) points at a repository file that
+# the PDF does not contain. hyperref would turn such a target into a dead
+# `LICENSE.pdf` link, so the converter keeps the text and drops the URL.
 EXTERNAL_URL_RE: Final[re.Pattern[str]] = re.compile(
     r"^(?:[a-z][a-z0-9+.\-]*:|//)", re.IGNORECASE
 )
 
-# ASCII arrows in prose -> inline math arrows. All targets are base-LaTeX
-# macros, so no extra package is pulled in. ``<=`` is deliberately absent: it
-# overwhelmingly means "less than or equal" in prose, not a left arrow.
+# ASCII arrows in prose -> inline math arrows. Every target is a base-LaTeX
+# macro, so no node requires an extra package. `<=` is absent on purpose. In
+# prose it almost always means "less than or equal", not a left arrow.
 ARROWS: Final[dict[str, str]] = {
     "<-->": r"\longleftrightarrow",
     "<->": r"\leftrightarrow",
@@ -88,12 +88,13 @@ ARROWS: Final[dict[str, str]] = {
     "<-": r"\leftarrow",
     "=>": r"\Rightarrow",
 }
-# Longest alternatives first so e.g. ``<-->`` wins over ``<-``.
+# The longest alternatives come first, so `<-->` wins over `<-`.
 ARROW_RE: Final[re.Pattern[str]] = re.compile(
     "|".join(re.escape(token) for token in sorted(ARROWS, key=len, reverse=True))
 )
-# Capturing variant: ``re.split`` keeps the matched arrows as odd-indexed
-# pieces, so escaping prose and substituting arrows is a single pass.
+# The capturing variant makes `re.split` keep the matched arrows as the
+# odd-indexed pieces. One pass then escapes the prose and substitutes the
+# arrows.
 ARROW_SPLIT_RE: Final[re.Pattern[str]] = re.compile(f"({ARROW_RE.pattern})")
 CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "NOTE": InfoBox,
@@ -108,14 +109,16 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "ERROR": WarningBox,
 }
 
-# Pandoc-style citations in prose. A bracketed ``[@key]`` / ``[@key, p. 5]`` /
-# ``[@a; @b]`` becomes ``\autocite``; a narrative ``@key`` becomes ``\textcite``.
-# Keys use the usual BibTeX charset. The narrative form needs a non-word, non-``@``
-# char before it so an e-mail remnant like ``foo@bar`` is never mistaken for a
-# cite (e-mails arrive as their own ``Url`` node anyway).
-# A BibTeX key starts with an alphanumeric/underscore and, like Pandoc, may
-# contain internal punctuation but must not END on it (so a trailing sentence
-# period such as ``@knuth.`` is not swallowed into the key).
+# Pandoc-style citations in prose. A bracketed `[@key]`, `[@key, p. 5]` or
+# `[@a; @b]` becomes `\autocite`. A narrative `@key` becomes `\textcite`. A
+# narrative citation must not directly follow a word character or `@`, so an
+# e-mail remnant like `foo@bar` never reads as a citation. An e-mail arrives as
+# its own `Url` node anyway.
+#
+# A key uses the usual BibTeX character set. It starts with an alphanumeric
+# character or an underscore, and it may hold internal punctuation. A key must
+# not end on punctuation, so a trailing sentence period such as `@knuth.`
+# stays outside the key.
 _CITE_KEY = r"[A-Za-z0-9_](?:[\w:.#$%&+?<>~/-]*[A-Za-z0-9_])?"
 CITATION_RE: Final[re.Pattern[str]] = re.compile(
     r"\[(?P<bracket>\s*@[^\]]+)\]" + rf"|(?<![\w@])@(?P<narrative>{_CITE_KEY})"
@@ -126,15 +129,15 @@ _CITE_ENTRY_RE: Final[re.Pattern[str]] = re.compile(
 
 PARBREAK: Final[TeX] = Raw("\n\n")
 
-# Vertical breathing room added above and below a rendered table. ``\addvspace``
-# (rather than ``\vspace``) coalesces with adjacent spacing so a table next to a
-# heading or another block does not accumulate a double gap.
+# Vertical space above and below a rendered table. `\addvspace` (and not
+# `\vspace`) merges with the adjacent spacing, so a table next to a heading or
+# another block does not get a double gap.
 TABLE_VSPACE: Final[str] = r"0.8\baselineskip"
 
-# GFM cell alignment -> tabularx ``X`` column spec. ``X`` columns share the
-# table width and wrap their content, so wide tables no longer overrun the
-# page. ``None`` (no colon) falls back to left, matching how most renderers
-# treat an unaligned column.
+# GFM cell alignment -> tabularx `X` column spec. `X` columns share the table
+# width and wrap their content, so a wide table stays inside the text width.
+# `None` (no colon) means left. Most Markdown converters treat an unaligned
+# column the same way.
 COLUMN_ALIGN: Final[dict[str | None, str]] = {
     "left": r">{\raggedright\arraybackslash}X",
     "center": r">{\centering\arraybackslash}X",
@@ -153,19 +156,24 @@ def _children(node: object) -> list[object]:
 
 
 def _text(node: object) -> str | None:
-    """Return a node's literal text payload, or ``None`` for container nodes."""
+    """Return the literal text of a marko node.
+
+    Returns:
+        The text payload, or `None` when the node is a container.
+    """
     ch = getattr(node, "children", None)
     return ch if isinstance(ch, str) else None
 
 
 def _escape_text(text: str) -> str:
-    """LaTeX-escape prose, turning ASCII arrows into inline math arrows.
+    """Escape prose for LaTeX and turn each ASCII arrow into a math arrow.
 
-    Only used for running text (not code spans/blocks), so ``->`` and friends
-    become ``$\\rightarrow$`` etc. while the surrounding text is escaped.
+    The converter calls this for running text only, never for a code span or
+    a code block. An arrow such as `->` becomes `$\\rightarrow$`. The function
+    escapes the text around the arrow.
 
-    ``re.split`` on the capturing group alternates prose / arrow / prose / ...,
-    so odd pieces are the matched arrows and even pieces the text between them.
+    `re.split` on the capturing group alternates prose and arrow. The odd
+    pieces are the arrows. The even pieces are the text between them.
     """
     return "".join(
         f"${ARROWS[piece]}$" if index % 2 else escape_latex(piece)
@@ -174,16 +182,17 @@ def _escape_text(text: str) -> str:
 
 
 def _prose(text: str) -> TeX:
-    """Escape prose, splicing font-independent nodes for special characters.
+    """Escape prose and give each special character its own node.
 
-    The string is grouped into alternating runs of ordinary text and special
-    characters (:func:`~pytex_markdown.glyphs.is_special_char`). An ordinary run
-    keeps its arrow/escape handling as a single :class:`Raw`; each special char
-    becomes its own node -- a mapped glyph (``€ → ↔ ≤ ≥ ·``) via its
-    font-independent target, or a ``\\texttt{[missing glyph]}`` placeholder plus
-    a warning for a char the DIN font cannot render. Splicing per char preserves
-    surrounding spacing exactly (e.g. ``50€`` stays glyph-adjacent). See
-    :mod:`pytex_markdown.glyphs`.
+    The function groups the string into runs of ordinary text and runs of
+    special characters. See `is_special_char`. An ordinary run keeps its arrow
+    and escape handling inside a single `Raw` node.
+
+    A mapped glyph (`€ → ↔ ≤ ≥ ·`) becomes its font-independent node. Any other
+    special character becomes a `\\texttt{[missing glyph]}` placeholder plus a
+    warning, because the DIN font has no glyph for it. One node per character
+    keeps the spacing around it exact, so `50€` stays glyph-adjacent. See
+    `pytex_markdown.glyphs`.
     """
     return Concat(
         *(
@@ -200,12 +209,15 @@ def _prose(text: str) -> TeX:
 
 
 def _citation(match: re.Match[str]) -> TeX | None:
-    """Build a cite node from a ``CITATION_RE`` match, or ``None`` if not a cite.
+    """Build a cite node from a `CITATION_RE` match.
 
-    Narrative ``@key`` -> ``\\textcite``. Bracketed ``[@key]`` -> ``\\autocite``;
-    a single key may carry a postnote (``[@key, p. 5]``) and several keys may be
-    separated by ``;`` (``[@a; @b]``). A malformed bracket (no valid ``@key``
-    inside) returns ``None`` so it falls back to plain escaped text.
+    A narrative `@key` becomes `\\textcite`. A bracketed `[@key]` becomes
+    `\\autocite`. A single key may carry a postnote (`[@key, p. 5]`). One
+    bracket may hold several keys (`[@a; @b]`).
+
+    Returns:
+        The cite node, or `None` when the bracket holds no valid `@key`. The
+        caller then uses plain escaped text instead.
     """
     narrative = match.group("narrative")
     if narrative is not None:
@@ -219,17 +231,19 @@ def _citation(match: re.Match[str]) -> TeX | None:
         keys.append(parsed.group("key"))
         if parsed.group("post") is not None:
             postnote = parsed.group("post").strip()
-    # Biblatex attaches a single postnote to a lone key; drop it for multi-cites.
+    # biblatex attaches a postnote to a lone key only. Drop it when the bracket
+    # holds several keys.
     if len(keys) == 1 and postnote is not None:
         return Autocite(keys[0], postnote=escape_latex(postnote))
     return Autocite(*keys)
 
 
 def _inline_text(text: str) -> TeX:
-    """Convert prose, turning Pandoc citations into cite nodes.
+    """Convert prose and turn each Pandoc citation into a cite node.
 
-    Citation spans are pulled out first (so their keys are not LaTeX-escaped);
-    the text around them keeps the euro/arrow/escape handling of :func:`_prose`.
+    The function extracts the citation spans first, so LaTeX escaping never
+    touches their keys. The text around them keeps the euro, arrow and escape
+    handling of `_prose`.
     """
     parts: list[TeX] = []
     last = 0
@@ -249,10 +263,15 @@ def _inline_text(text: str) -> TeX:
 
 
 class MarkdownConverter:
-    """Walk a marko AST, producing a single ``TeX`` tree.
+    """Walk a marko parse tree and build one node tree.
 
-    Subclass to add domain-specific blocks/inlines (see
-    ``pytex_protocol.convert.ProtocolConverter``).
+    Subclass this class to add domain-specific blocks and inlines. See
+    `pytex_markdown.protocol.convert.ProtocolConverter`.
+
+    Attributes:
+        base_level: The shift applied to the heading depth. The default `0`
+            maps a Markdown `#` to `\\section`.
+        callouts: When true, a `> [!NOTE]` block becomes a colored box.
     """
 
     base_level: int
@@ -268,7 +287,7 @@ class MarkdownConverter:
         kind = _kind(node)
         text = _text(node)
         if text is not None:
-            # RawText / CodeSpan / Literal etc. carry a plain string.
+            # A RawText, CodeSpan or Literal node carries a plain string.
             if kind == "CodeSpan":
                 return Texttt(Raw(escape_latex(text)))
             return _inline_text(text)
@@ -281,23 +300,23 @@ class MarkdownConverter:
             dest = str(getattr(node, "dest", ""))
             if EXTERNAL_URL_RE.match(dest):
                 return Href(dest, self.inlines(node))
-            # Relative/local/anchor target: keep the text, drop the dead link.
+            # A relative, local or in-document target has no live URL in the
+            # PDF. Keep the text and drop the link.
             return self.inlines(node)
         if kind == "Image":
             dest = str(getattr(node, "dest", ""))
             if EXTERNAL_URL_RE.match(dest):
                 return IncludeImage(dest)
-            # The .tex is compiled in the build dir, not next to the Markdown
-            # source, so a relative path would not resolve. Make it absolute
-            # (relative to the CWD the build runs from) so \includegraphics
-            # finds the file without copying or base64-embedding it.
+            # tectonic compiles the rendered `.tex` file in the build
+            # directory, not next to the Markdown input file, so a relative
+            # path would not resolve. Make the path absolute against the
+            # current working directory of the build. `\includegraphics` then
+            # finds the file without a copy and without a base64 embed.
             return IncludeImage(str(Path(dest).resolve()))
         if kind == "LineBreak":
-            # Hard break -> newline; soft break -> a plain space.
             soft = bool(getattr(node, "soft", False))
             return Raw(" ") if soft else Newline()
 
-        # Unknown inline: recurse if it has children, else drop.
         kids = _children(node)
         return self.inlines(node) if kids else Empty
 
@@ -319,7 +338,8 @@ class MarkdownConverter:
 
     def _list_item(self, node: object) -> TeX:
         kids = _children(node)
-        # Tight item: a lone paragraph -> inline its content (no extra break).
+        # A tight item holds one paragraph. Inline its content so that the
+        # item gets no extra break.
         if len(kids) == 1 and _kind(kids[0]) == "Paragraph":
             return self.inlines(kids[0])
         return self.blocks(kids)
@@ -344,7 +364,6 @@ class MarkdownConverter:
         box = CALLOUTS.get(match.group(1).upper())
         if box is None:
             return None
-        # Rebuild the first paragraph with the marker stripped, keep the rest.
         stripped = first_text[match.end() :]
         head = Concat(
             _inline_text(stripped),
@@ -354,16 +373,18 @@ class MarkdownConverter:
         return box(Concat(*_interleave(body_blocks)))
 
     def _code(self, node: object) -> TeX:
-        # Code blocks hold a single RawText child; fall back to a direct string.
+        # marko puts the code text on the node itself for some block kinds and
+        # inside one RawText child for the others. Read the direct text first,
+        # then the child.
         text = _text(node)
         if text is None:
             kids = _children(node)
             text = _text(kids[0]) if kids else ""
-        # lstlisting with breaklines so long lines wrap instead of running off
-        # the page. Language is intentionally omitted: listings aborts on
-        # unknown languages, and Markdown info strings are unconstrained. The
-        # body is bracketed by newlines because lstlisting reads code starting
-        # on the line after \begin (and \end must sit on its own line).
+        # `breaklines` wraps a long line. Without it a long line goes past the
+        # page margin. The language is absent on purpose. listings stops with
+        # an error on an unknown language, and a Markdown info string can hold
+        # any word. A newline brackets the body. lstlisting reads the code
+        # from the line after `\begin`, and `\end` must sit on its own line.
         code = (text or "").rstrip("\n")
         return Lstlisting(f"\n{code}\n", {"breaklines": "true"})
 
@@ -371,11 +392,12 @@ class MarkdownConverter:
         return Concat(Noindent(), Rule(r"\linewidth", "0.4pt"))
 
     def _table(self, node: object) -> TeX:
-        """GFM pipe table -> ``tabularx`` (\\linewidth) with booktabs rules.
+        """Convert a GFM pipe table to a `tabularx` with booktabs rules.
 
-        The first ``TableRow`` is the header (separated by ``\\midrule``);
-        per-column alignment comes from the cells' ``align`` attribute. ``X``
-        columns wrap their content so wide tables stay inside the text width.
+        The table spans `\\linewidth`. The first `TableRow` is the header, and
+        `\\midrule` separates it from the body. The per-column alignment comes
+        from the `align` attribute of the header cells. An `X` column wraps its
+        content, so a wide table stays inside the text width.
         """
         rows = [c for c in _children(node) if _kind(c) == "TableRow"]
         if not rows:
@@ -399,8 +421,8 @@ class MarkdownConverter:
             Raw("\n"),
         )
         table = Tabularx(r"\linewidth", spec, body_rows)
-        # Wrap in vertical space: `\par` closes the surrounding paragraph so
-        # `\addvspace` lands in vertical mode both before and after the table.
+        # `\par` closes the paragraph around the table, so `\addvspace` lands
+        # in vertical mode both before and after the table.
         return Concat(
             Raw(f"\\par\\addvspace{{{TABLE_VSPACE}}}\n"),
             table,
@@ -409,7 +431,6 @@ class MarkdownConverter:
 
     def _table_row(self, node: object) -> TeX:
         cells = [self.inlines(c) for c in _children(node) if _kind(c) == "TableCell"]
-        # ``&`` between cells, ``\\`` after the last one.
         return Concat(
             *(
                 part
@@ -420,11 +441,15 @@ class MarkdownConverter:
         )
 
     def _eval_comment(self, node: object) -> TeX:
-        """Evaluate a ``[//]: # "EXPR"`` Markdown comment as a pytex expression.
+        """Evaluate a `[//]: # "EXPR"` Markdown comment as a pytex expression.
 
-        This mirrors the ``\\iffalse{pytex(EXPR)}\\fi`` escape hatch in raw TeX:
-        ``EXPR`` is evaluated with the Registry namespace. A ``TeX`` result is
-        spliced into the tree as-is; anything else is stringified into ``Raw``.
+        This mirrors the inline `pytex(...)` marker of a `.tex` file. PyTeX
+        evaluates `EXPR` with the Registry namespace. A `TeX` result goes into
+        the node tree unchanged. Any other result becomes a `Raw` node that
+        holds `str(result)`.
+
+        **Warning:** this runs Python code from the Markdown input file. If
+        the input file comes from a source you do not trust, do not convert it.
         """
         title = getattr(node, "title", None)
         if not isinstance(title, str):
@@ -452,8 +477,9 @@ class MarkdownConverter:
         if kind == "Table":
             return self._table(node)
         if kind == "LinkRefDef":
-            # `[//]: # "EXPR"` is the Markdown-comment escape hatch: evaluate it.
-            # Any other link reference definition renders to nothing.
+            # `[//]: # "EXPR"` is the Markdown counterpart of the inline
+            # `pytex(...)` marker. Any other link reference definition
+            # renders to nothing.
             if (
                 getattr(node, "label", None) == "//"
                 and getattr(node, "dest", None) == "#"
@@ -462,7 +488,7 @@ class MarkdownConverter:
             return Empty
         if kind == "BlankLine":
             return Empty
-        # Container we do not special-case (e.g. nested Document).
+        # A container without a special case, for example a nested Document.
         kids = _children(node)
         return self.blocks(kids) if kids else Empty
 
@@ -472,9 +498,9 @@ class MarkdownConverter:
 
 
 def _strip_md_title(title: str) -> str:
-    """Strip the delimiters marko keeps around a link-ref-def title.
+    """Strip the delimiters that marko keeps around a link-ref-def title.
 
-    Titles arrive quoted (``"..."``, ``'...'``) or parenthesised (``(...)``).
+    A title arrives in double quotes, in single quotes or in parentheses.
     """
     t = title.strip()
     if len(t) >= 2 and (
@@ -485,6 +511,6 @@ def _strip_md_title(title: str) -> str:
 
 
 def _interleave(blocks: list[TeX]) -> Iterator[TeX]:
-    """Yield non-empty block nodes separated by paragraph breaks."""
+    """Yield the non-empty block nodes with a paragraph break between them."""
     kept = [b for b in blocks if b is not Empty]
     return (part for i, b in enumerate(kept) for part in ((PARBREAK, b) if i else (b,)))

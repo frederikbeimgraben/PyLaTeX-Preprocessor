@@ -1,15 +1,18 @@
-"""``pytex-sandbox-init`` - one-shot setup for offline UNTRUSTED PDF builds.
+"""`pytex-sandbox-init`: one-time setup for offline, confined PDF builds.
 
-A new user who wants confined (UNTRUSTED / SANDBOXED) PDF compiles needs two
-out-of-band, privileged steps done once: build the Podman sandbox image and
-warm the tectonic bundle cache so the offline (``--network none`` +
-``--only-cached``) request path does not cache-miss. This console script does
-both, with friendly preflight checks and error messages instead of raw
-``podman`` stderr, so the user never has to guess why a confined build refuses
-to run.
+A confined PDF build is an `untrusted` or a `sandboxed` build. Before the
+first one, you must do two privileged steps once, out of band:
 
-It is the *privileged warm-up* path from :mod:`pytex_api._sandbox`; it must
-never be wired into a request handler.
+1. Build the Podman sandbox image.
+2. Warm the tectonic bundle cache, so the offline request path finds every
+   resource. That path runs with `--network none` and `--only-cached`.
+
+This console script does both. It runs preflight checks and prints clear
+errors instead of raw `podman` stderr. So you do not have to guess why a
+confined build refuses to run.
+
+This module is the privileged warm-up path of `pytex_api._sandbox`. Never wire
+it into a request handler.
 """
 
 from __future__ import annotations
@@ -34,10 +37,14 @@ __all__ = ["main"]
 
 
 def _current_user_keys() -> set[str]:
-    """Identifiers a subuid/subgid line might be keyed by (login name or uid).
+    """Return the identifiers that a subuid or subgid line can use as its key.
 
-    Empty on non-POSIX or when the user cannot be resolved, which the caller
-    reads as "skip the check" rather than "misconfigured".
+    A line uses the login name or the numeric user ID.
+
+    Returns:
+        The set of identifiers. The set is empty on a non-POSIX platform, and
+        when PyTeX cannot resolve the user. The caller reads an empty set as
+        "skip the check", not as "the host is misconfigured".
     """
     if not hasattr(os, "getuid"):
         return set()
@@ -53,7 +60,12 @@ def _current_user_keys() -> set[str]:
 
 
 def _has_subid_range(path: Path, keys: set[str]) -> bool:
-    """Whether *path* (``/etc/subuid`` or ``/etc/subgid``) lists one of *keys*."""
+    """Report whether `path` lists one of `keys`.
+
+    Args:
+        path: `/etc/subuid` or `/etc/subgid`.
+        keys: The login name and the numeric user ID of the current user.
+    """
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -62,13 +74,16 @@ def _has_subid_range(path: Path, keys: set[str]) -> bool:
 
 
 def _subid_configured() -> bool:
-    """Best-effort check for the rootless subuid/subgid prerequisite.
+    """Check the subuid and subgid ranges that rootless Podman needs.
 
-    Rootless Podman maps container UIDs/GIDs through ``/etc/subuid`` and
-    ``/etc/subgid``; without a range for the user, ``podman build``/``run``
-    fails with a ``newuidmap``/``subuid`` error. Returns ``True`` (skip the
-    check) when the user cannot be identified, so a false negative never blocks
-    an otherwise-working setup.
+    Rootless Podman maps the user IDs and group IDs of a container through
+    `/etc/subuid` and `/etc/subgid`. Without a range for the user, `podman
+    build` and `podman run` fail with a `newuidmap` or `subuid` error.
+
+    Returns:
+        `True` when a range exists, and also when PyTeX cannot identify the
+        user. The second case skips the check, so a false negative never
+        blocks a setup that works.
     """
     keys = _current_user_keys()
     if not keys:
@@ -79,10 +94,11 @@ def _subid_configured() -> bool:
 
 
 def _friendly_error(message: str) -> str:
-    """Map raw podman/tectonic failure text to an actionable hint.
+    """Map raw podman or tectonic failure text to a hint the user can act on.
 
-    Falls back to the original message when nothing matches - still better than
-    swallowing it.
+    Returns:
+        The hint, or the original message when no pattern matches. The
+        original message is still better than no message.
     """
     low = message.lower()
     if any(token in low for token in ("subuid", "subgid", "newuidmap", "newgidmap")):
@@ -104,7 +120,12 @@ def _friendly_error(message: str) -> str:
 
 
 def _check_podman(console: Console) -> bool:
-    """Fatal preflight: podman must be installed. Returns ``False`` if not."""
+    """Run the fatal preflight check that Podman is installed.
+
+    Returns:
+        `True` when `podman` is on PATH. `False` after the function printed
+        the error and the install hint. The caller must then stop.
+    """
     if podman_available():
         return True
     console.error("podman is not installed or not on PATH")
@@ -116,7 +137,11 @@ def _check_podman(console: Console) -> bool:
 
 
 def _warn_if_not_rootless(console: Console) -> None:
-    """Soft preflight: warn (do not fail) when subuid/subgid look unconfigured."""
+    """Warn when the subuid and subgid ranges look unconfigured.
+
+    This is a soft preflight check. It only warns, and it never fails the
+    setup, because the check can produce a false negative.
+    """
     if _subid_configured():
         return
     console.warn("rootless podman may not be fully configured")
@@ -130,7 +155,14 @@ def _warn_if_not_rootless(console: Console) -> None:
 def _ensure_image(
     config: SandboxConfig, console: Console, *, force_build: bool
 ) -> None:
-    """Build the sandbox image unless it already exists (and not forced)."""
+    """Build the sandbox image unless it already exists.
+
+    Args:
+        force_build: Rebuild the image even when it already exists.
+
+    Raises:
+        RuntimeError: `podman build` exited non-zero.
+    """
     if not force_build and sandbox_image_present(config.image):
         console.note(f"sandbox image {config.image} already present; skipping build")
         return
@@ -139,7 +171,16 @@ def _ensure_image(
 
 
 def main(argv: list[str] | None = None, *, console: Console | None = None) -> int:
-    """Build the sandbox image and warm the bundle cache; return an exit code."""
+    """Build the sandbox image and warm the bundle cache.
+
+    Args:
+        argv: The command-line arguments. `None` reads `sys.argv`.
+        console: The console that prints the progress. `None` makes a new one.
+
+    Returns:
+        0 after a successful setup. 1 when Podman is missing, or when a step
+        failed. The function prints a hint before it returns 1.
+    """
     parser = argparse.ArgumentParser(
         prog="pytex-sandbox-init",
         description=(

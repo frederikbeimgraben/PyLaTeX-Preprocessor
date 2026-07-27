@@ -1,7 +1,8 @@
-"""Value types for the blob-in / blob-out API: enums, request/result, errors.
+"""Value types for the blob-in and blob-out API.
 
-Kept free of any heavy imports so a caller can describe a build without pulling
-in marko, tectonic, or the render machinery.
+This module holds the enums, the request type, the result type, and the
+errors. It has no heavy imports, so a caller can describe a build without a
+load of marko, tectonic, or the render machinery.
 """
 
 from __future__ import annotations
@@ -37,57 +38,70 @@ __all__ = [
 
 
 class InputKind(Enum):
-    """What the request bytes *are* - declared, never sniffed from a suffix.
+    """What the request bytes are, as the caller declares them.
 
-    Declaring the kind removes suffix-confusion attacks and the implicit
-    "``.py`` means execute me" coupling of the filesystem entry points.
+    PyTeX never reads the kind from a file suffix. A declared kind removes
+    suffix-confusion attacks. It also removes the implicit rule of the
+    filesystem entry points that a `.py` suffix means "execute me".
     """
 
     MARKDOWN = "md"
     TEX = "tex"
-    TEX_PY = "py"  # executes Python on load - TRUSTED only
+    TEX_PY = "py"  # runs Python on load, for `trusted` builds only
 
 
 class OutputKind(Enum):
-    TEX = "tex"  # rendered LaTeX source
-    PDF = "pdf"  # compiled via tectonic
+    TEX = "tex"  # the rendered LaTeX source
+    PDF = "pdf"  # compiled by the tectonic binary
 
 
 class TrustLevel(Enum):
-    """How much the source is trusted; the central axis of the security model.
+    """How much PyTeX trusts the source of a request.
 
-    ``UNTRUSTED`` assumes the source is hostile (the default). ``TRUSTED`` is
-    for first-party callers and unlocks Python execution and shell-escape.
+    This is the central axis of the security model. `untrusted` is the default
+    and assumes that the source is hostile. `trusted` is for first-party
+    callers, and it unlocks Python execution and shell-escape.
     """
 
-    UNTRUSTED = "untrusted"  # default; hostile input assumed
-    SANDBOXED = "sandboxed"  # semi-trusted; wider packages, still no code/shell
-    TRUSTED = "trusted"  # full power, incl. Python exec & shell-escape
+    UNTRUSTED = "untrusted"  # the default, which assumes hostile input
+    SANDBOXED = "sandboxed"  # semi-trusted, wider packages, still no code or shell
+    TRUSTED = "trusted"  # full power, including Python execution and shell-escape
 
 
 class ApiError(RuntimeError):
-    """Base class for every error the API raises deliberately."""
+    """Base class for every error that the API raises on purpose."""
 
 
 class TrustError(ApiError):
-    """A capability was requested that the request's trust level forbids."""
+    """The request asks for a capability that its trust level forbids."""
 
 
 class LimitError(ApiError):
-    """A resource or size limit was exceeded (input, output, or build time)."""
+    """The input, the output, or the build time passed a limit."""
 
 
 class CompileError(ApiError):
-    """tectonic was unavailable or failed to produce a PDF."""
+    """tectonic was not available, or it did not produce a PDF."""
 
 
 @dataclass(frozen=True)
 class BuildLimits:
-    """Resource caps applied to a build (enforced hardest for untrusted input).
+    """Resource caps for one build, applied hardest to untrusted input.
 
-    ``cpu``/``memory``/``fsize`` map to POSIX ``setrlimit`` on the compile
-    subprocess; ``wall_timeout_s`` is the subprocess wall-clock kill; the byte
-    caps bound input, output, and the returned log.
+    Attributes:
+        wall_timeout_s: The wall-clock kill for the compile subprocess, in
+            seconds.
+        cpu_timeout_s: The POSIX `RLIMIT_CPU` cap for the compile subprocess,
+            in seconds.
+        max_output_bytes: The cap on the returned `.tex` bytes or PDF bytes.
+        max_memory_bytes: The POSIX `RLIMIT_AS` cap, in bytes.
+        max_fsize_bytes: The POSIX `RLIMIT_FSIZE` per-file write cap, in
+            bytes.
+        max_input_bytes: The cap on the source bytes of the request.
+        max_tex_passes: The intended cap on the number of compile passes. No
+            code reads this field today, because the tectonic binary picks its
+            own pass count.
+        max_log_chars: The cap on the returned log, in characters.
     """
 
     wall_timeout_s: float = 30.0
@@ -102,7 +116,18 @@ class BuildLimits:
 
 @dataclass(frozen=True)
 class BuildRequest:
-    """A self-contained build job: source bytes in, never a path."""
+    """A self-contained build job that carries source bytes and never a path.
+
+    Attributes:
+        variant: The variant that wraps a converted Markdown source. `None`
+            picks the default variant. The value has no effect on a `.tex` or
+            a `.tex.py` source.
+        config: The document-class parameters. They override the frontmatter
+            of a Markdown source.
+        assets: The inline assets, keyed by file name. PyTeX writes each one
+            next to the rendered `.tex` file. A name must be a plain file
+            name, with no directory part.
+    """
 
     source: bytes
     input_kind: InputKind
@@ -110,16 +135,25 @@ class BuildRequest:
     trust: TrustLevel = TrustLevel.UNTRUSTED
     variant: str | None = None
     config: Mapping[str, object] = field(default_factory=_empty_config)
-    assets: Mapping[str, bytes] = field(default_factory=_empty_assets)  # name -> bytes
+    assets: Mapping[str, bytes] = field(default_factory=_empty_assets)
     limits: BuildLimits = field(default_factory=BuildLimits)
 
 
 @dataclass(frozen=True)
 class BuildResult:
-    """The build output and metadata; the caller never sees a path."""
+    """The build output and its metadata. The caller never sees a path.
 
-    output: bytes  # .tex or .pdf bytes
+    Attributes:
+        output: The rendered `.tex` bytes or the PDF bytes. `output_kind`
+            says which one.
+        log: The render log and the tectonic log, truncated to
+            `BuildLimits.max_log_chars`.
+        warnings: The text that follows each `warning:` tag in the log.
+        duration_s: The wall-clock time of the whole build, in seconds.
+    """
+
+    output: bytes
     output_kind: OutputKind
-    log: str  # render/tectonic log, truncated to limits.max_log_chars
+    log: str
     warnings: tuple[str, ...]
     duration_s: float

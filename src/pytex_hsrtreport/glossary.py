@@ -1,3 +1,5 @@
+"""Glossary and acronym setup for the HSRT report."""
+
 from pytex.commands.glossaries import (
     Glsenablehyper,
     Makeglossaries,
@@ -10,15 +12,17 @@ from pytex.registry import Registry
 
 __all__ = ["AcrShortcut", "HSRTGlossarySetup"]
 
-# Custom L/C/R column types used by the manualfixedwidth glossary style. Each
-# fixes a horizontal alignment while still allowing manual \newline breaks.
+# Custom L, C and R column types for the `manualfixedwidth` glossary style.
+# Each type fixes one horizontal alignment. Each type still accepts a manual
+# `\newline` break.
 COLUMN_TYPES = (
     r"\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}"
     + r"\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}"
     + r"\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}"
 )
 
-# A three-column glossary style with fixed widths (30%/58%/10% of \textwidth).
+# A glossary style with three columns of fixed width. The columns take 30%,
+# 58% and 10% of `\textwidth`.
 GLOSSARY_STYLE = (
     r"\newglossarystyle{manualfixedwidth}{"
     + r"\setglossarystyle{long3colheader}"
@@ -30,7 +34,7 @@ GLOSSARY_STYLE = (
     + r"\renewcommand{\arraystretch}{1.1}}"
 )
 
-# German column/section labels for the glossary and acronym lists.
+# German column and section labels for the glossary and the acronym list.
 GLOSSARY_LABELS = (
     r"\renewcommand*{\entryname}{Wort/Abkürzung}"
     + r"\renewcommand*{\descriptionname}{Bedeutung}"
@@ -41,9 +45,10 @@ GLOSSARY_LABELS = (
 
 @Registry.add
 def HSRTGlossarySetup() -> TeX:
-    """Standard HSRT glossary setup.
+    r"""Set up the standard HSRT glossary.
 
-    makeglossaries, manualfixedwidth style, German labels.
+    This node calls `\makeglossaries`, selects the `manualfixedwidth` style,
+    and sets the German labels.
     """
     return Concat(
         Makeglossaries(),
@@ -57,5 +62,5 @@ def HSRTGlossarySetup() -> TeX:
 
 @Registry.add
 def AcrShortcut() -> TeX:
-    """Shortcut: `\\acr` aliases `\\acrshort`."""
+    r"""Define `\acr` as a short name for `\acrshort`."""
     return Raw(r"\newcommand{\acr}{\acrshort}")

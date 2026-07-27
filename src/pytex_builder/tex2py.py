@@ -1,14 +1,15 @@
-"""``pytex-tex2py`` - convert a ``.tex`` file into a ``.tex.py`` source.
+"""`pytex-tex2py`: convert a `.tex` file into a `.tex.py` file.
 
-The input is read as a single `Raw` (via `IncludeTeX`), `Optimize`d into a
-native node tree (inline ``pytex(...)`` markers expanded, comments and math
-recognised), and serialised back to Python that rebuilds the same tree:
+PyTeX reads the input file as one `Raw` node through `IncludeTeX`. The optimize
+pass then turns it into a native node tree. That pass expands the inline
+`pytex(...)` markers and recognizes comments and math. This module serializes
+the node tree back to Python that rebuilds the same tree:
 
     __pytex__ = Concat(Comment(...), Raw("..."), ControlSequence("today", ()), ...)
 
-Running the result through ``pytex`` renders byte-for-byte what the original
-``.tex`` did. Nodes the serialiser does not special-case fall back to a literal
-``Raw`` of their rendered output, so the conversion always round-trips.
+When you run the result through `pytex`, it renders byte-for-byte what the
+original `.tex` file rendered. A node that this module does not handle becomes
+a literal `Raw` of its rendered output, so the conversion always round-trips.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ __all__ = ["main", "to_python"]
 
 
 class _Serializer:
-    """Builds a Python expression for a node and records the imports it needs."""
+    """Builds the Python expression for a node and records the imports it needs."""
 
     def __init__(self) -> None:
         self.imports: set[tuple[str, str]] = set()
@@ -46,7 +47,10 @@ class _Serializer:
         self.imports.add((module, name))
 
     def _literal(self, node: TeX) -> str:
-        """Fallback: embed the node's rendered LaTeX as a literal Raw."""
+        """Return the rendered LaTeX of `node` as a literal `Raw` expression.
+
+        This is the fallback for a node that `emit` does not handle.
+        """
         self._need("pytex.model.raw", "Raw")
         return f"Raw({node.rendered!r}, allow_replacements=False)"
 
@@ -76,7 +80,8 @@ class _Serializer:
         if isinstance(node, ControlSequence):
             self._need("pytex.model.control_sequence", "ControlSequence")
             cs = cast("ControlSequence[Parameters]", node)
-            # required_packages is dropped: it has no effect on rendering.
+            # This drops `required_packages`, which does not change what the
+            # control sequence renders.
             return f"ControlSequence({cs.name!r}, {self._tuple(cs.params)})"
         if isinstance(node, WithPackage):
             self._need("pytex.helpers.with_package", "WithPackage")
@@ -105,11 +110,11 @@ class _Serializer:
 
 
 def to_python(node: TeX) -> str:
-    """Return a complete ``.tex.py`` source that rebuilds `node`."""
+    """Return a complete `.tex.py` source that rebuilds `node`."""
     serializer = _Serializer()
-    expr = serializer.emit(node)  # also records every needed import
+    expr = serializer.emit(node)  # records every import the tree needs
     if isinstance(node, Concat) and node.elements:
-        # One element per line keeps a whole-document Concat readable.
+        # One element per line keeps a whole-document `Concat` readable.
         body = ",\n    ".join(serializer.emit(e) for e in node.elements)
         expr = f"Concat(\n    {body},\n)"
     return f"{serializer.import_block()}\n\n__pytex__ = {expr}\n"

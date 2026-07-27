@@ -88,10 +88,11 @@ def Normalfont() -> TeX:
     return ControlSequence("normalfont", ())
 
 
-# Size switches use the LaTeX command spelling verbatim as the factory name:
-# `\large`/`\Large`/`\LARGE` and `\huge`/`\Huge` differ only by case, which
-# PascalCase cannot encode without a collision. Python identifiers are
-# case-sensitive, so `large`/`Large`/`LARGE` map one-to-one and predictably.
+# Each size switch keeps the LaTeX command spelling as its factory name.
+# `\large`, `\Large` and `\LARGE` differ only in case, and so do `\huge` and
+# `\Huge`. PascalCase cannot show that difference without a name collision.
+# Python identifiers are case-sensitive, so `large`, `Large` and `LARGE` map
+# one-to-one onto the LaTeX names.
 @Registry.add
 def tiny() -> TeX:
     return ControlSequence("tiny", ())

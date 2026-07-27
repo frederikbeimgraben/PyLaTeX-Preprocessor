@@ -62,7 +62,8 @@ def Autocite(*keys: str, postnote: str | None = None) -> TeX:
     key_param = Parameter(",".join(keys))
     if postnote is None:
         return ControlSequence("autocite", (key_param,))
-    # A single optional argument to \autocite is the postnote (e.g. a page).
+    # biblatex reads a single optional argument to `\autocite` as the
+    # postnote, for example a page number.
     return ControlSequence("autocite", (Parameter(postnote, optional=True), key_param))
 
 

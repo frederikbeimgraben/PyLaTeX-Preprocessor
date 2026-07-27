@@ -241,11 +241,12 @@ def Newline() -> TeX:
 @Registry.add
 @with_package(EUROSYM)
 def Euro() -> TeX:
-    """Euro sign via ``eurosym``'s ``\\euro{}``.
+    """Make the euro sign with the `eurosym` command `\\euro{}`.
 
-    eurosym ships its own glyph, so it renders even when the text font (e.g.
-    DIN) has no euro glyph. The trailing empty group stops the macro from
-    gobbling a following space, keeping ``50\\euro{} each`` spaced correctly.
+    The `eurosym` package has its own euro glyph. The sign prints even when
+    the text font has no euro glyph, for example DIN. The empty group at the
+    end stops `\\euro` from removing the space that follows. This keeps
+    `50\\euro{} each` spaced correctly.
     """
     return ControlSequence("euro", (Parameter(Raw("")),))
 
@@ -363,7 +364,10 @@ def Enumerate(*items: TeX | str) -> TeX:
 
 
 def _describe_item(item: tuple[TeX | str, TeX | str] | TeX) -> TeX | str:
-    """A `(term, description)` pair becomes a labelled `\\item`; nodes pass through."""
+    """Turn a `(term, description)` pair into a labeled `\\item`.
+
+    A TeX node passes through unchanged.
+    """
     if isinstance(item, tuple):
         term, desc = item
         return Item(desc, label=term)
@@ -542,8 +546,9 @@ def Verb(body: str, delim: str = "|") -> TeX:
     return Raw(f"\\verb{delim}{body}{delim}")
 
 
-# Size switches moved to pytex/commands/font.py (zero-arg ControlSequence wrappers).
-# Compose with `Concat(large(), " body")` for inline use.
+# The size switches live in `pytex/commands/font.py`. Each one is a factory
+# that takes no argument. For inline use, compose a size switch with its body,
+# for example `Concat(large(), " body")`.
 
 
 @Registry.add

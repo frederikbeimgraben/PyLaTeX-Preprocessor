@@ -1,14 +1,16 @@
 """A Markdown converter for meeting protocols.
 
-Extends the base :class:`pytex_markdown.convert.MarkdownConverter` with:
+`ProtocolConverter` extends `pytex_markdown.convert.MarkdownConverter` in two
+ways:
 
-* protocol callouts - ``> [!beschluss]``, ``> [!abstimmung]`` (parsed into a
-  vote tally), ``> [!aufgabe]``, ``> [!frist]`` - on top of the inherited
-  GitHub/Obsidian callouts;
-* inline ``{{shortcode}}`` expansion in every run of text.
+1. It adds the protocol callouts `> [!beschluss]` (resolution),
+   `> [!abstimmung]` (vote, which it parses into a tally), `> [!aufgabe]`
+   (action item) and `> [!frist]` (deadline). The GitHub-style callouts of the
+   base converter stay available.
+2. It expands an inline `{{shortcode}}` in every run of text.
 
 Agenda items (TOPs) are plain Markdown headings, so they need no special
-handling - they become numbered sections via the base converter.
+handling. The base converter turns them into numbered sections.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ if TYPE_CHECKING:
 
 __all__ = ["ProtocolConverter"]
 
-# Callout marker -> single-body entry factory.
+# Callout marker -> the entry factory that takes a single body.
 _PROTOCOL_CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
     "BESCHLUSS": Decision,
     "DECISION": Decision,
@@ -72,12 +74,12 @@ def _tally(text: str, key: str) -> int:
 
 
 def _is_tally_line(line: str) -> bool:
-    """A line is the vote tally if it carries at least two of yes/no/abstain."""
+    """Test whether a line carries at least two of the three vote counts."""
     return sum(1 for rx in _TALLY_RE.values() if rx.search(line)) >= 2
 
 
 def _interleave(items: Iterator[TeX]) -> Iterator[TeX]:
-    """Yield `items` separated by LaTeX line breaks (for multi-line box bodies)."""
+    """Yield `items` with a LaTeX line break between them, for a multi-line box."""
     from pytex.model.raw import Raw
 
     sep = Raw(r"\\")
@@ -88,7 +90,7 @@ def _interleave(items: Iterator[TeX]) -> Iterator[TeX]:
 
 
 def _leaf_texts(node: object) -> list[str]:
-    """Every leaf text fragment beneath `node`, in order (one per source line)."""
+    """Return every leaf text fragment under `node`, one per source line."""
     text = _text(node)
     if text is not None:
         return [text]
@@ -96,7 +98,12 @@ def _leaf_texts(node: object) -> list[str]:
 
 
 class ProtocolConverter(MarkdownConverter):
-    """`MarkdownConverter` with protocol callouts and inline shortcodes."""
+    """A `MarkdownConverter` with protocol callouts and inline shortcodes.
+
+    Attributes:
+        meta: The parsed frontmatter. The shortcode expansion reads the
+            meeting fields from it.
+    """
 
     meta: Mapping[str, FrontmatterValue]
 
@@ -110,7 +117,7 @@ class ProtocolConverter(MarkdownConverter):
         super().__init__(base_level=base_level, callouts=callouts)
         self.meta = meta or {}
 
-    # -- inline: splice {{shortcodes}} into otherwise-plain text ----------
+    # -- inline: expand {{shortcodes}} inside otherwise-plain text --------
 
     @override
     def inline(self, node: object) -> TeX:
@@ -135,8 +142,6 @@ class ProtocolConverter(MarkdownConverter):
         factory = _PROTOCOL_CALLOUTS.get(name)
         if factory is None:
             return super()._as_callout(kids)
-        # First paragraph: marker title + its remaining inlines; then any
-        # following blocks of the callout.
         head = Concat(self.inline_text(title), *(self.inline(c) for c in head_rest))
         body_parts = [head, *(self.block(b) for b in rest_blocks)]
         return factory(Concat(*_join(body_parts)))
@@ -144,8 +149,13 @@ class ProtocolConverter(MarkdownConverter):
     def _protocol_marker(
         self, kids: list[object]
     ) -> tuple[str, str, list[object], list[object]] | None:
-        """Return (MARKER, title-after-marker, rest-of-first-paragraph,
-        following-blocks) if kids open a protocol callout we own, else None."""
+        """Read the opening paragraph of a quote as a protocol callout marker.
+
+        Returns:
+            A tuple of the marker name, the title after the marker, the rest
+            of the first paragraph and the blocks that follow. Returns `None`
+            when the quote opens no callout that this class owns.
+        """
         if not kids or _kind(kids[0]) != "Paragraph":
             return None
         inner = _children(kids[0])
@@ -166,8 +176,8 @@ class ProtocolConverter(MarkdownConverter):
         return name, title, inner[1:], kids[1:]
 
     def _signature_callout(self, kids: list[object]) -> TeX:
-        # Each line "Rolle: Name" becomes one signer; the marker is stripped
-        # from the first line.
+        # Each line `Rolle: Name` (role, then name) becomes one signer. The
+        # first line loses the callout marker.
         lines = [frag for k in kids for frag in _leaf_texts(k)]
         if lines:
             lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
@@ -180,8 +190,8 @@ class ProtocolConverter(MarkdownConverter):
         return SignatureLines(*signers)
 
     def _vote_callout(self, kids: list[object]) -> TeX:
-        # Per source line: the tally line feeds the counts, every other line is
-        # kept as the box body (otherwise descriptive text would be dropped).
+        # The tally line gives the counts. Every other source line stays as
+        # the box body, so the box keeps the descriptive text.
         lines = [frag for k in kids for frag in _leaf_texts(k)]
         if lines:
             lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
@@ -197,7 +207,7 @@ class ProtocolConverter(MarkdownConverter):
         )
 
     def inline_text(self, text: str) -> TeX:
-        """Expand `{{shortcodes}}` and escape the rest of a bare string."""
+        """Expand each `{{shortcode}}` in a bare string and escape the rest."""
         return expand_inline_shortcodes(text, self.meta)
 
 

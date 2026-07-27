@@ -1,25 +1,32 @@
-r"""`tex(t"...")` — build a `TeX` tree from a template string (PEP 750).
+r"""Build a node tree from a template string with `tex(t"...")` (PEP 750).
 
-Requires Python 3.14 (the ``t"..."`` syntax and :mod:`string.templatelib`).
-This module is import-safe on older versions — it contains no t-string literals
-and guards the runtime import — but :func:`tex` can only be called with a real
-``Template``, which cannot exist before 3.14. ``pytex`` only re-exports it on
-3.14+.
+`tex` needs Python 3.14 or later for the `t"..."` syntax and for
+`string.templatelib`. This module stays import-safe on an older Python. It
+holds no t-string literal and it guards the runtime import. You can call `tex`
+only with a real `Template`, and a `Template` cannot exist before Python 3.14.
+`pytex` re-exports `tex` only on Python 3.14 and later.
 
-The rendering model mirrors the escape boundary a LaTeX document needs:
+The conversion follows the escape boundary that a LaTeX document needs. PyTeX
+trusts the static parts of the template, because the author wrote them, and
+keeps them as literal LaTeX. For each interpolation, `tex` uses one of these
+rules:
 
-* static template parts are literal LaTeX (author-written, trusted);
-* interpolations are escaped when they are plain values, spliced as-is when
-  they are `TeX` nodes, and recursed when they are nested template strings or
-  iterables of the above.
+1. `tex` puts a TeX node into the node tree without a change.
+2. `tex` converts a nested template string, a list, or a tuple one item at a
+   time.
+3. `tex` formats any other value, then escapes it.
 
+Example:
     name = "Q&A: 50%"
-    tex(t"{Bold('Heading')} - {name}")   # node spliced; name -> "Q\&A: 50\%"
+    tex(t"{Bold('Heading')} - {name}")
+
+    The `Bold` node goes into the node tree without a change. PyTeX escapes
+    `name` to "Q\&A: 50\%".
 """
 
-# `string.templatelib` has no type stub before 3.14, so a type-checker running
-# on an older Python cannot type the `Template` import; silence that noise for
-# this module only (its logic is exercised on 3.14 in CI / the docker test).
+# `string.templatelib` has no type stub before Python 3.14. A type-checker on
+# an older Python cannot type the `Template` import, so silence that noise for
+# this module only. CI and the docker test exercise the logic on Python 3.14.
 # pyright: reportMissingImports=false, reportUnknownVariableType=false
 from __future__ import annotations
 
@@ -47,8 +54,9 @@ if TYPE_CHECKING:
         def __iter__(self) -> Iterator[str | _Interpolation]: ...
 
 
-# Real `Template` class at runtime (3.14+) for the nested-template check; an
-# empty tuple on older versions makes the isinstance test always False.
+# On Python 3.14 and later this holds the real `Template` class for the
+# nested-template check. On an older Python it is an empty tuple, which makes
+# the isinstance test always False.
 try:
     from string.templatelib import Template
 
@@ -64,7 +72,10 @@ _CONVERSIONS = {"r": repr, "s": str, "a": ascii}
 
 
 def tex(template: _Template) -> TeX:
-    """Render a t-string into a `TeX` tree (see the module docstring)."""
+    """Convert a template string into a node tree.
+
+    See the module docstring for the escape rules.
+    """
     return Concat(
         *(
             Raw(item)  # literal LaTeX

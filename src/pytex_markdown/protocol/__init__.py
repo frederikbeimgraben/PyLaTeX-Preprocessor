@@ -1,15 +1,16 @@
-"""STUPA/AStA meeting-protocol rendering, built on top of ``pytex_hsrtreport``.
+"""Meeting protocol rendering for StuPa and AStA, built on `pytex_hsrtreport`.
 
-Write the minutes in Obsidian-flavoured Markdown - YAML frontmatter for the
-meeting header, ``> [!beschluss]`` / ``> [!abstimmung]`` / ``> [!aufgabe]``
-callouts and inline ``{{shortcodes}}`` for the protocol-specific bits - and
-render it to a PDF that matches the HSRTReport look.
+Write the meeting protocol in Obsidian-flavored Markdown. The YAML frontmatter
+holds the meeting header. The `> [!beschluss]`, `> [!abstimmung]` and
+`> [!aufgabe]` callouts and the inline `{{shortcodes}}` hold the
+protocol-specific parts. The build then renders the `.tex` file and compiles it
+to a PDF with the HSRTReport look.
 
     from pytex_markdown.protocol import IncludeProtocol
     __pytex__ = IncludeProtocol("sitzung.md")
 
-The legacy ``pytex_protocol`` package re-exports this module's public API as a
-compatibility shim.
+The deprecated `pytex_protocol` package re-exports the public API of this
+module.
 """
 
 from ..frontmatter import split_frontmatter

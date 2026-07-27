@@ -1,14 +1,17 @@
-"""Trust-gated source-bytes -> rendered-LaTeX step.
+"""Trust-gated step from source bytes to rendered LaTeX.
 
-This is where the code-execution surfaces are gated:
+This module holds the gates on the code-execution surfaces:
 
-* ``.tex.py`` / ``.py`` import (``exec_module``) - TRUSTED only,
-* Markdown ``[//]: # "EXPR"`` eval comments - stripped unless TRUSTED,
-* ``.tex`` ``\\iffalse{pytex(...)}\\fi`` replacements - disabled unless TRUSTED.
+* the import of a `.tex.py` or `.py` file through `exec_module`, which only a
+  `trusted` build may do,
+* the Markdown `[//]: # "EXPR"` eval comments, which PyTeX strips for every
+  non-trusted build,
+* the inline `pytex(...)` markers in a `.tex` source, which PyTeX turns off
+  for every non-trusted build.
 
-The rendered LaTeX is then screened against the package allowlist before it is
-returned, so a forbidden ``\\usepackage`` is caught whether the output is the
-``.tex`` itself or the input to a PDF compile.
+PyTeX then checks the rendered LaTeX against the package allowlist before it
+returns. So a forbidden `\\usepackage` fails whether the result is the
+rendered `.tex` file or the input to a PDF compile.
 """
 
 from __future__ import annotations
@@ -37,8 +40,9 @@ def _decode(source: bytes) -> str:
 
 
 def _render_python_source(source: bytes, workdir: Path) -> str:
-    # The public, suffix-dispatching entry point: a `.py` path is imported and
-    # its `__pytex__` node returned. Only reached on the TRUSTED path.
+    # `get_tex_node` is the public entry point that dispatches on the suffix.
+    # It imports a `.py` path and returns the `__pytex__` node of the module.
+    # Only a `trusted` build reaches this function.
     from pytex_builder.render import get_tex_node
 
     text = _decode(source)
@@ -56,29 +60,35 @@ def _render_markdown_source(
     if not policy.allow_markdown_eval:
         text = strip_markdown_eval_comments(text)
     document = build_document(text, variant=req.variant, config=req.config)
-    # Report/protocol variants embed bundled fonts via fontspec's ``Path=fonts/...``
-    # (HSRTFontSetup). Those TTFs must be materialised into the compile workdir,
-    # or XeTeX fails with "the font ... cannot be found". Plain documents lack the
-    # method and skip this no-op.
+    # The report variant and the protocol variants load bundled fonts through
+    # the fontspec option `Path=fonts/...` (see `HSRTFontSetup`). PyTeX must
+    # write those TTF files to disk in the temporary work directory, or XeTeX
+    # fails with "the font ... cannot be found". A plain document has no
+    # `write_inline_fonts` method and skips this step.
     write_inline_fonts = getattr(document, "write_inline_fonts", None)
     if callable(write_inline_fonts):
         write_inline_fonts(str(workdir))
-    # Same for the (svg->pdf converted) logos and any inline images: the tikz
-    # title/footer overlays reference them by the relative ``logos/<file>`` path,
-    # so the files must exist next to the .tex or tectonic fails with
-    # "Unable to load picture or PDF file 'logos/...'". Best-effort: SVG logos are
-    # converted via ``inkscape``; if it is absent (e.g. a warm-up render with no
-    # converter on PATH) we log and continue rather than failing the whole render —
-    # PDF logos (the common report/protocol case) need no converter and still
-    # materialise. ``OSError`` covers a missing inkscape binary; ``CalledProcessError``
-    # a conversion error.
+    # The logos (converted from SVG to PDF) and the inline images need the
+    # same treatment. The tikz title overlay and footer overlay name them by
+    # the relative path `logos/<file>`, so the files must sit next to the
+    # rendered `.tex` file. If not, tectonic fails with "Unable to load
+    # picture or PDF file 'logos/...'". The step is best-effort. `inkscape`
+    # converts an SVG logo. When inkscape is missing, for example during a
+    # warm-up render, PyTeX logs the problem and continues instead of a failed
+    # render. A PDF logo, which is the common case for a report or a meeting
+    # protocol, needs no converter and still lands on disk. `OSError` covers a
+    # missing inkscape binary, and `CalledProcessError` a conversion error.
     _materialise_best_effort(document, "write_inline_logos", workdir)
     _materialise_best_effort(document, "write_inline_images", workdir)
     return document.rendered
 
 
 def _materialise_best_effort(document: object, method: str, workdir: Path) -> None:
-    """Call ``document.<method>(workdir)`` if present; swallow converter errors."""
+    """Call `document.<method>(workdir)` if it exists, and log converter errors.
+
+    A missing converter binary or a failed conversion must not fail the whole
+    render, so this function logs the error and returns.
+    """
     import logging
     import subprocess
 
@@ -94,10 +104,21 @@ def _materialise_best_effort(document: object, method: str, workdir: Path) -> No
 
 
 def render_to_latex(req: BuildRequest, policy: TrustPolicy, workdir: Path) -> str:
-    """Render the request's source to a LaTeX string under the trust policy.
+    """Render the source of the request to a LaTeX string under the policy.
 
-    ``workdir`` is the per-request temp directory; it is only touched for the
-    Python-execution path (which needs a real module file to import).
+    Args:
+        workdir: The temporary work directory of the request. The Python
+            execution path is the only path that writes there, because it
+            needs a real module file to import.
+
+    Returns:
+        The rendered LaTeX source, already checked against the package
+        allowlist.
+
+    Raises:
+        TrustError: The input kind is `TEX_PY` and the policy blocks Python
+            execution, or the rendered LaTeX requires a forbidden package.
+        ApiError: The source is not valid UTF-8, or the input kind is unknown.
     """
     kind = req.input_kind
     if kind is InputKind.TEX_PY:
@@ -108,8 +129,9 @@ def render_to_latex(req: BuildRequest, policy: TrustPolicy, workdir: Path) -> st
             )
         latex = _render_python_source(req.source, workdir)
     elif kind is InputKind.TEX:
-        # Raw with replacements gated: untrusted .tex keeps `\iffalse pytex()`
-        # blocks as inert literals instead of evaluating them.
+        # `Raw` gates the inline `pytex(...)` markers. An untrusted `.tex`
+        # source keeps each `\iffalse` block as an inert literal, and PyTeX
+        # never evaluates it.
         latex = Raw(
             _decode(req.source),
             allow_replacements=policy.allow_tex_replacements,

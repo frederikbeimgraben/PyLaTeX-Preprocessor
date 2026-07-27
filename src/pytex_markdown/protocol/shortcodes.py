@@ -1,11 +1,13 @@
-"""Inline ``{{shortcode}}`` expansion for protocol Markdown.
+"""Inline `{{shortcode}}` expansion for protocol Markdown.
 
-Shortcodes are the inline counterpart to the block callouts: small widgets
-(``{{time 18:30}}``, ``{{vote ja=12 nein=3 enthaltung=2}}``) and references to
-frontmatter fields (``{{anwesend}}``, ``{{count anwesend}}``, ``{{datum}}``).
+A shortcode is the inline counterpart of a block callout. A shortcode builds a
+small component, for example `{{time 18:30}}` or
+`{{vote ja=12 nein=3 enthaltung=2}}`. A shortcode can also reference a
+frontmatter field, for example `{{anwesend}}`, `{{count anwesend}}` or
+`{{datum}}`.
 
-Unknown shortcodes are rendered back verbatim (escaped) so a typo is visible
-in the PDF rather than silently dropped.
+An unknown shortcode goes back into the text as escaped literal text. You then
+see the typo in the PDF. PyTeX never drops it in silence.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ __all__ = ["SHORTCODE_RE", "expand_inline_shortcodes", "expand_shortcode"]
 
 SHORTCODE_RE: Final[re.Pattern[str]] = re.compile(r"\{\{\s*(.*?)\s*\}\}")
 
-# Frontmatter keys that can be referenced inline by their bare name.
+# The frontmatter keys that a shortcode may reference by their bare name.
 _FIELD_ALIASES: Final[dict[str, tuple[str, ...]]] = {
     "gremium": ("gremium",),
     "datum": ("datum", "date"),
@@ -97,7 +99,7 @@ def _parse_kwargs(rest: str) -> dict[str, str]:
 
 
 def expand_shortcode(inner: str, meta: Mapping[str, FrontmatterValue]) -> TeX:
-    """Expand a single ``{{...}}`` body (without braces) to a TeX node."""
+    """Expand the body of one `{{...}}` marker, without the braces, to a node."""
     name, _, rest = inner.strip().partition(" ")
     name = name.lower()
     rest = rest.strip()
@@ -117,11 +119,12 @@ def expand_shortcode(inner: str, meta: Mapping[str, FrontmatterValue]) -> TeX:
 
 
 def expand_inline_shortcodes(text: str, meta: Mapping[str, FrontmatterValue]) -> TeX:
-    """Split `text` on ``{{...}}`` markers, escaping prose and expanding codes.
+    """Split `text` on the `{{...}}` markers, then escape and expand.
 
-    ``re.split`` on the capturing group alternates prose / inner / prose / ...,
-    so odd pieces are shortcode bodies and even pieces the prose between them.
-    Empty prose pieces (adjacent or edge markers) are dropped.
+    `re.split` on the capturing group alternates prose and shortcode body. The
+    odd pieces are the shortcode bodies. The even pieces are the prose between
+    them. The function drops the empty prose pieces that two adjacent markers
+    or a marker at an edge produce.
     """
     return Concat(
         *(

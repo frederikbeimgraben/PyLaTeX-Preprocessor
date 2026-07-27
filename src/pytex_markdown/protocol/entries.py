@@ -1,8 +1,8 @@
-"""Protocol entry factories, styled to match the HSRTReport callout language.
+"""Protocol entry factories, styled like the HSRTReport callouts.
 
-Each entry is a coloured box (or, for votes, the existing ``VotingResults``
-tally) so a protocol reads with the same visual vocabulary as a report. Labels
-are German, matching the STUPA/AStA context.
+Each entry is a colored box. A vote reuses the existing `VotingResults` tally,
+so a protocol reads with the same visual vocabulary as a report. The labels are
+German, because the StuPa and AStA context needs German documents.
 """
 
 from __future__ import annotations
@@ -36,7 +36,11 @@ def _labelled_box(
     icon: str,
     color: str,
 ) -> TeX:
-    """A ColoredBox whose body is prefixed with a bold label, matching _preset."""
+    """Return a `ColoredBox` whose body starts with a bold label.
+
+    The box uses the same icon size and offset as the `_preset` boxes of
+    `pytex_components.boxes`, so both look the same.
+    """
     return ColoredBox(
         body=Concat(Textbf(f"{label}: "), body),
         icon=FaIcon(icon),
@@ -49,13 +53,18 @@ def _labelled_box(
 
 @Registry.add
 def Decision(body: TeX | str) -> TeX:
-    """A resolution/`Beschluss` box (gavel, HSRT green)."""
+    """A `Beschluss` (resolution) box with a gavel icon, in HSRT green."""
     return _labelled_box("Beschluss", body, icon="gavel", color="britishracinggreen")
 
 
 @Registry.add
 def Deadline(body: TeX | str, due: str | None = None) -> TeX:
-    """A `Frist` (deadline) box. `due` is appended in parentheses when given."""
+    """A `Frist` (deadline) box.
+
+    Args:
+        due: The due date. When it is given, the box appends it in
+            parentheses, in italics.
+    """
     content = Concat(body, Textit(f" (bis {due})")) if due else body
     return _labelled_box("Frist", content, icon="hourglass-half", color="orange")
 
@@ -66,7 +75,12 @@ def ActionItem(
     who: str | None = None,
     due: str | None = None,
 ) -> TeX:
-    """An `Aufgabe` (action item) box with optional assignee and due date."""
+    """An `Aufgabe` (action item) box.
+
+    The box appends the given values in parentheses, in italics. It prints
+    `Zuständig` (responsible) before `who` and `Frist` (deadline) before `due`.
+    It leaves out a value that the caller does not give.
+    """
     meta = ", ".join(
         part
         for part in (
@@ -86,11 +100,11 @@ def Vote(
     abstain: int = 0,
     body: TeX | str = "",
 ) -> TeX:
-    """A voting tally, reusing the report's `VotingResults` box."""
+    """A vote tally that reuses the `VotingResults` box of the report."""
     return VotingResults(yes=yes, no=no, abstain=abstain, body=body)
 
 
 @Registry.add
 def Timestamp(time: str) -> TeX:
-    """Inline timestamp: a clock glyph plus the time, in HSRT blue."""
+    """An inline timestamp: a clock icon and the time, in HSRT blue."""
     return Textcolor("hanblue", Concat(FaIcon("clock"), " ", Textbf(time)))

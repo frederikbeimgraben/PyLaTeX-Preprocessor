@@ -1,3 +1,5 @@
+"""Add a package requirement to a node or to a factory."""
+
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
@@ -15,6 +17,7 @@ __all__ = ["WithPackage", "coerce_package", "with_package"]
 
 @Registry.add
 def coerce_package(pkg: Package | str) -> Package:
+    """Return a `Package` for `pkg`. A string value is a LaTeX package name."""
     if isinstance(pkg, Package):
         return pkg
 
@@ -24,6 +27,13 @@ def coerce_package(pkg: Package | str) -> Package:
 @Registry.add
 @dataclass
 class WithPackage[T: TeX](TeX):
+    """A node that adds one package requirement to the node tree.
+
+    The node renders exactly what its child node renders. It only adds
+    `package` to the package requirements that PyTeX collects for the
+    preamble. A string value for `package` is a LaTeX package name.
+    """
+
     child: T
     package: Package | str
     _parent: "TeX | None" = field(default=None, init=False, compare=False, repr=False)
@@ -51,6 +61,13 @@ class WithPackage[T: TeX](TeX):
 
 
 def with_package[C: Callable[..., TeX]](pkg: Package | str) -> Callable[[C], C]:
+    """Return a decorator that adds a package requirement to a factory.
+
+    The decorated factory returns a `WithPackage` node that holds the node
+    the original factory made. A string value for `pkg` is a LaTeX package
+    name.
+    """
+
     def decorator(func: C) -> C:
         @wraps(func)
         def wrapper(*args: object, **kwargs: object) -> TeX:

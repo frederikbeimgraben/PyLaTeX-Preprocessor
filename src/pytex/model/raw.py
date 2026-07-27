@@ -10,6 +10,12 @@ __all__ = ["Raw", "pytex_namespace"]
 
 
 def _nested_inner(depth: int) -> str:
+    """Build a regex fragment that matches balanced parentheses to `depth`.
+
+    A regular expression cannot match parentheses that nest without a limit, so
+    `PATTERN` supports a fixed depth only. An expression that nests deeper does
+    not match, and the marker stays in the rendered `.tex` file.
+    """
     inner = r"[^()]*"
     for _ in range(depth):
         inner = rf"(?:[^()]|\({inner}\))*"
@@ -23,11 +29,16 @@ PATTERN = re.compile(
 
 
 def pytex_namespace(extra: dict[str, object] | None = None) -> dict[str, object]:
-    """Namespace used to ``eval`` ``pytex(...)`` expressions.
+    """Build the namespace that `eval` uses for a `pytex(...)` expression.
 
-    Exposes Python builtins plus every Registry-registered factory, so the same
-    names work in both escape hatches: ``\\iffalse{pytex(...)}\\fi`` (TeX) and
-    ``[//]: # "..."`` (Markdown).
+    The namespace holds the Python builtins and every factory in the
+    `Registry`. The same names therefore work in both code-execution surfaces:
+    the inline `pytex(...)` marker `\\iffalse{pytex(...)}\\fi` in a `.tex` file,
+    and `[//]: # "..."` in Markdown.
+
+    Args:
+        extra: More names to add. A name in `extra` replaces a registry name.
+            None adds no name.
     """
     return {
         "__builtins__": __builtins__,
@@ -48,6 +59,19 @@ def _evaluate(content: str, extra: dict[str, object]) -> str:
 @Registry.add
 @dataclass
 class Raw(TeX):
+    """Literal LaTeX source that PyTeX does not escape.
+
+    `rendered` returns `content` as written, except for the inline
+    `pytex(...)` markers that `allow_replacements` enables.
+
+    Attributes:
+        namespace: Extra names for the inline `pytex(...)` markers. None means
+            no extra names.
+        allow_replacements: True makes `rendered` run each inline `pytex(...)`
+            marker in `content` as Python code. This is code execution by
+            design. Pass False for content from a source you do not trust.
+    """
+
     content: str
     namespace: dict[str, object] | None = field(default=None)
     allow_replacements: bool = True

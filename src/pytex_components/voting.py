@@ -16,9 +16,11 @@ from .boxes import ColoredBox, CustomBox
 
 __all__ = ["VotingResults"]
 
-# `multicol` is not in pytex.packages; the multicols env needs it. Declared here
-# because VotingResults builds the Multicols node inside `.rendered`, so the
-# command's own requirements never reach the document's package collector.
+# `pytex.packages` has no entry for `multicol`, and the `multicols`
+# environment needs that package. This module declares the package
+# requirement, because `VotingResults` builds the `Multicols` node inside
+# `.rendered`. The requirements of a node built there never reach the package
+# collector of the document.
 MULTICOL: Final = DefinePackage("multicol")
 
 
@@ -33,7 +35,19 @@ def _vote_color(yes: int, no: int) -> str:
 @Registry.add
 @dataclass(frozen=True)
 class VotingResults(TeX):
-    """Voting tally box. Header color picked in Python from yes/no counts."""
+    """A box that shows the tally of a vote.
+
+    The box prints the German labels `Ja` (yes), `Nein` (no) and
+    `Enthaltung` (abstain) in three columns.
+
+    PyTeX picks the icon color and the background color in Python from the
+    counts. More yes votes give `britishracinggreen`, more no votes give
+    `red`, and an equal count gives `eggplant`.
+
+    Attributes:
+        body: Text that PyTeX prints above the three columns. The default is
+            the empty string, which prints nothing.
+    """
 
     yes: Final[int]
     no: Final[int]
@@ -46,6 +60,7 @@ class VotingResults(TeX):
 
     @property
     def color(self) -> str:
+        """The xcolor name for the icon and the background, from `yes` and `no`."""
         return _vote_color(self.yes, self.no)
 
     @property
@@ -56,9 +71,10 @@ class VotingResults(TeX):
     @property
     @override
     def requires(self) -> frozenset[PackageProtocol]:
-        # CALC is needed because the nested ColoredBox/CustomBox use infix
-        # length arithmetic; they are built inside `.rendered`, so their own
-        # `requires` (which include CALC) never reach the package collector.
+        # The nested `ColoredBox` and `CustomBox` nodes use infix length
+        # arithmetic, so they need `calc`. PyTeX builds them inside
+        # `.rendered`, so their own `requires` sets never reach the package
+        # collector. This set names `calc` again for that reason.
         return frozenset({MDFRAMED, XCOLOR, FONTAWESOME, MULTICOL, CALC})
 
     @property

@@ -1,3 +1,10 @@
+"""Factories that render LaTeX control sequences and environments.
+
+Each submodule holds the factories for one LaTeX package, or for one group of
+kernel commands. This package imports every submodule, so `Registry` then
+holds the registry key of every factory.
+"""
+
 from . import (
     biblatex,
     builtin,

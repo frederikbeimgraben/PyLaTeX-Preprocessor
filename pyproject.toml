@@ -42,11 +42,11 @@ addopts = "--import-mode=importlib"
 line-length = 88
 target-version = "py313"
 src = ["src", "tests"]
-# Uses Python 3.14 t-string syntax; the py313 target cannot parse it. Excluded
-# from lint/format (it is exercised by pytest on 3.14).
-# `examples/` is illustrative-only and not part of the CI lint scope (`ruff
-# {check,format} src tests`); excluding it keeps a bare `ruff check` matching CI
-# instead of choking on example-only files (some also use 3.14 t-strings).
+# `test_template.py` uses Python 3.14 t-string syntax, which the py313 target
+# cannot parse. Ruff skips the file. Pytest still runs it on Python 3.14.
+# CI lints `src` and `tests` only, so `examples/` stays outside the lint scope.
+# The exclusion keeps a bare `ruff check` equal to CI. Some example files also
+# use 3.14 t-strings.
 extend-exclude = ["tests/pytex/test_template.py", "examples"]
 
 [tool.ruff.lint]
@@ -66,26 +66,27 @@ select = [
   "ANN",  # flake8-annotations
   "RUF",  # ruff-specific
 ]
-# N802 (non-lowercase function names) is intentional: the public API mirrors
-# LaTeX control sequences as PascalCase factories (`Bfseries`, `Author`,
-# `Align`, ...). Renaming would break every document and downstream package.
+# The public API mirrors LaTeX control sequences as PascalCase factories, for
+# example `Bfseries`, `Author` and `Align`. N802 flags those names, so this
+# config ignores it. A rename breaks every document and downstream package.
 ignore = ["N802"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests favour readability over full annotation coverage.
+# Tests prefer readability over full annotation coverage.
 "tests/**" = ["ANN"]
-# These modules embed raw LaTeX templates whose German typography uses
-# non-ASCII glyphs on purpose (EN DASH separators, MULTIPLICATION SIGN). An
-# inline `noqa` is impossible since it would land inside the template string.
-# pagesetup is one large raw LaTeX template string; its lines cannot be
-# reflowed (a source break would alter the emitted LaTeX).
+# These modules embed raw LaTeX templates. The German typography uses non-ASCII
+# glyphs on purpose, for example EN DASH separators and MULTIPLICATION SIGN.
+# An inline `noqa` cannot work here, because it lands inside the template
+# string. `pagesetup` holds one large raw LaTeX template string. Its lines must
+# stay as they are, because a source break changes the emitted LaTeX.
 "src/pytex_hsrtreport/pagesetup.py" = ["RUF001", "E501"]
 "src/pytex_hsrtreport/watermark.py" = ["RUF002"]
-# glossary holds raw LaTeX template constants (column types, style, labels)
-# that exceed the line length and cannot be reflowed.
+# `glossary` holds raw LaTeX template constants: column types, style and
+# labels. These constants pass the line length limit. They must stay on one
+# line, because a source break changes the emitted LaTeX.
 "src/pytex_hsrtreport/glossary.py" = ["E501"]
-# tectonic pins a table of 64-char biber SHA256 checksums; the hash literals
-# are unbreakable.
+# `tectonic` pins a table of biber SHA256 checksums. Each hash is 64 characters
+# on one line, and a source break corrupts it.
 "src/pytex_builder/tectonic.py" = ["E501"]
 
 [tool.ruff.lint.isort]

@@ -1,3 +1,5 @@
+"""listings styles for code blocks in the HSRT report."""
+
 from typing import Final
 
 from pytex.commands.colors import SelectColor
@@ -80,6 +82,7 @@ HSRT_LISTING_STYLES: Final[dict[str, dict[str, TeX | str]]] = {
 
 @Registry.add
 def HSRTListingStyles() -> TeX:
+    """Set the base listings options and define each HSRT listing style."""
     return Concat(
         Lstset(HSRT_LISTING_BASE),
         *(Lstdefinestyle(name, opts) for name, opts in HSRT_LISTING_STYLES.items()),
@@ -87,4 +90,9 @@ def HSRTListingStyles() -> TeX:
 
 
 def style_options(name: str) -> dict[str, TeX | str]:
+    """Return a copy of the options of one HSRT listing style.
+
+    Raises:
+        KeyError: The name is not a known HSRT listing style.
+    """
     return dict(HSRT_LISTING_STYLES[name])

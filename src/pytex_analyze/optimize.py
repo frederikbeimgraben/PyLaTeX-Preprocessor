@@ -1,16 +1,17 @@
-"""`Optimize` - simplify a `TeX` tree without changing what it renders.
+"""The optimize pass, which simplifies a `TeX` node tree.
 
-Two passes, both render-preserving:
+The pass does two things. Both are render-equivalent.
 
-* structural - flatten nested `Concat`s and drop nodes that render to nothing
-  (handled by `Concat` itself on reconstruction);
-* recognition - turn `Raw` strings that are really a single LaTeX construct
-  (``\\newpage``, ``\\section{...}``, ``\\begin{x}...\\end{x}``) into the
-  matching native nodes.
+1. It flattens nested `Concat` nodes and drops the child nodes that render
+   to nothing. `Concat` itself does this when PyTeX rebuilds it.
+2. It turns a `Raw` string that holds one whole LaTeX construct into the
+   matching native node. Examples are `\\newpage`, `\\section{...}` and
+   `\\begin{x}...\\end{x}`.
 
-Every `Raw` conversion is guarded: the candidate node is only used when it
-renders to exactly the same string as the original, so `Optimize(x).rendered
-== x.rendered` always holds.
+Each `Raw` conversion has a guard. PyTeX uses the new node only when the new
+node renders to the same string as the original `Raw`. The whitespace just
+inside `\\[..\\]` and `\\(..\\)` is the one exception. TeX ignores that
+whitespace, so a candidate that differs only there still passes the guard.
 """
 
 from __future__ import annotations
@@ -36,20 +37,22 @@ if TYPE_CHECKING:
 
 __all__ = ["Optimize"]
 
-# Whole-string LaTeX shapes a Raw might carry. The guard (re-render equality)
-# makes loose matches safe, so these stay deliberately simple.
+# Whole-string LaTeX shapes that a `Raw` can hold. The re-render guard makes a
+# loose match safe, so these patterns stay simple on purpose.
 _ENV = re.compile(r"\\begin\{([a-zA-Z@*]+)\}(.*)\\end\{\1\}", re.DOTALL)
 _ONE_ARG = re.compile(r"\\([a-zA-Z@]+)\{([^{}]*)\}", re.DOTALL)
 _BARE = re.compile(r"\\([a-zA-Z@]+)")
 
-# Constructs recognised *inside* a Raw and split out into their own nodes:
-# inline pytex(...) markers, line comments, and math delimiters. `\\[`/`\\(`
-# map onto DisplayMath/Math and `$...$` onto InlineMath. (`$` body is kept
-# single-`$`-free so `$$` does not match across a display block.)
+# Constructs that the pass finds inside a `Raw` and splits out into their own
+# nodes. These are inline `pytex(...)` markers, line comments and math
+# delimiters. `\\[` maps onto `DisplayMath`, `\\(` onto `Math`, and `$...$`
+# onto `InlineMath`. The `$` body holds no `$` character, so `$$` cannot match
+# across a display block.
 _TOKEN = re.compile(
     rf"(?P<marker>{PATTERN.pattern})"
-    # A comment owns its terminating newline, so the `\n` is required (an
-    # unterminated comment at EOF stays text, keeping rendering identical).
+    # A comment owns the newline that ends it, so the `\n` is required. An
+    # unterminated comment at the end of the file stays text, which keeps the
+    # rendered string the same.
     + r"|(?<!\\)%(?P<comment>[^\n]*)\n"
     + r"|\\\[(?P<dmath>.*?)\\\]"
     + r"|\\\((?P<imath>.*?)\\\)"
@@ -60,7 +63,7 @@ _TOKEN = re.compile(
 
 @Registry.add
 def Optimize(body: TeX | str) -> TeX:
-    """Return a render-equivalent but simpler version of `body`."""
+    """Return a simpler, render-equivalent version of `body`."""
     return _optimize(coerce_tex(body))
 
 
@@ -88,14 +91,16 @@ def _optimize_concat(node: Concat) -> TeX:
     parts: list[TeX] = []
     for element in node.elements:
         optimized = _optimize(element)
-        # Flatten nested Concats (concatenation is associative, so the rendered
-        # string is unchanged) - but keep a `\begin{}...\end{}` group together so
-        # it stays recognisable as an environment.
+        # Concatenation is associative, so flattening a nested `Concat` does
+        # not change the rendered string. Keep a `\begin{}...\end{}` group
+        # together, because the pass must still recognize it as an
+        # environment.
         if isinstance(optimized, Concat) and not _is_environment(optimized):
             parts.extend(optimized.elements)
         else:
             parts.append(optimized)
-    # `Concat` drops empties and unwraps a single child on construction.
+    # `Concat` drops the empty parts and unwraps a single child when PyTeX
+    # constructs it.
     return Concat(*parts)
 
 
@@ -111,12 +116,16 @@ def _is_environment(concat: Concat) -> bool:
 
 
 def _native(raw: Raw) -> TeX:
-    """Turn a `Raw` into native nodes where it is safe to do so.
+    """Turn a `Raw` into native nodes when this is safe.
 
-    Two recognisers, both guarded by re-render equality so meaning is kept:
-    the embedded constructs in `_TOKEN` (pytex markers, comments, `\\[...\\]`
-    and `\\(...\\)` math) are split out, and a `Raw` that is one whole LaTeX
-    construct becomes the matching node. Falls back to the original `Raw`.
+    The function tries two steps. First it splits out the constructs that
+    `_TOKEN` matches. These are inline `pytex(...)` markers, comments, and
+    `\\[...\\]` and `\\(...\\)` math. Then it tries to turn a `Raw` that holds
+    one whole LaTeX construct into the matching node. Re-render equality
+    guards both steps, so the meaning stays the same.
+
+    Returns:
+        The native nodes, or the original `Raw` when neither step matches.
     """
     tokenized = _tokenize(raw)
     if tokenized is not None:
@@ -135,19 +144,24 @@ _MATH_CLOSE = re.compile(r"\s+(\\[\])])")
 
 
 def _strip_math_ws(text: str) -> str:
-    r"""Drop whitespace just inside ``\[..\]`` and ``\(..\)``.
+    r"""Drop the whitespace just inside `\[..\]` and `\(..\)`.
 
-    TeX math mode ignores it, so two strings that differ only there render the
-    same — this lets the tokenizer accept a `DisplayMath`/`Math` candidate
-    (which trims that whitespace) as equivalent to the original.
+    TeX math mode ignores that whitespace. Two strings that differ only there
+    give the same printed result. A `DisplayMath` node and a `Math` node trim
+    that whitespace. The tokenizer uses this function so that it still accepts
+    such a candidate as equal to the original string.
     """
     return _MATH_CLOSE.sub(r"\1", _MATH_OPEN.sub(r"\1", text))
 
 
 def _tokenize(raw: Raw) -> TeX | None:
-    """Split a `Raw` into literal text and the native nodes for the constructs
-    in `_TOKEN`. Returns `None` when nothing matches or the result would change
-    the rendered output (math-delimiter whitespace aside — TeX ignores that)."""
+    """Split a `Raw` into literal text and the native nodes that `_TOKEN` finds.
+
+    Returns:
+        The split nodes. The result is `None` when `_TOKEN` matches nothing,
+        or when the split would change the rendered string. Whitespace inside
+        the math delimiters is the one exception, because TeX ignores it.
+    """
     content = raw.content
     namespace = pytex_namespace(raw.namespace or {})
     parts: list[TeX] = []
@@ -180,7 +194,7 @@ def _token_node(
             return result
         return Raw(str(result), allow_replacements=False)
     if (comment := match.group("comment")) is not None:
-        return Comment(comment)  # body between '%' and the consumed newline
+        return Comment(comment)
     if (dmath := match.group("dmath")) is not None:
         return DisplayMath(_optimize(Raw(dmath)))
     if (imath := match.group("imath")) is not None:

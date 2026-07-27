@@ -1,3 +1,10 @@
+"""PyTeX builds a LaTeX document from typed, immutable TeX nodes.
+
+This package re-exports the model modules, the command modules, `packages`,
+three helper modules, and the `Registry`. Use the factories to make a node
+tree. Read the `.rendered` property of the root node to get the LaTeX source.
+"""
+
 import sys
 
 from . import packages
@@ -90,8 +97,9 @@ __all__ = [
     "with_package",
 ]
 
-# `tex(t"...")` needs PEP 750 template strings (Python 3.14+). Exposed only
-# there; the rest of the library stays importable on 3.13.
+# `tex(t"...")` uses PEP 750 template strings, which need Python 3.14 or
+# later. PyTeX exposes `tex` only on that version and later. The rest of the
+# library stays importable on Python 3.13.
 if sys.version_info >= (3, 14):
     from .template import tex as tex  # pyright: ignore[reportUnreachable]
 

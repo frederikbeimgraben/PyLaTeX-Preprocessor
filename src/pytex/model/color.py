@@ -37,7 +37,7 @@ NAMED_COLORS: set[str] = {
 
 
 def register_named_color(name: str) -> None:
-    """Whitelist a name so `Color.named(name)` accepts it."""
+    """Add a name to the allowed color names, so `Color.named` accepts it."""
     NAMED_COLORS.add(name)
 
 
@@ -47,7 +47,7 @@ def is_known_color_name(name: str) -> bool:
 
 @dataclass(frozen=True)
 class ColorSpec:
-    """Frozen colour identity: `model` + `value` for `\\definecolor`."""
+    """The xcolor model and the value that `\\definecolor` needs."""
 
     model: str
     value: str
@@ -55,13 +55,22 @@ class ColorSpec:
 
 @Registry.add
 class Color(TeX):
-    """Type-safe colour reference.
+    """A reference to a color, which renders as an xcolor color name.
 
-    Constructors:
-        Color("blue")                 # registered name
-        Color("#FF0000")              # hex
-        Color((255, 0, 0))            # rgb 0..255
-        Color((1.0, 0.0, 0.0))        # rgb 0..1
+    A `Color` requires the xcolor package. A `Color` that carries a `spec` also
+    needs a `\\definecolor` line in the preamble. Use `collect_colors` to find
+    those nodes.
+
+    Attributes:
+        name: The xcolor name that this node renders.
+        spec: The model and the value for `\\definecolor`. It is None when
+            xcolor already knows the name.
+
+    Example:
+        Color("blue")            # an allowed color name
+        Color("#FF0000")         # hex
+        Color((255, 0, 0))       # rgb components from 0 to 255
+        Color((1.0, 0.0, 0.0))   # rgb components from 0.0 to 1.0
         Color.hex("FF0000")
         Color.rgb255(255, 0, 0)
         Color.rgb(1.0, 0.0, 0.0)
@@ -126,10 +135,29 @@ class Color(TeX):
         return cls(name=name, spec=None)
 
     def tint(self, percent: int) -> "Color":
-        """xcolor tint: `<self>!<percent>` (e.g. `blue!20`)."""
+        """Return a tint of this color, `<name>!<percent>`, for example `blue!20`.
+
+        Args:
+            percent: How much of this color remains, from 0 to 100. The rest
+                is white. This method does not check the range.
+
+        Returns:
+            A new `Color` with no `spec`, so no `\\definecolor` line comes from
+            it.
+        """
         return Color(name=f"{self.name}!{percent}", spec=None)
 
     def mix(self, other: "Color", percent: int = 50) -> "Color":
+        """Mix this color with `other`, and render `<name>!<percent>!<other>`.
+
+        Args:
+            percent: The share of this color, from 0 to 100. The default 50
+                gives an equal mix. This method does not check the range.
+
+        Returns:
+            A new `Color` with no `spec`, so no `\\definecolor` line comes from
+            it.
+        """
         return Color(
             name=f"{self.name}!{percent}!{other.name}",
             spec=None,
@@ -190,7 +218,12 @@ def _from_overload(
 
 
 def collect_colors(root: TeX) -> tuple[Color, ...]:
-    """Walk a TeX tree, return all unique `Color` instances with a `spec`."""
+    """Find every `Color` node in a node tree that carries a `spec`.
+
+    Returns:
+        One `Color` for each distinct color name, in the order the walk first
+        meets it.
+    """
     seen: dict[str, Color] = {}
 
     def walk(node: TeX) -> None:

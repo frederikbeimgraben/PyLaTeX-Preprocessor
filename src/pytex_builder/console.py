@@ -1,7 +1,8 @@
-"""Minimal, tectonic-style terminal output.
+"""Minimal terminal output in the style of tectonic.
 
-No emojis, no progress bars - just level-tagged lines with restrained color.
-Color is disabled automatically when stderr is not a TTY or ``NO_COLOR`` is set.
+The console writes level-tagged lines with restrained color. It uses no emojis
+and no progress bars. The console turns color off when the stream is not a TTY,
+or when `NO_COLOR` is set.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ class _Style:
 
 
 class Console:
-    """Writes level-tagged status lines to ``stderr``."""
+    """Writes level-tagged status lines to `stderr`."""
 
     def __init__(self, stream: TextIO | None = None) -> None:
         self.stream: TextIO = stream or sys.stderr
@@ -50,7 +51,7 @@ class Console:
         self.stream.flush()
 
     def step(self, message: str) -> None:
-        """A high-level pipeline stage (e.g. 'Rendering', 'Compiling')."""
+        """Report the start of a build stage, for example 'Rendering'."""
         self._emit("==>", message, _Style.GREEN)
 
     def note(self, message: str) -> None:
@@ -63,13 +64,13 @@ class Console:
         self._emit("error:", message, _Style.RED)
 
     def hint(self, message: str) -> None:
-        """A follow-up suggestion attached to a preceding warning/error."""
+        """Print a suggestion that belongs to the warning or error above it."""
         bullet = self._paint("    cause:", _Style.DIM)
         self.stream.write(f"{bullet} {message}\n")
         self.stream.flush()
 
     def detail(self, message: str) -> None:
-        """An indented, dimmed continuation line."""
+        """Print an indented, dimmed continuation line."""
         self.stream.write(f"{self._paint('    ' + message, _Style.DIM)}\n")
         self.stream.flush()
 

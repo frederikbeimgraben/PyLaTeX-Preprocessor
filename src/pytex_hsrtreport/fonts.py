@@ -1,3 +1,5 @@
+"""fontspec setup for the bundled DIN and Blender font families."""
+
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -10,19 +12,23 @@ from pytex.registry import Registry
 
 FONT_DIR: Final[Path] = Path(str(files("pytex_hsrtreport").joinpath("assets/fonts")))
 
-# Output dir for the bundled TTFs, relative to the .tex file. `HSRTReport`'s
-# `write_inline_fonts` copies the real font files here; fontspec's Path= option
-# (see `_font_opts`) loads them from <this>/<subfamily>/.
+# Directory for the bundled TTF files, relative to the rendered `.tex` file.
+# `HSRTReport.write_inline_fonts` writes the font files to disk here. The
+# fontspec `Path=` option in `_font_opts` loads them from
+# `<this directory>/<subfamily>/`.
 FONT_OUTPUT_DIR: Final[str] = "fonts"
 
 
 def all_font_paths() -> tuple[Path, ...]:
-    """Return all bundled TTF paths, sorted for reproducible output."""
+    """Return the path of each bundled TTF file, in sorted order.
+
+    The sort keeps the render reproducible.
+    """
     return tuple(sorted(FONT_DIR.rglob("*.ttf")))
 
 
 def rel(font_path: Path) -> str:
-    """Path of a font file relative to `FONT_DIR`."""
+    """Return the path of a font file relative to `FONT_DIR`."""
     return font_path.relative_to(FONT_DIR).as_posix()
 
 
@@ -39,12 +45,12 @@ def _font_opts(subfamily: str, upright: str, italic: str) -> dict[str, str]:
 
 @Registry.add
 def HSRTFontSetup() -> TeX:
-    """fontspec setup for bundled DIN (main) and Blender (sans) fonts.
+    """Set up fontspec for the bundled DIN (main) and Blender (sans) fonts.
 
-    Mirrors ``Config/Fonts.tex`` from the original template.  The font files
-    are expected at ``fonts/DIN/`` and ``fonts/Blender/`` relative to the
-    output ``.tex`` file, which is where ``HSRTReport.write_inline_fonts``
-    copies the bundled TTFs before the TeX run.
+    This node mirrors `Config/Fonts.tex` from the original template. LaTeX
+    looks for the font files in `fonts/DIN/` and `fonts/Blender/`, relative
+    to the rendered `.tex` file. `HSRTReport.write_inline_fonts` writes them
+    to disk there before PyTeX compiles the document.
     """
     blender_opts = _font_opts("Blender", "*-Medium", "*-MediumItalic")
     din_opts = _font_opts("DIN", "*-Regular", "*-Italic")

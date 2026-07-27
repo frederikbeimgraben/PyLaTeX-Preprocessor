@@ -1,26 +1,30 @@
-"""Rootless Podman sandbox wrapper for untrusted / sandboxed compiles.
+"""Rootless Podman sandbox wrapper for untrusted and sandboxed compiles.
 
-Wraps the tectonic argv in a ``podman run`` invocation that confines the build
-to an ephemeral, network-less, read-only container:
+This module wraps the tectonic argv in a `podman run` call. That call confines
+the build to a temporary, network-less, read-only container:
 
-* ``--network none`` - no network at all (the bundle is pre-warmed; untrusted
-  builds also pass ``--only-cached`` so tectonic never tries to fetch),
-* ``--read-only`` rootfs + a size-capped ``/tmp`` tmpfs for scratch,
-* ``--cap-drop ALL`` + ``--security-opt no-new-privileges`` + Podman's default
-  seccomp profile - trims the kernel attack surface,
-* ``--memory`` / ``--pids-limit`` / ``--cpus`` - cgroups v2 resource caps,
-* only the per-request workdir is mounted read-write (SELinux-relabelled with
-  ``:Z``); the pre-warmed bundle cache is mounted as an ephemeral overlay
-  (``:O``) so tectonic gets a writable view without ever mutating the host
-  cache.
+* `--network none` blocks the network. `pytex-sandbox-init` warms the bundle
+  cache in advance, and an untrusted build also passes `--only-cached`, so
+  tectonic never tries to fetch,
+* `--read-only` makes the root filesystem read-only, and a size-capped `/tmp`
+  tmpfs gives the build its scratch space,
+* `--cap-drop ALL`, `--security-opt no-new-privileges`, and the default
+  seccomp profile of Podman cut the set of kernel calls that the build can
+  make,
+* `--memory`, `--pids-limit`, and `--cpus` set the cgroups v2 resource caps,
+* the temporary work directory of the request is the only read-write mount.
+  Podman relabels it for SELinux with `:Z`. Podman mounts the warmed bundle
+  cache as a temporary overlay with `:O`, so tectonic gets a writable view and
+  the host cache never changes.
 
-tectonic runs from the image itself (the image carries the binary + its shared
-libs + fontconfig), so no host system path is exec-mounted. A statically-linked
-host binary can instead be mounted by setting ``tectonic_in_image=False``.
+tectonic runs from the image itself, because the image carries the binary, its
+shared libraries, and fontconfig. So Podman mounts no host system path as an
+executable. To mount a statically-linked host binary instead, set
+`tectonic_in_image=False`.
 
-This is defense-in-depth *on top of* the render-layer trust gating and the
-``setrlimit``/timeout floor in :mod:`pytex_api._compile`. ``render_blob`` stays
-sandbox-agnostic; the wrapper is selected by the :class:`TrustPolicy`.
+The sandbox is defense in depth on top of the trust gates in the render layer
+and the `setrlimit` and timeout floor in `pytex_api._compile`. `render_blob`
+knows nothing about the sandbox. The `TrustPolicy` selects the wrapper.
 """
 
 from __future__ import annotations
@@ -46,34 +50,37 @@ __all__ = [
     "warm_sandbox_cache",
 ]
 
-# Container-internal mount points / paths.
+# The mount points and paths inside the container.
 CONTAINER_WORKDIR = "/work"
-CONTAINER_BINARY = "/work/tectonic-bin"  # only used when a host binary is mounted
+CONTAINER_BINARY = "/work/tectonic-bin"  # used only with a mounted host binary
 CONTAINER_CACHE = "/cache"
-_CONTAINER_HOME = "/tmp"  # writable tmpfs; fontconfig / XDG scratch lands here
+_CONTAINER_HOME = "/tmp"  # writable tmpfs for the fontconfig and XDG scratch
 
-# Default image: a small Fedora base with tectonic (and its shared libs +
-# fontconfig) installed from the distro repos. The build is a privileged
-# warm-up step (see build_sandbox_image); an untrusted request never reaches
-# the network. tectonic comes from the image so no host binary - which may be
-# dynamically linked against libs the base image lacks - has to be smuggled in.
+# The default image is a small Fedora base. It carries tectonic, the shared
+# libraries of tectonic, and fontconfig, all from the distro repositories. The
+# image build is a privileged warm-up step (see `build_sandbox_image`), and an
+# untrusted request never reaches the network. tectonic comes from the image,
+# so PyTeX never has to put a host binary into the container. Such a host
+# binary can link against libraries that the base image does not have.
 _DEFAULT_IMAGE = "localhost/pytex-tectonic:latest"
-# Base pinned by digest (not a moving :latest tag) for a reproducible,
-# supply-chain-auditable build.
+# This module pins the base image by digest, not by the moving `:latest` tag.
+# So the build is reproducible, and an auditor can check the supply chain.
 _BASE_IMAGE = (
     "registry.fedoraproject.org/fedora-minimal"
     "@sha256:7d847227f0f90b4d45566c9a2ba67b5d36a286b798dbdf27f24d2c02a23b6489"
 )
-# tectonic is not a Fedora package, so install a pinned upstream release and
-# verify its sha256 (instead of piping the latest installer to a shell). The
-# shared libs it links (graphite2 + openssl; harfbuzz/freetype are statically
-# bundled) and fontconfig (for fontspec docs) come from the distro.
+# tectonic is not a Fedora package. The image build installs a pinned upstream
+# release and verifies its sha256, instead of a pipe from the latest installer
+# into a shell. The distro supplies the shared libraries that tectonic links,
+# which are graphite2 and openssl, and fontconfig for a fontspec document.
+# harfbuzz and freetype are statically bundled in the tectonic binary.
 _TECTONIC_VERSION = "0.16.9"
-# Per-arch upstream release asset + its sha256. The image is built natively on
-# the host, so the asset must match the build host's CPU arch: x86_64 uses the
-# glibc build (its shared libs come from the distro install line below);
-# aarch64 ships only a statically-linked musl build upstream. A hard-coded
-# x86_64 asset produced an "exec format error" when the image was built on ARM.
+# The upstream release asset per architecture, with its sha256. Podman builds
+# the image natively on the host, so the asset must match the CPU
+# architecture of that host. x86_64 uses the glibc build, whose shared
+# libraries come from the install line below. Upstream ships only a
+# statically-linked musl build for aarch64. A hard-coded x86_64 asset caused
+# an "exec format error" when Podman built the image on ARM.
 _TECTONIC_ASSETS: dict[str, tuple[str, str]] = {
     "x86_64": (
         "x86_64-unknown-linux-gnu",
@@ -84,7 +91,7 @@ _TECTONIC_ASSETS: dict[str, tuple[str, str]] = {
         "f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1",
     ),
 }
-# platform.machine() spelling -> a key in _TECTONIC_ASSETS.
+# A `platform.machine()` spelling -> a key in `_TECTONIC_ASSETS`.
 _ARCH_ALIASES: dict[str, str] = {
     "x86_64": "x86_64",
     "amd64": "x86_64",
@@ -94,7 +101,7 @@ _ARCH_ALIASES: dict[str, str] = {
 
 
 def _tectonic_url(target: str) -> str:
-    """The upstream release URL for a ``<arch>-<vendor>-<os>-<abi>`` *target*."""
+    """Return the upstream release URL for a `<arch>-<vendor>-<os>-<abi>` target."""
     return (
         "https://github.com/tectonic-typesetting/tectonic/releases/download/"
         f"tectonic%40{_TECTONIC_VERSION}/"
@@ -103,12 +110,23 @@ def _tectonic_url(target: str) -> str:
 
 
 def _containerfile(machine: str | None = None) -> str:
-    """Render the sandbox Containerfile for *machine* (default: host arch).
+    """Build the text of the sandbox Containerfile for one CPU architecture.
 
-    The tectonic download URL + sha256 are chosen by architecture so the image
-    builds correctly on both x86_64 and aarch64 hosts. The musl aarch64 binary
-    is static, so the extra ``graphite2``/``openssl-libs`` packages it does not
-    link are harmless there; ``fontconfig`` is needed by both for fontspec.
+    The architecture picks the tectonic download URL and its sha256, so the
+    image builds correctly on an x86_64 host and on an aarch64 host. The
+    aarch64 musl binary is static, so the extra `graphite2` and `openssl-libs`
+    packages that it does not link do no harm there. Both architectures need
+    `fontconfig` for a fontspec document.
+
+    Args:
+        machine: A `platform.machine()` spelling. `None` reads the
+            architecture of the host.
+
+    Returns:
+        The full Containerfile text.
+
+    Raises:
+        RuntimeError: PyTeX has no tectonic asset for this architecture.
     """
     raw = (machine or platform.machine()).lower()
     arch = _ARCH_ALIASES.get(raw)
@@ -136,14 +154,15 @@ def _containerfile(machine: str | None = None) -> str:
 _DEFAULT_PIDS_LIMIT = 256
 _DEFAULT_MAX_CPUS = "2"
 _DEFAULT_TMPFS_SIZE = "256m"
-# Floors enforced for non-trusted builds so a 0/negative limit cannot drop a
-# cap entirely (an unbounded container is a host OOM/disk-DoS vector).
+# Floors for a non-trusted build, so a limit of zero or less cannot remove a
+# cap. A container with no cap can exhaust the host memory or the host disk.
 MEMORY_FLOOR_BYTES = 256 * 1024 * 1024
 FSIZE_FLOOR_BYTES = 64 * 1024 * 1024
 
-# Host font / fontconfig dirs, mounted read-only when present so fontspec docs
-# can see system fonts. Basic (lmodern) builds need none of these - they come
-# from the tectonic bundle.
+# The host font directories and fontconfig directories. PyTeX mounts each one
+# read-only when it exists, so a fontspec document can see the system fonts. A
+# basic lmodern build needs none of them, because those fonts come from the
+# tectonic bundle.
 _DEFAULT_FONT_DIRS: tuple[str, ...] = (
     "/usr/share/fonts",
     "/usr/local/share/fonts",
@@ -153,7 +172,12 @@ _DEFAULT_FONT_DIRS: tuple[str, ...] = (
 
 
 def _default_cache_dir() -> Path:
-    """tectonic's bundle cache: ``$XDG_CACHE_HOME/Tectonic`` or ``~/.cache``."""
+    """Return the bundle cache path of tectonic.
+
+    Returns:
+        `$XDG_CACHE_HOME/Tectonic`, or `~/.cache/Tectonic` when
+        `XDG_CACHE_HOME` is not set.
+    """
     xdg = os.environ.get("XDG_CACHE_HOME")
     base = Path(xdg) if xdg else Path.home() / ".cache"
     return base / "Tectonic"
@@ -161,7 +185,7 @@ def _default_cache_dir() -> Path:
 
 @dataclass(frozen=True)
 class SandboxConfig:
-    """Knobs for the Podman sandbox; all have safe defaults."""
+    """The settings of the Podman sandbox. Every one has a safe default."""
 
     image: str = _DEFAULT_IMAGE
     cache_dir: Path = field(default_factory=_default_cache_dir)
@@ -169,24 +193,29 @@ class SandboxConfig:
     pids_limit: int = _DEFAULT_PIDS_LIMIT
     max_cpus: str = _DEFAULT_MAX_CPUS
     tmpfs_size: str = _DEFAULT_TMPFS_SIZE
-    # None -> Podman's built-in default seccomp profile (recommended). A path
-    # points at a custom JSON profile passed via --security-opt seccomp=.
+    # `None` -> the built-in default seccomp profile of Podman, which is the
+    # recommended value. A path -> a custom JSON profile, passed with
+    # `--security-opt seccomp=`.
     seccomp_profile: Path | None = None
-    # Mount existing host font dirs read-only into the container.
+    # Mount each host font directory that exists read-only into the container.
     mount_fonts: bool = True
-    # True -> run the image's own ``tectonic`` (recommended; the image carries
-    # the binary + its shared libs). False -> mount a host binary at
-    # CONTAINER_BINARY (only safe with a statically-linked tectonic).
+    # `True` -> run the tectonic binary of the image. This is the recommended
+    # value, because the image carries the binary and its shared libraries.
+    # `False` -> mount a host binary at `CONTAINER_BINARY`, which is only safe
+    # with a statically-linked tectonic.
     tectonic_in_image: bool = True
 
 
 def podman_available() -> bool:
-    """Whether a ``podman`` binary is on PATH."""
+    """Report whether a `podman` binary is on PATH."""
     return which("podman") is not None
 
 
 def sandbox_image_present(image: str = _DEFAULT_IMAGE) -> bool:
-    """Whether ``image`` already exists locally (no network)."""
+    """Report whether `image` already exists on this host.
+
+    The check never uses the network.
+    """
     if not podman_available():
         return False
     proc = subprocess.run(
@@ -200,14 +229,21 @@ def sandbox_image_present(image: str = _DEFAULT_IMAGE) -> bool:
 def build_sandbox_image(
     image: str = _DEFAULT_IMAGE, *, timeout_s: float = 600.0
 ) -> None:
-    """Build the tectonic sandbox image (privileged warm-up; needs network).
+    """Build the tectonic sandbox image.
 
-    Installs ``tectonic`` + ``fontconfig`` into a Fedora base, selecting the
-    tectonic binary for the build host's CPU architecture. Run this once, out
-    of band, never from an untrusted request path. Raises on failure.
+    This is a privileged warm-up step, and it needs the network. Podman
+    installs `tectonic` and `fontconfig` into a Fedora base. The build picks
+    the tectonic binary for the CPU architecture of the build host.
+
+    Run this step once, out of band. Never call it from a request path that
+    serves untrusted input.
+
+    Raises:
+        RuntimeError: `podman build` exited non-zero.
     """
-    # "-" reads the Containerfile from stdin with no build context (there is no
-    # COPY/ADD), so the whole repo is not sent to the builder.
+    # The "-" argument reads the Containerfile from stdin with no build
+    # context. The file has no COPY and no ADD, so Podman does not need to
+    # send the whole repository to the builder.
     proc = subprocess.run(
         ["podman", "build", "-t", image, "-"],
         input=_containerfile(),
@@ -222,11 +258,13 @@ def build_sandbox_image(
         )
 
 
-# Representative warm-up documents: one per offline-relevant variant, each
-# carrying that variant's *real* preamble (HSRT report fonts, protocol header
-# packages). Warming with these - rather than a bare "# Warm" stub - pulls the
-# exact bundle resources the offline (--network none + --only-cached) builds
-# need, so a real report or protocol does not cache-miss on its first compile.
+# One warm-up document per variant that matters offline. Each one carries the
+# real preamble of its variant, which holds the HSRT report fonts and the
+# packages of the meeting protocol header. These documents pull the exact
+# bundle resources that the offline build needs, which a bare "# Warm" stub
+# would not. The offline build runs with `--network none` and
+# `--only-cached`. So a real report or meeting protocol finds everything in
+# the cache on its first compile.
 _WARM_SAMPLES: tuple[tuple[str | None, bytes], ...] = (
     (None, b"# Warm\n\nWarm-up body.\n"),
     ("report", b"---\ntitle: Warm Report\nauthor: PyTeX\n---\n# Intro\n\nBody.\n"),
@@ -244,10 +282,14 @@ _WARM_SAMPLES: tuple[tuple[str | None, bytes], ...] = (
 
 
 def _write_warm_documents(work: Path) -> list[str]:
-    """Render each warm sample to LaTeX in *work*; return the ``.tex`` names.
+    """Render each warm-up sample to a `.tex` file in the `work` directory.
 
-    Renders through the TRUSTED policy so the variant preambles come out exactly
-    as a real build would emit them. Pure rendering - no network, no container.
+    The render runs under the `trusted` policy, so each variant preamble comes
+    out exactly as a real build writes it. This function only renders. It uses
+    no network and no container.
+
+    Returns:
+        The file names of the rendered `.tex` files, in sample order.
     """
     from ._models import BuildRequest, InputKind, TrustLevel
     from ._policy import policy_for
@@ -276,22 +318,25 @@ def _write_warm_documents(work: Path) -> list[str]:
 
 
 def _warm_podman_cmd(config: SandboxConfig, work: Path, tex_name: str) -> list[str]:
-    """``podman run`` argv that warms the cache from *tex_name* (pure; testable).
+    """Assemble the `podman run` argv that warms the cache from `tex_name`.
 
-    Network ON (default), cache mounted read-write with a *shared* (:z) relabel
-    - NOT private (:Z). The cache is the shared lower layer that later request
-    containers read via :O and that the host-side TRUSTED build reads directly;
-    a private MCS category (:Z) would deny those readers under enforcing
-    SELinux. :z is allowed here because the cache lives in the user's $HOME (he
-    owns it), unlike shared system dirs.
+    The function is pure, so a unit test can call it directly. The network
+    stays on, which is the Podman default. Podman mounts the cache read-write
+    with the shared `:z` relabel, and not with the private `:Z` relabel. The
+    cache is the shared lower layer. A later request container reads it
+    through `:O`, and a `trusted` build on the host reads it directly. Under
+    enforcing SELinux, a private MCS category from `:Z` would deny both
+    readers. `:z` is safe here, because the cache lives in the `$HOME` of the
+    user, who owns it. A shared system directory would be a different case.
     """
     return [
         "podman",
         "run",
         "--rm",
-        # Host netns for the one-time privileged warm-up so the bundle can be
-        # fetched even where rootless slirp/pasta networking is unavailable.
-        # This is NOT the untrusted path (which always runs --network none).
+        # The one-time privileged warm-up uses the host network namespace, so
+        # it can fetch the bundle even where rootless slirp or pasta
+        # networking is not available. This is not the untrusted path, which
+        # always runs with `--network none`.
         "--network",
         "host",
         "-v",
@@ -317,17 +362,25 @@ def _warm_podman_cmd(config: SandboxConfig, work: Path, tex_name: str) -> list[s
 def warm_sandbox_cache(
     config: SandboxConfig | None = None, *, timeout_s: float = 600.0
 ) -> None:
-    """Populate the bundle cache using the *image's own* tectonic (one-time).
+    """Fill the bundle cache by running the tectonic binary of the image.
 
-    A privileged warm-up: runs the sandbox image online with the cache mounted
-    read-write so the fetched bundle is written to the host cache by the exact
-    tectonic version that the confined builds use. One compile per representative
-    variant (plain, report, protocol-*) so the offline (``--network none`` +
-    ``--only-cached``) request does not cache-miss on a real document's preamble.
-    Without this, a cache warmed by a differently-versioned host tectonic - or by
-    a minimal stub missing the report/protocol fonts - can miss, and the offline
-    request would then fail. Never call from an untrusted request path. Raises on
-    failure.
+    This is a one-time privileged warm-up. It runs the sandbox image online
+    with the cache mounted read-write. So the exact tectonic version that the
+    confined builds use writes the fetched bundle into the host cache.
+
+    The warm-up runs one compile per variant that matters: plain, report, and
+    the two meeting protocol variants. So an offline request finds the
+    preamble resources of a real document in the cache. The offline request
+    runs with `--network none` and `--only-cached`.
+
+    Without this step, the cache can miss and the offline request then fails.
+    A cache warmed by a host tectonic of a different version can miss. A cache
+    warmed by a minimal stub without the report fonts and the meeting protocol
+    fonts can also miss. Never call this function from a request path that
+    serves untrusted input.
+
+    Raises:
+        RuntimeError: One warm-up compile exited non-zero.
     """
     cfg = config or SandboxConfig()
     cfg.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -351,16 +404,22 @@ def warm_sandbox_cache(
 
 
 def _existing_font_mounts(config: SandboxConfig) -> list[str]:
-    """Read-only mounts of host font dirs that exist.
+    """Build the read-only mount flags for the host font directories that exist.
 
-    SELinux caveat: these are mounted plain ``:ro``, *not* relabelled. A ``:z``
-    relabel of shared system dirs (``/usr/share/fonts`` ...) is rejected rootless
-    (``lsetxattr ... operation not permitted`` - the user does not own those
-    files), so relabelling is not an option here. Under strict enforcing policy a
-    denial would mean system fonts are invisible to the build; the common path is
-    unaffected because PyTeX's default (lmodern) fonts ship inside the tectonic
-    bundle. A fontspec doc needing a specific system font should bake it into the
-    sandbox image or pass it as a caller asset.
+    SELinux note: Podman mounts these plain with `:ro` and does not relabel
+    them. A `:z` relabel of a shared system directory such as
+    `/usr/share/fonts` fails rootless with `lsetxattr ... operation not
+    permitted`, because the user does not own those files. So a relabel is not
+    an option here.
+
+    Under a strict enforcing policy, SELinux can then hide the system fonts
+    from the build. The common path does not change, because the default
+    lmodern fonts of PyTeX come from the tectonic bundle. If a fontspec
+    document needs one specific system font, put that font into the sandbox
+    image, or pass it as an inline asset.
+
+    Returns:
+        The `-v` flags and their mount arguments, in one flat list.
     """
     if not config.mount_fonts:
         return []
@@ -381,19 +440,27 @@ def build_podman_cmd(
     max_fsize_bytes: int,
     name: str | None = None,
 ) -> list[str]:
-    """Assemble the full ``podman run ...`` argv wrapping ``inner_cmd``.
+    """Assemble the full `podman run ...` argv around `inner_cmd`.
 
-    Pure and unit-testable. ``inner_cmd`` is the tectonic argv already expressed
-    in *container* paths (binary at :data:`CONTAINER_BINARY`, files under
-    :data:`CONTAINER_WORKDIR`); this function only prepends the container
-    launcher, its hardening flags, and the mounts. ``name`` gives the container
-    a stable name so it can be force-removed if the wall-clock kill fires.
+    The function is pure, so a unit test can call it directly. It only puts
+    the container launcher, the hardening flags, and the mounts in front of
+    `inner_cmd`.
 
-    ``max_memory_bytes`` is floored at :data:`MEMORY_FLOOR_BYTES` and
-    ``max_fsize_bytes`` at :data:`FSIZE_FLOOR_BYTES`; both caps are always
-    emitted (an unbounded container is a host OOM / disk-DoS vector).
-    ``--ulimit fsize`` restores the per-file write cap lost with the in-process
-    ``RLIMIT_FSIZE`` (its value is raw bytes, verified on Podman).
+    Args:
+        inner_cmd: The tectonic argv, already written in container paths. The
+            binary sits at `CONTAINER_BINARY`, and the files under
+            `CONTAINER_WORKDIR`.
+        max_memory_bytes: The memory cap, floored at `MEMORY_FLOOR_BYTES`.
+        max_fsize_bytes: The per-file write cap, floored at
+            `FSIZE_FLOOR_BYTES`. `--ulimit fsize` carries it, and its value is
+            raw bytes on Podman. This cap replaces the in-process
+            `RLIMIT_FSIZE`, which the container path does not apply.
+        name: A stable container name, so the caller can force-remove the
+            container after a wall-clock kill. `None` lets Podman pick a name.
+
+    Returns:
+        The full argv. Both resource caps are always present, because a
+        container with no cap can exhaust the host memory or the host disk.
     """
     cmd: list[str] = [
         "podman",
@@ -411,9 +478,10 @@ def build_podman_cmd(
         cmd += ["--name", name]
     if config.seccomp_profile is not None:
         cmd += ["--security-opt", f"seccomp={config.seccomp_profile}"]
-    # else: Podman applies its default seccomp profile automatically.
+    # A `None` profile needs no flag. Podman then applies its own default.
 
-    # Always cap memory (floored), pids, cpu, and per-file write size (floored).
+    # Always cap the memory, the process count, the CPU count, and the
+    # per-file write size. The memory cap and the write cap get a floor.
     memory = max(max_memory_bytes, MEMORY_FLOOR_BYTES)
     cmd += ["--memory", f"{memory}b"]
     cmd += ["--pids-limit", str(config.pids_limit)]
@@ -429,12 +497,14 @@ def build_podman_cmd(
     cmd += ["-e", f"XDG_CACHE_HOME={_CONTAINER_HOME}/.cache"]
     cmd += ["-e", f"TECTONIC_CACHE_DIR={CONTAINER_CACHE}"]
 
-    # Pre-warmed bundle cache as an ephemeral overlay: tectonic gets a writable
-    # view, the host cache is never mutated, and Podman handles relabelling.
+    # Mount the warmed bundle cache as a temporary overlay. tectonic gets a
+    # writable view, the host cache never changes, and Podman does the
+    # relabel.
     cmd += ["-v", f"{config.cache_dir}:{CONTAINER_CACHE}:O"]
     cmd += _existing_font_mounts(config)
-    # The only read-write mount: our private per-request workdir, SELinux
-    # relabelled (:Z) so the container can read/write it under enforcing policy.
+    # The temporary work directory of the request is the only read-write
+    # mount. Podman relabels it for SELinux with `:Z`, so the container can
+    # read it and write it under an enforcing policy.
     cmd += ["-v", f"{workdir}:{CONTAINER_WORKDIR}:rw,Z"]
     cmd += ["--workdir", CONTAINER_WORKDIR]
     cmd.append(config.image)

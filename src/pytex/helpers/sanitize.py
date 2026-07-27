@@ -1,12 +1,13 @@
-"""Sanitize untrusted text before it enters a document.
+"""Sanitize text from a source you do not trust before it enters a document.
 
-Two independent concerns:
+`Sanitize` handles two independent concerns, and each one has its own flag.
 
-* ``tex``   - escape LaTeX-special characters so the text renders literally
-  (pytex itself does no escaping; raw strings pass straight through).
-* ``pytex`` - disable PyTeX replacement so an embedded
-  ``\\iffalse{pytex(...)}\\fi`` marker is never evaluated. The marker can run
-  arbitrary Python, so this matters for content from outside the program.
+1. When `tex` is True, `Sanitize` escapes the LaTeX-special characters, so
+   the text renders literally. PyTeX escapes nothing by itself, and a `Raw`
+   node passes its text straight through.
+2. When `pytex` is True, `Sanitize` stops PyTeX from evaluating an inline
+   `pytex(...)` marker in the content. The marker can run any Python code, so
+   this matters for content from outside the program.
 """
 
 from __future__ import annotations
@@ -21,8 +22,8 @@ __all__ = ["Sanitize", "escape_latex"]
 if TYPE_CHECKING:
     from ..interface.tex import TeX
 
-# Build the result char-by-char so braces introduced by a replacement are
-# never themselves re-escaped.
+# `escape_latex` reads the text one character at a time, so it never escapes
+# a brace that a replacement adds.
 ESCAPES: Final[dict[str, str]] = {
     "\\": r"\textbackslash{}",
     "&": r"\&",
@@ -34,26 +35,36 @@ ESCAPES: Final[dict[str, str]] = {
     "}": r"\}",
     "~": r"\textasciitilde{}",
     "^": r"\textasciicircum{}",
-    # babel ngerman (always loaded) makes `"` an active shorthand char, so a
-    # literal double quote would be swallowed/mangled. `\textquotedbl{}` is a
-    # font-encoding macro (T1/textcomp), not a shorthand, so it prints an
-    # upright double quote untouched; the empty group stops space-gobbling.
+    # PyTeX always loads babel with `ngerman`, which makes `"` an active
+    # shorthand character. LaTeX would swallow or mangle a literal double
+    # quote. `\textquotedbl{}` is a font-encoding macro (T1 or textcomp) and
+    # not a shorthand, so it prints an upright double quote without a change.
+    # The empty group stops LaTeX from eating the space after the macro.
     '"': r"\textquotedbl{}",
 }
 
 
 def escape_latex(text: str) -> str:
-    """Return ``text`` with LaTeX-special characters escaped."""
+    """Return `text` with the LaTeX-special characters escaped.
+
+    The function replaces every character that `ESCAPES` names. It leaves
+    every other character unchanged.
+    """
     return "".join(ESCAPES.get(ch, ch) for ch in text)
 
 
 @Registry.add
 def Sanitize(content: str, pytex: bool = True, tex: bool = True) -> TeX:
-    """Wrap ``content`` as a ``TeX`` node, neutralising unsafe input.
+    """Wrap `content` in a `Raw` node and make unsafe input harmless.
 
-    * ``tex=True``   escapes LaTeX-special characters.
-    * ``pytex=True`` prevents any ``\\iffalse{pytex(...)}\\fi`` marker in the
-      content from being evaluated.
+    Args:
+        pytex: True stops PyTeX from evaluating an inline `pytex(...)` marker
+            in the content. Default True.
+        tex: True escapes the LaTeX-special characters in the content.
+            Default True.
+
+    Returns:
+        A `Raw` node that holds the sanitized text.
     """
     text = escape_latex(content) if tex else content
     return Raw(text, allow_replacements=not pytex)

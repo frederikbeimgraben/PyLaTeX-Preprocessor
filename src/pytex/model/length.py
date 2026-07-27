@@ -16,10 +16,14 @@ def _expr(value: "Length | int | float | str") -> str:
 @Registry.add
 @dataclass(frozen=True)
 class Length(TeX):
-    """LaTeX length expression. Arithmetic uses the calc package syntax.
+    """A LaTeX length expression, for example `\\textwidth` or `0.5\\textwidth`.
 
-    Combine via Python operators: `Linewidth() - "0.5cm"`, `0.5 * Textwidth()`.
-    Pass to anything that takes a length spec (Vspace, Setlength, Minipage width).
+    The Python operators build the arithmetic: `Linewidth() - "0.5cm"` or
+    `0.5 * Textwidth()`. The arithmetic uses the syntax of the calc package, so
+    the document must load calc. `Length` does not require calc on its own.
+
+    Pass a `Length` to anything that takes a length, for example `Vspace`,
+    `Setlength`, or the width of a `Minipage`.
     """
 
     expr: Final[str]

@@ -77,12 +77,14 @@ def _is_blank(node: TeX | str) -> bool:
 
 
 def _trim(body: TeX | str) -> TeX | str:
-    """Strip whitespace just inside the math delimiters.
+    """Strip the whitespace just inside the math delimiters.
 
-    TeX math mode ignores leading/trailing spaces and newlines, so this is
-    render-equivalent; it also avoids a blank line (`\\par`) sneaking inside the
-    delimiters, which is a hard LaTeX error. Only the outer boundary is touched
-    (interior whitespace can be significant, e.g. in `\\text{}` or alignments).
+    TeX math mode ignores leading and trailing spaces and newlines, so this is
+    render-equivalent. It also keeps a blank line out of the delimiters. A
+    blank line makes a `\\par`, and a `\\par` inside math is a hard LaTeX error.
+
+    Only the outer boundary changes. Interior whitespace can matter, for
+    example inside `\\text{}` or in an alignment.
     """
     if isinstance(body, str):
         return body.strip()
@@ -113,7 +115,7 @@ def Math(body: TeX | str) -> TeX:
 
 @Registry.add
 def InlineMath(body: TeX | str) -> TeX:
-    """Dollar-delimited inline math: ``$body$``."""
+    """Inline math between dollar signs, `$body$`."""
     return Concat(Raw("$"), _trim(body), Raw("$"))
 
 

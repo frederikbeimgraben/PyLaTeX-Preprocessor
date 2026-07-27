@@ -1,12 +1,12 @@
-"""Minimal YAML-frontmatter splitter for protocol Markdown files.
+"""A minimal YAML frontmatter splitter for protocol Markdown files.
 
-Obsidian writes a ``---`` fenced YAML block at the top of a note. We only need
-a tiny subset - scalars, inline flow lists (``[a, b]``), block lists
-(``- item``) and block scalars (``|`` literal / ``>`` folded) - so this is
-parsed without a YAML dependency.
+Obsidian writes a `---` fenced YAML block at the top of a note. This module
+parses only a small subset of YAML, so it needs no YAML dependency. The subset
+covers scalars, inline flow lists (`[a, b]`), block lists (`- item`) and block
+scalars (`|` literal and `>` folded).
 
-Block scalars let a value span multiple lines, e.g. an inline BibTeX
-bibliography::
+A block scalar lets a value span several lines. An inline BibTeX bibliography
+is the main use:
 
     bibliography: |
       @book{knuth1984,
@@ -30,7 +30,7 @@ def _strip_quotes(text: str) -> str:
 
 
 def _parse_flow_list(text: str) -> list[str]:
-    """Parse an inline ``[a, b, c]`` list into stripped, unquoted items."""
+    """Parse an inline `[a, b, c]` list into stripped, unquoted items."""
     inner = text.strip()[1:-1]
     return [_strip_quotes(item) for item in inner.split(",") if item.strip()]
 
@@ -40,12 +40,17 @@ def _indent(line: str) -> int:
 
 
 def _block_scalar_header(value: str) -> tuple[str, str] | None:
-    """Parse a ``|``/``>`` block-scalar header into ``(style, chomping)``.
+    """Parse a `|` or `>` block-scalar header.
 
-    ``style`` is ``"|"`` (literal) or ``">"`` (folded); ``chomping`` is ``"-"``
-    (strip), ``"+"`` (keep) or ``""`` (clip, the default). Returns ``None`` when
-    ``value`` is an ordinary scalar that merely happens to start with ``|``/``>``
-    (e.g. ``|pipe``), so those are left untouched.
+    Args:
+        value: The text that follows the `key:` on the header line.
+
+    Returns:
+        A `(style, chomping)` pair. `style` is `"|"` (literal) or `">"`
+        (folded). `chomping` is `"-"` (strip), `"+"` (keep) or `""` (clip, the
+        default). Returns `None` when `value` is an ordinary scalar that only
+        starts with `|` or `>`, for example `|pipe`. Such a value stays
+        unchanged.
     """
     if not value or value[0] not in "|>":
         return None
@@ -54,8 +59,8 @@ def _block_scalar_header(value: str) -> tuple[str, str] | None:
     if rest[:1] in ("+", "-"):
         chomping, rest = rest[0], rest[1:]
     rest = rest.strip()
-    # Only a trailing comment may follow the indicator; anything else means this
-    # was not a block scalar after all.
+    # Only a trailing comment may follow the indicator. Any other text means
+    # that this line is not a block-scalar header.
     if rest and not rest.startswith("#"):
         return None
     return style, chomping
@@ -67,8 +72,11 @@ def _consume_block(
     """Collect the lines of a block scalar.
 
     A line belongs to the block while it is blank or indented deeper than the
-    ``key:`` line. Returns the captured (raw) lines and the index of the first
-    line that does not belong to the block.
+    `key:` line.
+
+    Returns:
+        The captured raw lines, and the index of the first line that does not
+        belong to the block.
     """
     block: list[str] = []
     i = start
@@ -86,17 +94,17 @@ def _consume_block(
 
 
 def _dedent(block: list[str]) -> list[str]:
-    """Strip the common leading indentation of the block's non-empty lines."""
+    """Strip the common leading indentation of the non-empty block lines."""
     indents = [_indent(line) for line in block if line.strip()]
     base = min(indents) if indents else 0
     return [line[base:] if len(line) >= base else "" for line in block]
 
 
 def _fold(lines: list[str]) -> str:
-    """Fold a ``>`` block: single line breaks become spaces, blank lines stay.
+    """Fold a `>` block, where a single line break becomes a space.
 
-    A run of N blank lines between paragraphs collapses to N line breaks; lines
-    within a paragraph are joined with a single space.
+    A run of N blank lines between two paragraphs becomes N line breaks. The
+    function joins the lines inside one paragraph with a single space.
     """
     parts: list[str] = []
     pending_blanks = 0
@@ -114,12 +122,12 @@ def _fold(lines: list[str]) -> str:
 
 
 def _chomp(text: str, chomping: str) -> str:
-    """Apply the block-scalar trailing-newline (chomping) indicator."""
+    """Apply the block-scalar chomping indicator to the trailing newlines."""
     if chomping == "-":  # strip: no trailing newline
         return text.rstrip("\n")
-    if chomping == "+":  # keep: leave trailing newlines as captured
+    if chomping == "+":  # keep: leave the trailing newlines as captured
         return text
-    # clip (default): a single trailing newline when there is content
+    # clip (the default): one trailing newline when the block has content
     return text.rstrip("\n") + "\n" if text.strip() else ""
 
 
@@ -139,7 +147,7 @@ def _parse_block(lines: list[str]) -> dict[str, FrontmatterValue]:
             i += 1
             continue
         stripped = raw.strip()
-        # A block-list continuation belongs to the most recent key.
+        # A block-list item belongs to the most recent key.
         if stripped.startswith("- ") and key is not None:
             item = _strip_quotes(stripped[2:])
             existing = meta.get(key)
@@ -161,7 +169,7 @@ def _parse_block(lines: list[str]) -> dict[str, FrontmatterValue]:
             meta[key] = _render_block(block, *header)
             continue
         if not value:
-            # Either a block list follows, or an empty scalar.
+            # A block list follows, or the value is an empty scalar.
             meta[key] = ""
         elif value.startswith("[") and value.endswith("]"):
             meta[key] = _parse_flow_list(value)
@@ -172,14 +180,15 @@ def _parse_block(lines: list[str]) -> dict[str, FrontmatterValue]:
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, FrontmatterValue], str]:
-    """Split ``text`` into (frontmatter mapping, remaining body).
+    """Split `text` into the frontmatter mapping and the remaining body.
 
-    Returns an empty mapping and the unchanged text when no ``---`` fence opens
-    the document.
+    Returns:
+        The parsed frontmatter and the body. Returns an empty mapping and the
+        unchanged text when no `---` fence opens the document.
     """
     if not text.lstrip().startswith("---"):
         return {}, text
-    # Normalise to make the leading fence easy to consume.
+    # Drop the leading blank lines, so the opening fence is the first line.
     stripped = text.lstrip("\n")
     lines = stripped.splitlines()
     if not lines or lines[0].strip() != "---":

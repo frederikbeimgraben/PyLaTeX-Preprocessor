@@ -1,8 +1,8 @@
-"""The compact protocol header block rendered at the top of a protocol.
+"""The compact header box at the top of a meeting protocol.
 
-Maps the parsed frontmatter to a single HSRT-styled box: meeting body + date
-on top, then the organisational fields and the attendance lists. German labels
-throughout (STUPA/AStA context).
+This module maps the parsed frontmatter to one HSRT-styled box. The committee
+and the date come first. The organizational fields and the attendance lists
+follow. The labels are German throughout, for the StuPa and AStA context.
 """
 
 from __future__ import annotations
@@ -26,13 +26,14 @@ if TYPE_CHECKING:
 
 __all__ = ["ProtocolHeader", "header_from_meta"]
 
-# Frontmatter key -> human label for the single-value organisational fields.
+# Frontmatter key -> printed label, for the single-value organizational fields.
 _FIELD_LABELS: tuple[tuple[str, str], ...] = (
     ("ort", "Ort"),
     ("sitzungsleitung", "Sitzungsleitung"),
     ("protokoll", "Protokoll"),
 )
-# Frontmatter key -> label for the attendance lists (rendered with a count).
+# Frontmatter key -> printed label, for the attendance lists. Each label
+# carries the number of people.
 _LIST_LABELS: tuple[tuple[str, str], ...] = (
     ("anwesend", "Anwesend"),
     ("entschuldigt", "Entschuldigt"),
@@ -56,7 +57,17 @@ def _line(label: str, value: str) -> TeX:
 @Registry.add
 @dataclass(frozen=True)
 class ProtocolHeader(TeX):
-    """A compact meeting-header box: title, date/time, fields, attendance."""
+    """A compact meeting-header box with the title, date, fields and people.
+
+    Attributes:
+        gremium: The committee that holds the meeting.
+        fields: The single-value organizational fields, keyed by the
+            frontmatter key: `ort` (place), `sitzungsleitung` (chair) and
+            `protokoll` (writer).
+        attendance: The attendance lists, keyed by the frontmatter key:
+            `anwesend` (present), `entschuldigt` (excused), `abwesend`
+            (absent) and `gaeste` (guests).
+    """
 
     gremium: str = ""
     datum: str = ""
@@ -111,7 +122,11 @@ def _intersperse(items: Iterator[TeX], sep: TeX) -> Iterator[TeX]:
 
 
 def header_from_meta(meta: Mapping[str, FrontmatterValue]) -> ProtocolHeader:
-    """Build a `ProtocolHeader` from parsed frontmatter (German keys, aliases)."""
+    """Build a `ProtocolHeader` from the parsed frontmatter.
+
+    The frontmatter keys are German. The function also accepts the known
+    English aliases, for example `date` for `datum`.
+    """
 
     def scalar(*keys: str) -> str:
         for key in keys:
@@ -126,7 +141,8 @@ def header_from_meta(meta: Mapping[str, FrontmatterValue]) -> ProtocolHeader:
         for key, _ in _LIST_LABELS
         if _as_list(meta.get(key))
     }
-    # `gäste` is the natural German spelling; accept it as an alias for `gaeste`.
+    # `gäste` is the natural German spelling. Accept it as an alias for
+    # `gaeste`, because a German writer uses the umlaut form.
     if "gaeste" not in attendance and _as_list(meta.get("gäste")):
         attendance["gaeste"] = _as_list(meta.get("gäste"))
     return ProtocolHeader(

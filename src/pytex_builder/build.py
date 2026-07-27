@@ -1,23 +1,22 @@
-"""``pytex`` command-line entry point.
+"""The command-line entry point of `pytex`.
 
-Renders a ``.tex`` or ``.py`` input to a LaTeX file and, optionally, compiles
-it with tectonic - running ``makeindex`` between passes so ``glossaries`` and
-acronyms resolve.
+This module renders an input file to a rendered `.tex` file. With `--build` it
+also compiles that file to PDF with tectonic. It runs the makeindex step
+between the compile passes, so that `glossaries` and acronyms resolve.
 
-Security / trust
-----------------
-The CLI runs in a **TRUSTED** context by default. It imports and executes
-``.py`` inputs, evaluates ``.tex`` ``\\iffalse{pytex(...)}\\fi`` replacements
-and Markdown ``eval`` comments, and enables tectonic shell-escape. That is
-remote-code-execution *by design* and is safe only for documents **you wrote
-yourself**. Never point the default CLI at a file from an untrusted source.
+Note:
+    The command runs at trust level `trusted` by default. At that level PyTeX
+    imports and executes a `.tex.py` input file. It also evaluates the inline
+    `pytex(...)` markers of a `.tex` input file, evaluates Markdown `eval`
+    comments, and turns shell-escape on. This is code execution by design. Use
+    the default only on documents you wrote yourself.
 
-To render foreign or untrusted input, pass ``--untrusted`` (or
-``--trust-level {sandboxed,untrusted}``). Those route the build through the
-:mod:`pytex_api` trust policy, which disables every code-execution surface (no
-Python exec, no ``.tex`` replacements, no Markdown eval), forces shell-escape
-off, enforces the package allowlist, and applies resource limits - with
-``sandboxed`` additionally requiring the Podman OS sandbox for PDF builds.
+    If the input file comes from a source you do not trust, pass `--untrusted`
+    or `--trust-level sandboxed`. Both options route the build through the
+    `pytex_api` trust policy. The trust policy closes every code-execution
+    surface, forces shell-escape off, applies the package allowlist, and
+    applies resource limits. The value `sandboxed` also needs the Podman
+    sandbox for a PDF build.
 """
 
 from __future__ import annotations
@@ -33,9 +32,9 @@ from typing import TYPE_CHECKING, cast
 
 from pytex_analyze import Optimize, Severity, analyze
 
-# Import the trust enum from the value-type module, not the package root:
-# `pytex_api/__init__` imports `pytex_builder.console`, so going through the
-# root here would be a circular import. `_models` pulls only stdlib.
+# Import the trust enum from the value-type module, not from the package root.
+# `pytex_api/__init__` imports `pytex_builder.console`, so an import through the
+# root would be circular. `_models` imports only the standard library.
 from pytex_api._models import TrustLevel
 
 from .console import Console, color_enabled
@@ -64,26 +63,31 @@ class Config:
     force: bool = False
     variant: str | None = None
     config: dict[str, object] | None = None
-    # TRUSTED (default) runs the in-process pipeline with full code-execution
-    # power; any other level routes the build through the pytex_api trust policy.
+    # The trust level `trusted` (the default) runs the in-process build with
+    # every code-execution surface open. Every other trust level routes the
+    # build through the `pytex_api` trust policy.
     trust: TrustLevel = TrustLevel.TRUSTED
 
 
 def _default_output(inp: Path, build_dir: Path) -> Path:
-    """Default rendered-output path inside the build directory.
+    """Return the default path of the rendered `.tex` file.
 
-    The driver extension is dropped, plus a trailing ``.tex`` if the source is
-    named after its target (the ``name.tex.py`` convention). The result lives in
-    ``build_dir`` so the ``.out.tex`` and its inline assets (fonts, logos,
-    images) stay out of the source tree:
+    The path is inside the build directory, so the rendered `.tex` file and its
+    inline assets stay out of the source tree. The inline assets are the fonts,
+    the logos and the images. PyTeX drops the extension of the input file. It
+    drops a second `.tex` extension when the input file follows the
+    `name.tex.py` convention.
 
-    The stem is also slugified (whitespace and shell/TeX-hostile characters
-    become ``_``) because it becomes the TeX ``\\jobname``; spaces there break
-    tectonic's biber/makeindex steps (the ``.bcf`` path cannot be opened):
+    The stem becomes the TeX `\\jobname`, so `_slug` cleans it. A space in the
+    `\\jobname` breaks tectonic's biber step and makeindex step, because they
+    cannot open the `.bcf` path.
 
-    * ``example.tex.py``        -> ``<build_dir>/example.out.tex``
-    * ``report.py``             -> ``<build_dir>/report.out.tex``
-    * ``2026-06-15 STUPA.md``   -> ``<build_dir>/2026-06-15_STUPA.md.out.tex``
+    Example:
+        `example.tex.py` -> `<build_dir>/example.out.tex`
+
+        `report.py` -> `<build_dir>/report.out.tex`
+
+        `2026-06-15 STUPA.md` -> `<build_dir>/2026-06-15_STUPA.md.out.tex`
     """
     base = inp
     if base.suffix.lower() in {".py", ".tex"}:
@@ -94,8 +98,14 @@ def _default_output(inp: Path, build_dir: Path) -> Path:
 
 
 def _slug(name: str) -> str:
-    """Make `name` safe as a TeX jobname: collapse whitespace and drop
-    characters that confuse tectonic/biber/makeindex."""
+    """Make `name` safe as a TeX jobname.
+
+    This function replaces each run of whitespace with `_`. It then removes
+    every character that confuses tectonic, biber or makeindex.
+
+    Returns:
+        The safe name. When no character survives, the result is `document`.
+    """
     name = re.sub(r"\s+", "_", name.strip())
     name = re.sub(r"[^\w.\-]", "", name)
     return name or "document"
@@ -245,12 +255,12 @@ def _parse_config(
 
 
 def _optimize(tex_node: TeX) -> TeX:
-    """Return a render-equivalent, tidied version of the input tree.
+    """Run the optimize pass and return the tidied node tree.
 
-    `Optimize` rewrites node trees but does not descend into document nodes, so
-    for a `Document` (and its subclasses, e.g. `HSRTReport`) the body is
-    optimised in place - keeping the document object, its type, and its
-    inline-asset methods intact.
+    The optimize pass is render-equivalent. `Optimize` rewrites a node tree but
+    does not descend into a document node. For a `Document`, and for a subclass
+    such as `HSRTReport`, this function optimizes the body in place. The
+    document node keeps its type and its inline-asset methods.
     """
     from pytex.model.document import Document
 
@@ -261,9 +271,13 @@ def _optimize(tex_node: TeX) -> TeX:
 
 
 def _analyze(tex_node: TeX, console: Console) -> None:
-    """Run the static checks and report them; abort on any error-level issue.
+    """Run the analysis pass and print every issue it finds.
 
-    `--force` bypasses this entirely (the caller skips the call).
+    `--force` skips the analysis pass. The caller then does not call this
+    function at all.
+
+    Raises:
+        BuildError: The analysis pass reported at least one error-level issue.
     """
     issues = analyze(tex_node)
     errors = 0
@@ -280,12 +294,15 @@ def _analyze(tex_node: TeX, console: Console) -> None:
 
 
 def _input_kind_for(path: Path) -> InputKind:
-    """Map a CLI input suffix to a declared :class:`pytex_api.InputKind`.
+    """Map the suffix of an input file to a declared `InputKind`.
 
-    ``.py``/``.tex.py`` -> ``TEX_PY`` (Python-executing, rejected by every
-    non-TRUSTED policy), ``.tex`` -> ``TEX``, ``.md``/``.markdown`` ->
-    ``MARKDOWN``. Unknown suffixes raise :class:`BuildError`, matching the
-    trusted dispatcher in :mod:`pytex_builder.render`.
+    The mapping is `.py` and `.tex.py` -> `TEX_PY`, `.tex` -> `TEX`, and `.md`
+    and `.markdown` -> `MARKDOWN`. The kind `TEX_PY` executes Python, so the
+    trust policy rejects it at every trust level except `trusted`.
+
+    Raises:
+        BuildError: PyTeX does not support this suffix. The trusted dispatcher
+            in `pytex_builder.render` raises the same error.
     """
     from pytex_api import InputKind
 
@@ -302,17 +319,21 @@ def _input_kind_for(path: Path) -> InputKind:
 
 
 def _run_untrusted(cfg: Config, console: Console) -> None:
-    """Render or build ``cfg.input`` through the :mod:`pytex_api` trust policy.
+    """Render or build `cfg.input` through the `pytex_api` trust policy.
 
-    Reads the source bytes and hands them to :func:`pytex_api.render_blob` under
-    ``cfg.trust``, so the gating decisions (no Python exec, no ``.tex``
-    replacements, no Markdown eval, shell-escape off, package allowlist,
-    resource limits, and - for SANDBOXED - the Podman sandbox) are the API's,
-    never duplicated here. Any :class:`pytex_api.ApiError` is mapped to a
-    :class:`BuildError` so ``main`` reports it like every other build failure.
+    This function reads the source bytes and passes them to
+    `pytex_api.render_blob` at trust level `cfg.trust`. The trust policy makes
+    every gating decision. It closes every code-execution surface, forces
+    shell-escape off, applies the package allowlist, and applies resource
+    limits. At trust level `sandboxed` it also uses the Podman sandbox. This
+    module never repeats those decisions.
 
-    ``--tree`` and the optimize/analysis pass are TRUSTED-only conveniences (they
-    need the in-process node tree) and do not apply on this path.
+    `--tree`, the optimize pass and the analysis pass need the in-process node
+    tree, so they work only at trust level `trusted`. This path ignores them.
+
+    Raises:
+        BuildError: `pytex_api` raised an `ApiError`. This function maps that
+            error, so that `main` reports it like every other build failure.
     """
     from pytex_api import ApiError, BuildRequest, OutputKind, render_blob
 
@@ -365,9 +386,10 @@ def _run(cfg: Config, console: Console) -> None:
     console.step(f"Rendering {cfg.input.name}")
     tex_node = get_tex_node(cfg.input, variant=cfg.variant, config=cfg.config)
 
-    # Normalise then check, both skipped with --force. Optimize is
-    # render-equivalent, so the output is unchanged; it just tidies the tree
-    # (the printed --tree and the analysis below then see the clean version).
+    # `--force` skips the optimize pass and the analysis pass below. The
+    # optimize pass is render-equivalent, so the rendered `.tex` file stays the
+    # same. It only tidies the node tree, and `--tree` and the analysis pass
+    # then see the tidied tree.
     if not cfg.force:
         tex_node = _optimize(tex_node)
 
@@ -387,9 +409,10 @@ def _run(cfg: Config, console: Console) -> None:
 
     build_dir.mkdir(parents=True, exist_ok=True)
 
-    # Materialise inline assets (fonts, logos, images) alongside the .tex (in
-    # the build dir by default) so the TeX engine can locate them by the
-    # relative paths in the preamble.
+    # Write the inline assets to disk next to the rendered `.tex` file. The
+    # inline assets are the fonts, the logos and the images. That directory is
+    # the build directory by default, so the relative paths in the preamble
+    # resolve during the compile pass.
     if hasattr(tex_node, "write_inline_fonts"):
         cast("HSRTReport", tex_node).write_inline_fonts(str(output.parent))
     if hasattr(tex_node, "write_inline_logos"):
@@ -405,7 +428,8 @@ def _run(cfg: Config, console: Console) -> None:
         run_tectonic(
             binary, output, build_dir, shell_escape=cfg.shell_escape, console=console
         )
-        # Resolve glossaries after the first pass; rerun only if it changed.
+        # Run the makeindex step after the first compile pass. Run a second
+        # compile pass only when the makeindex step rebuilt an index.
         if pass_no == 1 and run_makeindex(job, build_dir, console=console):
             continue
         break

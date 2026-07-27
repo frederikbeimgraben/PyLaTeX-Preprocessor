@@ -1,3 +1,5 @@
+r"""The HSRT color palette and the `\definecolor` commands that declare it."""
+
 from typing import Final
 
 from pytex.commands.colors import Definecolor
@@ -24,7 +26,10 @@ def _spec(rgb: tuple[float, float, float]) -> str:
 
 @Registry.add
 def HSRTColors() -> TeX:
-    """Definecolor commands for all HSRT palette colors. Emit once in preamble."""
+    r"""Declare every color of the HSRT palette with `\definecolor`.
+
+    Use this node one time in the preamble.
+    """
     return Concat(
         *(Definecolor(name, "rgb", _spec(rgb)) for name, rgb in HSRT_PALETTE.items())
     )

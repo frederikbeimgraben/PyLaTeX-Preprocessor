@@ -1,11 +1,12 @@
 # pyright: reportUnsupportedDunderAll=false
-"""Model subpackage.
+"""The TeX node types that make up a node tree.
 
-Modules are not eager-imported here to avoid a circular import:
-`pytex/__init__.py` → `pytex.packages` → `pytex.model.package` →
-`pytex.model.__init__` → `pytex.model.math` → `pytex.packages` (still loading).
+This module imports no submodule, because an eager import makes a circular
+import: `pytex/__init__.py` -> `pytex.packages` -> `pytex.model.package` ->
+`pytex.model.__init__` -> `pytex.model.math` -> `pytex.packages`, which is
+still loading.
 
-Import submodules directly: `from pytex.model.math import Frac`.
+Import each submodule directly, for example `from pytex.model.math import Frac`.
 """
 
 __all__ = [

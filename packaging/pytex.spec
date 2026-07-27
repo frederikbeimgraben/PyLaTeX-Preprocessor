@@ -1,10 +1,14 @@
-# PyInstaller spec for the standalone `pytex` binary.  (Run via packaging/build.py
-# or `pyinstaller packaging/pytex.spec`.)
+# PyInstaller spec for the standalone `pytex` binary. Run it through
+# `packaging/build.py` or through `pyinstaller packaging/pytex.spec`.
 #
-# Bundles the pytex packages (with their data: HSRT fonts/logos/tex, etc.), the
-# distribution metadata (so `pytex --version` works frozen), and every extra
-# package listed in bundle.toml (so documents can import numpy/pandas/… at
-# runtime).
+# The spec bundles three things:
+#
+# 1. The pytex packages with their data, for example the HSRT fonts, logos and
+#    tex files.
+# 2. The distribution metadata, so `pytex --version` works in the frozen
+#    binary.
+# 3. Every extra package that `bundle.toml` lists, so a document can import
+#    numpy or pandas at runtime.
 
 import tomllib
 from pathlib import Path
@@ -13,7 +17,8 @@ from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 _HERE = Path(SPECPATH)  # noqa: F821 - injected by PyInstaller
 
-# pytex's own packages: collect_all grabs their package-data (assets/tex).
+# `collect_all` also takes the package data of these packages, for example the
+# `assets` and `tex` folders.
 _PYTEX_PACKAGES = [
     "pytex",
     "pytex_analyze",

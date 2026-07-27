@@ -1,4 +1,4 @@
-"""Deprecated alias for :mod:`pytex_markdown.frontmatter`."""
+"""The deprecated alias for `pytex_markdown.frontmatter`."""
 
 from __future__ import annotations
 

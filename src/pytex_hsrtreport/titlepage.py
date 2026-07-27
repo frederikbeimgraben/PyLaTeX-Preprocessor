@@ -1,3 +1,5 @@
+"""The HSRT title page and the rows of its data table."""
+
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Final, override
@@ -30,8 +32,11 @@ from .logos import titlepage_logo_overlay
 
 
 def _is_blank(node: TeX | str) -> bool:
-    """True for an empty string or the `Empty` node — used to skip empty
-    title-page sections (a protocol has no abstract or keywords)."""
+    """Return true for a string with no visible text, or for the `Empty` node.
+
+    The title page uses this to skip a section that has no content. A meeting
+    protocol, for example, has no abstract and no keywords.
+    """
     if isinstance(node, str):
         return not node.strip()
     return node is Empty
@@ -42,6 +47,8 @@ __all__ = ["TitlePage", "TitlePageDataLine"]
 
 @dataclass(frozen=True)
 class TitlePageDataLine:
+    """One label-and-value row of the title page data table."""
+
     label: str
     value: TeX | str
 
@@ -60,11 +67,12 @@ def _data_table_body(lines: tuple[TitlePageDataLine, ...]) -> TeX:
 @Registry.add
 @dataclass
 class TitlePage(TeX):
-    """HSRT titlepage with abstract, keywords, and data table.
+    r"""The HSRT title page with an abstract, keywords and a data table.
 
-    ``logo_names`` drives a tikz overlay that chains logos left-to-right from
-    the top-left corner of the page, mirroring the ``\\foreach`` loop in
-    ``tmp/Pages/Titlepage.tex`` (loop unrolled in Python).
+    `logo_names` drives a tikz overlay. The overlay chains the logos from left
+    to right. The chain starts at the top-left corner of the page. The overlay
+    mirrors the `\foreach` loop in `tmp/Pages/Titlepage.tex`, unrolled in
+    Python.
     """
 
     title: Final[TeX | str]
@@ -103,11 +111,14 @@ class TitlePage(TeX):
                     Concat(
                         Blenderfont(),
                         Huge(),
-                        # A plain control-word terminator, not an optical kern:
-                        # the old \hspace*{-2.5pt} shifted only the first line,
-                        # leaving a wrapped title's later lines misaligned with
-                        # it and the rule. The space just ends \Huge (TeX gobbles
-                        # it) so the title's first word is not read as a macro.
+                        # This space ends the `\Huge` control word. TeX
+                        # discards the space, so the space moves nothing.
+                        # Without the space, TeX reads the first word of the
+                        # title as part of the macro name. Do not replace the
+                        # space with an optical kern. The old
+                        # `\hspace*{-2.5pt}` moved the first line only. The
+                        # later lines of a wrapped title then lost their
+                        # alignment with the first line and with the rule.
                         Raw(" "),
                         self.title,
                     )
@@ -119,15 +130,13 @@ class TitlePage(TeX):
         )
 
     def _content(self) -> Iterator[TeX | str]:
-        # Tikz overlay: logos chained left-to-right from the top-left corner,
-        # matching tmp/Pages/Titlepage.tex but with the foreach unrolled here.
         yield Raw(titlepage_logo_overlay(self.logo_names), allow_replacements=False)
         yield Vspace("4cm")
         yield self._title_block()
         yield Vspace("2em")
         yield Setstretch("1.0")
-        # Abstract and keywords are optional — skip the labels when empty
-        # (e.g. a meeting protocol has neither).
+        # The abstract and the keywords are optional. A meeting protocol has
+        # neither, so skip the heading when the value is empty.
         if not _is_blank(self.abstract):
             yield SectionStar(self.abstract_heading)
             yield Vspace("-1em")
@@ -149,9 +158,10 @@ class TitlePage(TeX):
     @property
     @override
     def rendered(self) -> str:
-        # `\HSRTTitlePagetrue` while the titlepage ships out so footer_logo_hook
-        # suppresses the bottom-right footer logos on this page only; reset
-        # after \end{titlepage} (which \clearpages while the flag is still set).
+        # `\HSRTTitlePagetrue` stays set while LaTeX ships out the title page.
+        # The hook from `footer_logo_hook` then leaves the bottom-right footer
+        # logos out on this page only. The reset comes after `\end{titlepage}`,
+        # which runs `\clearpage` while the flag is still set.
         return Concat(
             Raw(r"\HSRTTitlePagetrue", allow_replacements=False),
             TitlepageEnv(Concat(*self._content())),

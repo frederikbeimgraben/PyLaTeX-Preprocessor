@@ -1,3 +1,11 @@
+"""The LaTeX packages that a PyTeX node can name as a package requirement.
+
+Each module-level constant is one `Package` value. `DefinePackage` returns the
+same `Package` for the same name, so a constant is safe to compare by
+identity. The `Packages` enum holds the same values, so code can look a
+package up by member name.
+"""
+
 from enum import Enum
 
 from pytex.model.package import DefinePackage, Package
@@ -59,8 +67,9 @@ LASTPAGE: Package = DefinePackage("lastpage")
 CLEVEREF: Package = DefinePackage("cleveref", after={HYPERREF, AMSMATH})
 VARIOREF: Package = DefinePackage("varioref")
 FRAMED: Package = DefinePackage("framed")
-# framemethod=tikz must be set at load time (preamble) for mdframed's rounded
-# backgrounds; it cannot be switched on per-environment mid-document.
+# mdframed needs `framemethod=tikz` at load time in the preamble for rounded
+# backgrounds. You cannot switch the method on for one environment in the
+# document body.
 MDFRAMED: Package = DefinePackage("mdframed", options={("framemethod", "tikz")})
 PDFPAGES: Package = DefinePackage("pdfpages")
 FONTSPEC: Package = DefinePackage("fontspec")
@@ -74,7 +83,7 @@ NOMENCL: Package = DefinePackage("nomencl")
 ALGORITHM2E: Package = DefinePackage("algorithm2e")
 ALGORITHMS: Package = DefinePackage("algorithms")
 ALGORITHMICX: Package = DefinePackage("algorithmicx")
-LSTLISTING: Package = LISTINGS  # alias
+LSTLISTING: Package = LISTINGS
 TBL_THEOREM: Package = DefinePackage("amsthm", after={AMSMATH})
 AMSTHM: Package = TBL_THEOREM
 THMTOOLS: Package = DefinePackage("thmtools")
@@ -113,8 +122,8 @@ ARYDSHLN: Package = DefinePackage("arydshln")
 LMODERN: Package = DefinePackage("lmodern")
 HYPHENAT: Package = DefinePackage("hyphenat")
 FP: Package = DefinePackage("fp")
-# Ships its own euro glyph, so `\euro{}` renders independent of the text font
-# (e.g. DIN, whose font set lacks a euro glyph and would otherwise tofu).
+# eurosym ships its own euro glyph, so `\euro{}` works with any text font.
+# The DIN font set has no euro glyph and prints a tofu box without eurosym.
 EUROSYM: Package = DefinePackage("eurosym")
 
 
