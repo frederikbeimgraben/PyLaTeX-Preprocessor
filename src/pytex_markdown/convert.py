@@ -118,13 +118,24 @@ CALLOUTS: Final[dict[str, Callable[[TeX | str], TeX]]] = {
 # A key uses the usual BibTeX character set. It starts with an alphanumeric
 # character or an underscore, and it may hold internal punctuation. A key must
 # not end on punctuation, so a trailing sentence period such as `@knuth.`
-# stays outside the key.
-_CITE_KEY = r"[A-Za-z0-9_](?:[\w:.#$%&+?<>~/-]*[A-Za-z0-9_])?"
+# stays outside the key. BibTeX keys cannot hold `#`, `$`, `%` or `&`, and
+# each of those characters breaks a `\textcite`/`\autocite` argument when it
+# reaches TeX unescaped, so the class excludes them. The character then stays
+# in the surrounding prose, where `_prose` escapes it.
+_CITE_KEY = r"[A-Za-z0-9_](?:[\w:.+?<>~/-]*[A-Za-z0-9_])?"
 CITATION_RE: Final[re.Pattern[str]] = re.compile(
     r"\[(?P<bracket>\s*@[^\]]+)\]" + rf"|(?<![\w@])@(?P<narrative>{_CITE_KEY})"
 )
 _CITE_ENTRY_RE: Final[re.Pattern[str]] = re.compile(
     rf"^@(?P<key>{_CITE_KEY})\s*(?:,\s*(?P<post>.+))?$"
+)
+
+# listings has no escape mechanism for its own terminator. It closes the
+# environment at the first line that starts with `\end{lstlisting}`, so a
+# fenced code block that quotes that exact line would otherwise end the
+# environment early and let the rest of the block run as live LaTeX.
+_LSTLISTING_END_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?P<lead>[ \t]*)\\end\{lstlisting\}", re.MULTILINE
 )
 
 PARBREAK: Final[TeX] = Raw("\n\n")
@@ -383,10 +394,14 @@ class MarkdownConverter:
         # `breaklines` wraps a long line. Without it a long line goes past the
         # page margin. The language is absent on purpose. listings stops with
         # an error on an unknown language, and a Markdown info string can hold
-        # any word. A newline brackets the body. lstlisting reads the code
-        # from the line after `\begin`, and `\end` must sit on its own line.
+        # any word. `Lstlisting` brackets the body with its own newline, so
+        # `_code` passes the bare text.
         code = (text or "").rstrip("\n")
-        return Lstlisting(f"\n{code}\n", {"breaklines": "true"})
+        # Break a quoted `\end{lstlisting}` line so it cannot close the
+        # environment early. The inserted space keeps the printed code
+        # readable and stops the exact match that `listings` looks for.
+        code = _LSTLISTING_END_RE.sub(r"\g<lead>\\end{ lstlisting}", code)
+        return Lstlisting(code, {"breaklines": "true"})
 
     def _rule(self, _node: object) -> TeX:
         return Concat(Noindent(), Rule(r"\linewidth", "0.4pt"))

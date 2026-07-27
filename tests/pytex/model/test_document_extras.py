@@ -69,6 +69,20 @@ def test_write_inline_images_creates_files(tmp_path):
     assert Path(written[0]).read_bytes() == p.read_bytes()
 
 
+def test_write_inline_images_path_matches_rendered_reference(tmp_path):
+    # The rendered \includegraphics and \begin{filecontents*} both name the
+    # image by its own resolved, absolute path. The path write_inline_images
+    # returns must be that same path, or the compile pass and the written
+    # copy point at two different files.
+    p = _pdf(tmp_path, "src.pdf")
+    out_dir = tmp_path / "out"
+    doc = Document(IncludeImage(p, inline_base64=True))
+    written = doc.write_inline_images(str(out_dir))
+    rendered = doc.rendered
+    assert f"{{{written[0]}}}" in rendered
+    assert f"{{{written[0]}.b64}}" in rendered
+
+
 def test_rendered_emits_filecontents_before_document(tmp_path):
     p = _pdf(tmp_path)
     out = Document(IncludeImage(p, inline_base64=True)).rendered

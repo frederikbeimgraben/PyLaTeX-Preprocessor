@@ -168,14 +168,23 @@ def _tokenize(raw: Raw) -> TeX | None:
     cursor = 0
     for match in _TOKEN.finditer(content):
         if match.start() > cursor:
-            parts.append(Raw(content[cursor : match.start()], allow_replacements=False))
+            parts.append(
+                _optimize(
+                    Raw(content[cursor : match.start()], allow_replacements=False)
+                )
+            )
+        # `_token_node` already applies `_optimize` where that is needed, for
+        # example inside the `dmath`, `imath` and `smath` branches. Running
+        # `_optimize` on its result again would re-scan an inert marker Raw
+        # for the same `pytex(...)` marker forever, so this loop must not do
+        # that a second time.
         parts.append(_token_node(match, raw.allow_replacements, namespace))
         cursor = match.end()
     if not parts:
         return None
     if cursor < len(content):
-        parts.append(Raw(content[cursor:], allow_replacements=False))
-    candidate = Concat(*(_optimize(part) for part in parts))
+        parts.append(_optimize(Raw(content[cursor:], allow_replacements=False)))
+    candidate = Concat(*parts)
     rendered = candidate.rendered
     target = raw.rendered
     if rendered == target or _strip_math_ws(rendered) == _strip_math_ws(target):
@@ -196,10 +205,26 @@ def _token_node(
     if (comment := match.group("comment")) is not None:
         return Comment(comment)
     if (dmath := match.group("dmath")) is not None:
-        return DisplayMath(_optimize(Raw(dmath)))
+        return DisplayMath(
+            _optimize(
+                Raw(dmath, namespace=namespace, allow_replacements=allow_replacements)
+            )
+        )
     if (imath := match.group("imath")) is not None:
-        return Math(_optimize(Raw(imath)))
-    return InlineMath(_optimize(Raw(match.group("smath"))))
+        return Math(
+            _optimize(
+                Raw(imath, namespace=namespace, allow_replacements=allow_replacements)
+            )
+        )
+    return InlineMath(
+        _optimize(
+            Raw(
+                match.group("smath"),
+                namespace=namespace,
+                allow_replacements=allow_replacements,
+            )
+        )
+    )
 
 
 def _candidates(content: str) -> Iterator[TeX]:

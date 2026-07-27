@@ -56,6 +56,32 @@ def test_strip_keeps_ordinary_links():
     assert strip_markdown_eval_comments(text) == text
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        '[ // ]: # "1+1"',
+        '[\t//\t]: # "1+1"',
+        '[//]:\n# "1+1"',
+    ],
+)
+def test_strip_removes_eval_comment_variants_marko_still_parses(text):
+    out = strip_markdown_eval_comments(text)
+    assert "1+1" not in out
+
+
+def test_render_blob_does_not_evaluate_padded_label_eval_comment():
+    from pytex_api import BuildRequest, InputKind, OutputKind, TrustLevel, render_blob
+
+    req = BuildRequest(
+        source=b'[ // ]: # "1+1"',
+        input_kind=InputKind.MARKDOWN,
+        output_kind=OutputKind.TEX,
+        trust=TrustLevel.UNTRUSTED,
+    )
+    result = render_blob(req)
+    assert b"2" not in result.output
+
+
 # -- the package allowlist check --------------------------------------------
 
 

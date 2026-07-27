@@ -56,8 +56,12 @@ def test_color_requires_xcolor():
 
 
 def test_tint_chain():
-    c = Color.named("blue").tint(50).tint(80)
-    assert c.name == "blue!50!80"
+    import pytest
+
+    # blue!50!80 is not a name xcolor can resolve: it reads the token after
+    # the second "!" as a color name, not as a second tint percentage.
+    with pytest.raises(ValueError):
+        Color.named("blue").tint(50).tint(80)
 
 
 def test_or_alias_returns_color():
@@ -70,6 +74,16 @@ def test_collect_colors_unique_by_name():
     same = Color.hex("#FF0000")
     out = collect_colors(Concat(c, same))
     assert len(out) == 1
+
+
+def test_collect_colors_distinguishes_close_rgb_defaults():
+    # Two close but different rgb() colors must not share a default name.
+    # A shared name means one \definecolor line silently wins for both.
+    a = Color.rgb(0.5, 0.2, 0.1)
+    b = Color.rgb(0.501, 0.2, 0.1)
+    assert a.name != b.name
+    out = collect_colors(Concat(a, b))
+    assert len(out) == 2
 
 
 def test_collect_colors_returns_empty_for_pure_named():

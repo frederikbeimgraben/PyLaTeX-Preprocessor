@@ -1,7 +1,9 @@
 from ..helpers.with_package import with_package
 from ..interface.tex import TeX
+from ..model.concat import Concat
 from ..model.control_sequence import ControlSequence, Parameter
 from ..model.environment import Environment
+from ..model.raw import Raw
 from ..packages import BOOKTABS, LONGTABLE, MULTIROW, TABULARX
 from ..registry import Registry
 
@@ -90,10 +92,9 @@ def Bottomrule() -> TeX:
 def Cmidrule(spec: str, trim: str | None = None) -> TeX:
     if trim is None:
         return ControlSequence("cmidrule", (Parameter(spec),))
-    return ControlSequence(
-        "cmidrule",
-        (Parameter(trim, optional=True), Parameter(spec)),
-    )
+    # booktabs reads the trim spec in parentheses, for example
+    # \cmidrule(lr){2-3}. The bracket form is the rule thickness instead.
+    return Concat(Raw(f"\\cmidrule({trim})"), Parameter(spec))
 
 
 @Registry.add
@@ -103,7 +104,12 @@ def Arraybackslash() -> TeX:
 
 @Registry.add
 def Arraystretch(factor: str) -> TeX:
-    return ControlSequence("arraystretch", (Parameter(factor),))
+    # \arraystretch is a macro that holds a number, not a command that takes
+    # an argument. Redefine it with \renewcommand, the way LaTeX expects.
+    return ControlSequence(
+        "renewcommand",
+        (Parameter(Raw("\\arraystretch")), Parameter(factor)),
+    )
 
 
 @Registry.add

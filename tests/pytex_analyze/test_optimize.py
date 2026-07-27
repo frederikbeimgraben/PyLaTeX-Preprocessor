@@ -165,3 +165,62 @@ def test_dollar_math_with_marker_inside_expands():
     raw = Raw(r"$\iffalse{pytex(Frac('1', '2'))}\fi$")
     out = Optimize(raw)
     assert out.rendered == raw.rendered == r"$\frac{1}{2}$"
+
+
+def test_display_math_marker_stays_inert_when_replacements_disallowed(tmp_path):
+    # A marker inside `\[..\]` must stay inert when the enclosing `Raw` was
+    # marked untrusted. `Optimize` must not run the marker as Python code.
+    marker = tmp_path / "pwned_optimize"
+    content = (
+        r"\[\iffalse{pytex(__import__('pathlib').Path("
+        + repr(str(marker))
+        + r").write_text('x'))}\fi\]"
+    )
+    raw = Raw(content, allow_replacements=False)
+    Optimize(raw)
+    assert not marker.exists()
+
+
+def test_paren_math_marker_stays_inert_when_replacements_disallowed(tmp_path):
+    marker = tmp_path / "pwned_optimize_paren"
+    content = (
+        r"\(\iffalse{pytex(__import__('pathlib').Path("
+        + repr(str(marker))
+        + r").write_text('x'))}\fi\)"
+    )
+    raw = Raw(content, allow_replacements=False)
+    Optimize(raw)
+    assert not marker.exists()
+
+
+def test_environment_body_marker_stays_inert_when_replacements_disallowed(tmp_path):
+    # `_candidates` builds an `Environment` from a whole `\begin{}..\end{}`
+    # `Raw`. The body must keep the enclosing `allow_replacements` gate.
+    marker = tmp_path / "pwned_optimize_env"
+    content = (
+        r"\begin{center}\iffalse{pytex(__import__('pathlib').Path("
+        + repr(str(marker))
+        + r").write_text('x'))}\fi\end{center}"
+    )
+    raw = Raw(content, allow_replacements=False)
+    Optimize(raw)
+    assert not marker.exists()
+
+
+def test_display_math_marker_uses_raw_namespace():
+    # A `pytex(...)` marker inside `\[..\]` must see the names in `Raw.namespace`.
+    def bump() -> int:
+        return 7
+
+    raw = Raw(r"\[\iffalse{pytex(bump())}\fi\]", namespace={"bump": bump})
+    out = Optimize(raw)
+    assert out.rendered == r"\[7\]"
+
+
+def test_paren_math_marker_uses_raw_namespace():
+    def bump() -> int:
+        return 7
+
+    raw = Raw(r"\(\iffalse{pytex(bump())}\fi\)", namespace={"bump": bump})
+    out = Optimize(raw)
+    assert out.rendered == r"\(7\)"

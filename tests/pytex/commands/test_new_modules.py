@@ -331,7 +331,7 @@ def test_tables_commands():
     assert Midrule().rendered == r"\midrule"
     assert Bottomrule().rendered == r"\bottomrule"
     assert Cmidrule("1-3").rendered == r"\cmidrule{1-3}"
-    assert Cmidrule("1-3", trim="lr").rendered == r"\cmidrule[lr]{1-3}"
+    assert Cmidrule("1-3", trim="lr").rendered == r"\cmidrule(lr){1-3}"
     assert Arraybackslash().rendered == r"\arraybackslash"
     assert (
         Newcolumntype("L", 1, r">{\raggedright}p{#1}").rendered

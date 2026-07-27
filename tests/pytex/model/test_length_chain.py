@@ -6,6 +6,7 @@ from pytex.commands.lengths import (
     Textwidth,
 )
 from pytex.model.length import Length
+from pytex.packages import CALC
 
 
 def test_length_plus_length():
@@ -29,6 +30,16 @@ def test_chain_mixed_ops():
     assert out == r"2\textwidth-\linewidth+1cm"
 
 
+def test_mul_div_neg_parenthesize_a_compound_operand():
+    # Textwidth() - Parindent() is a compound expression (a top-level "-").
+    # Multiplying, dividing or negating it must wrap it in parentheses, or
+    # the +/- precedence of the wrapped expression silently changes.
+    half = Textwidth() - Parindent()
+    assert (0.5 * half).rendered == r"0.5*(\textwidth-\parindent)"
+    assert (-half).rendered == r"-(\textwidth-\parindent)"
+    assert (half / 2).rendered == r"(\textwidth-\parindent)/2"
+
+
 def test_double_neg():
     negated = -Parindent()
     assert (-negated).rendered == r"--\parindent"
@@ -49,6 +60,21 @@ def test_explicit_length_renders_as_is():
 
 def test_length_div():
     assert (Textwidth() / 3).rendered == r"\textwidth/3"
+
+
+def test_atomic_length_does_not_require_calc():
+    assert Textwidth().requires is None
+    assert (2 * Textwidth()).requires is None
+    assert (-Textwidth()).requires is None
+
+
+def test_compound_length_requires_calc():
+    # +, - and / use calc's infix syntax, so a Length built with one of them
+    # must report calc, or Setlength renders an expression the document
+    # never loads the package for.
+    assert (Textwidth() - Parindent()).requires == frozenset({CALC})
+    assert (Linewidth() + "1cm").requires == frozenset({CALC})
+    assert (Linewidth() / 2).requires == frozenset({CALC})
 
 
 def test_setlength_accepts_length():

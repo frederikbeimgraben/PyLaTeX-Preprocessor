@@ -62,3 +62,20 @@ def test_citation_not_expanded_in_code_span():
 def test_email_is_not_a_narrative_citation():
     out = Markdown("write to a@b.com today").rendered
     assert r"\textcite" not in out
+
+
+def test_narrative_citation_key_stops_before_hash():
+    # A "#" must never reach \textcite unescaped. TeX reads an unbraced "#"
+    # in an argument as a macro parameter marker and aborts the compile pass.
+    out = Markdown("see @smith#2 now").rendered
+    assert r"\textcite{smith#2}" not in out
+    assert r"\textcite{smith}" in out
+    assert r"\#2" in out
+
+
+def test_narrative_citation_key_stops_before_percent():
+    # A "#" in an argument comments out the remainder of the TeX source line.
+    out = Markdown("see @a%b now").rendered
+    assert r"\textcite{a%b}" not in out
+    assert r"\textcite{a}" in out
+    assert r"\%b" in out

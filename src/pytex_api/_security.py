@@ -45,10 +45,15 @@ _PACKAGE_RE = re.compile(
     r"\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}"
 )
 
-# Matches a `[//]: # "EXPR"` Markdown comment, one line at a time. The comment
-# is a link reference definition, which Markdown uses as a comment form. The
-# pattern covers the quoted form, the parenthesized form, and the bare form.
-_EVAL_COMMENT_RE = re.compile(r"^[ \t]*\[//\]:[ \t]*#.*$", re.MULTILINE)
+# Matches a `[//]: # "EXPR"` Markdown comment. The comment is a link
+# reference definition, which Markdown uses as a comment form. marko
+# normalizes the label, so it also accepts a padded label like `[ // ]:` or
+# `[\t//\t]:`, and it accepts the destination on the line after the label.
+# The pattern covers the quoted form, the parenthesized form, and the bare
+# form, on one line or split across the label and the destination line.
+_EVAL_COMMENT_RE = re.compile(
+    r"^[ \t]*\[[ \t]*//[ \t]*\]:[ \t]*\n?[ \t]*#.*$", re.MULTILINE
+)
 
 
 def validate_asset_name(name: str) -> str:

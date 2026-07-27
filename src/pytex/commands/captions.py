@@ -33,12 +33,9 @@ def Caption(text: TeX | str, short: TeX | str | None = None) -> TeX:
 
 
 @Registry.add
+@with_package(CAPTION)
 def Captionof(typ: str, text: TeX | str) -> TeX:
     """Render `\\captionof`, a caption outside a float environment.
-
-    The macro comes from the `caption` package, and this factory does not name
-    that package requirement. Wrap the node in `WithPackage` to name the
-    requirement yourself.
 
     Args:
         typ: The float type the caption counts against, for example `figure`.

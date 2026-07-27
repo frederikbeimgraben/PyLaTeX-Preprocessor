@@ -8,7 +8,7 @@ from typing import override
 from pytex.interface.package import PackageProtocol
 
 from ..interface.tex import TeX
-from ..model.package import Package
+from ..model.package import DefinePackage, Package
 from ..registry import Registry
 from .parenting import attach
 
@@ -21,7 +21,7 @@ def coerce_package(pkg: Package | str) -> Package:
     if isinstance(pkg, Package):
         return pkg
 
-    return Package(pkg)
+    return DefinePackage(pkg)
 
 
 @Registry.add

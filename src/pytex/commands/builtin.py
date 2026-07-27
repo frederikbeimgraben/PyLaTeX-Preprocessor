@@ -383,7 +383,14 @@ def Description(*items: tuple[TeX | str, TeX | str] | TeX) -> TeX:
 
 
 def _is_item(node: TeX | str) -> bool:
-    return isinstance(node, ControlSequence) and node.name == "item"
+    if isinstance(node, ControlSequence) and node.name == "item":
+        return True
+    return (
+        isinstance(node, Concat)
+        and bool(node.elements)
+        and isinstance(node.elements[0], ControlSequence)
+        and node.elements[0].name == "item"
+    )
 
 
 @Registry.add
@@ -543,6 +550,20 @@ def Verbatim(body: TeX | str) -> TeX:
 
 @Registry.add
 def Verb(body: str, delim: str = "|") -> TeX:
+    """Render `\\verb`, LaTeX's inline verbatim command.
+
+    Args:
+        delim: The character that marks the start and the end of `body`. The
+            factory rejects a `delim` that also appears in `body`, because
+            LaTeX would then end the verbatim text early. It also rejects
+            `"*"` and `" "`, the two values `\\verb` reads as a form switch
+            or a visible-space flag instead of as a delimiter.
+    """
+    if delim in body or delim in {"*", " "}:
+        raise ValueError(
+            "Verb needs a delim character absent from body, and delim must"
+            + ' not be "*" or " ".'
+        )
     return Raw(f"\\verb{delim}{body}{delim}")
 
 

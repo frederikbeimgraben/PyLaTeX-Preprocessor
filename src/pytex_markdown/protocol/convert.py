@@ -196,13 +196,16 @@ class ProtocolConverter(MarkdownConverter):
         if lines:
             lines[0] = CALLOUT_RE.sub("", lines[0], count=1)
         stripped = [s.strip() for s in lines]
-        full = " ".join(stripped)
+        # Only the tally line carries the counts. A descriptive line can
+        # contain a stray "ja <digits>" of its own, so the search must not
+        # widen to the whole callout.
+        tally_line = next((s for s in stripped if _is_tally_line(s)), "")
         body_lines = [s for s in stripped if s and not _is_tally_line(s)]
         body = Concat(*_interleave(self.inline_text(s) for s in body_lines))
         return Vote(
-            yes=_tally(full, "yes"),
-            no=_tally(full, "no"),
-            abstain=_tally(full, "abstain"),
+            yes=_tally(tally_line, "yes"),
+            no=_tally(tally_line, "no"),
+            abstain=_tally(tally_line, "abstain"),
             body=body,
         )
 

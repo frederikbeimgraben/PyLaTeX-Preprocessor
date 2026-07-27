@@ -16,7 +16,7 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ._models import CompileError, LimitError
+from ._models import CompileError, LimitError, TrustError
 from ._sandbox import (
     CONTAINER_BINARY,
     CONTAINER_WORKDIR,
@@ -320,6 +320,14 @@ def compile_to_pdf(
     build_dir = workdir / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
     for name, data in assets.items():
+        # `document.tex` is the file PyTeX just wrote from the rendered,
+        # allowlist-screened LaTeX. An asset of that name must not land here,
+        # or it silently replaces the screened file with unscanned content.
+        if name == tex_file.name:
+            raise TrustError(
+                f"asset name {name!r} would overwrite the rendered, "
+                + "package-screened LaTeX file; rename the asset"
+            )
         _ = (workdir / name).write_bytes(data)
 
     config = SandboxConfig()

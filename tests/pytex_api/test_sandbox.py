@@ -459,6 +459,16 @@ def test_containerfile_defaults_to_host_arch(monkeypatch):
     assert "aarch64-unknown-linux-musl" in _containerfile()
 
 
+def test_containerfile_installs_biber_so_biblatex_builds_can_find_it():
+    # Every report and meeting protocol variant loads biblatex, which makes
+    # tectonic call biber. Without a biber binary in the image, that call
+    # fails with "No such file or directory" inside the network-less
+    # sandbox, which cannot fetch one at request time.
+    out = _containerfile("x86_64")
+    assert "biber" in out
+    assert "/usr/local/bin/biber" in out
+
+
 def test_build_sandbox_image_feeds_arch_containerfile(monkeypatch):
     monkeypatch.setattr(sandbox_mod.platform, "machine", lambda: "x86_64")
     captured: dict[str, object] = {}

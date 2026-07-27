@@ -38,3 +38,12 @@ def test_requires_calc_for_nested_box_arithmetic():
     from pytex.packages import CALC
 
     assert CALC in VotingResults(yes=1, no=0, abstain=0).requires
+
+
+def test_requires_tikz_for_nested_colored_box():
+    # `VotingResults.rendered` builds a `ColoredBox`, and `ColoredBox.requires`
+    # names `tikz` as the mdframed framemethod that rounds the filled
+    # background. `VotingResults.requires` must carry that requirement too.
+    from pytex.packages import TIKZ
+
+    assert TIKZ in VotingResults(yes=1, no=0, abstain=0).requires
