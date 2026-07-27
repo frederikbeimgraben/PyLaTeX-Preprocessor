@@ -1,4 +1,4 @@
-"""The legacy ``pytex_protocol`` package stays as a deprecation shim."""
+"""The deprecated `pytex_protocol` package stays as a shim."""
 
 import warnings
 

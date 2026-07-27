@@ -48,7 +48,8 @@ def test_svg_target_uses_content_sha_digest(tmp_path):
 
 
 def test_svg_target_changes_when_content_changes(tmp_path):
-    # Editing the source (same path) must reconvert, not reuse a stale PDF.
+    # The path does not change when you edit the source. The digest must
+    # change, or PyTeX reuses a stale PDF.
     src = tmp_path / "logo.svg"
     src.write_text("<svg>old</svg>")
     before = IncludeImage(src).resolved_path.name
@@ -61,8 +62,9 @@ def test_ensure_converted_invokes_inkscape(monkeypatch, tmp_path):
     src = tmp_path / "x.svg"
     src.write_text("<svg>invoke</svg>")
     img = IncludeImage(src)
-    # The content-addressed cache target lives in ./build; clear any leftover
-    # from a previous run so conversion is actually exercised.
+    # The content-addressed cache target lives in the literal `build`
+    # directory. Delete a leftover file from an earlier run, so this test
+    # runs the conversion.
     img.resolved_path.unlink(missing_ok=True)
     calls: list[list[str]] = []
 

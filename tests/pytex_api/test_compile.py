@@ -1,4 +1,9 @@
-"""Compile-step tests: argv construction (pure) and a gated real PDF build."""
+"""Tests for the compile step.
+
+`build_tectonic_cmd` is pure, so most tests only inspect the argv it returns.
+The last test runs a real build. pytest skips that test when the tectonic
+binary is missing.
+"""
 
 import shutil
 from pathlib import Path

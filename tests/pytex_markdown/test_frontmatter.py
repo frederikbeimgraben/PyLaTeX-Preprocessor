@@ -48,9 +48,11 @@ def test_literal_block_scalar_preserves_newlines_and_indent():
         "Body\n"
     )
     meta, body = split_frontmatter(src)
-    # Common indent stripped, inner indentation and line breaks kept.
+    # The parser removes the common indent. It keeps the deeper indent and
+    # the line breaks.
     assert meta["bibliography"] == "@book{knuth,\n  author = {Knuth},\n}\n"
-    # The key after the block is still parsed, and the body is untouched.
+    # The block scalar must stop at the first line with less indent. It must
+    # not consume the keys or the body that come after it.
     assert meta["title"] == "T"
     assert body == "Body"
 
@@ -72,6 +74,7 @@ def test_block_scalar_keep_chomping():
 
 
 def test_pipe_prefixed_scalar_is_not_a_block_scalar():
-    # A value that merely starts with `|` stays an ordinary scalar.
+    # A `|` that has more text after it is not a block-scalar header. The
+    # value stays an ordinary scalar.
     meta, _ = split_frontmatter("---\nt: |pipe\n---\nx")
     assert meta["t"] == "|pipe"

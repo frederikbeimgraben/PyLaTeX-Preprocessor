@@ -37,5 +37,6 @@ def test_coloredbox_nested_parents_chain():
 
 def test_coloredbox_parent_str_body_no_attach():
     box = InfoBox("plain string")
-    # body is str; parent not assigned to str (skip)
+    # A str body cannot hold a parent, so `InfoBox` attaches nothing to it.
+    # The box itself stays a root node.
     assert box.parent is None

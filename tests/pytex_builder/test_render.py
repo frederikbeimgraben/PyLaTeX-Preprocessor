@@ -1,7 +1,8 @@
-"""End-to-end tests for the render stage of the build chain.
+"""Tests for the render step of a build.
 
-Covers every input kind get_tex_node accepts (.tex, .py, .md) plus the
-error paths in _render_python. No tectonic/compile involved.
+The tests cover every input file kind that `get_tex_node` accepts: `.tex`,
+`.py`, and `.md`. They also cover the error paths in `_render_python`. No
+test starts the tectonic binary.
 """
 
 import sys
@@ -67,8 +68,9 @@ def _force_py313(monkeypatch):
 
 
 def test_tstring_syntaxerror_hints_python_314(monkeypatch, tmp_path):
-    # A t-string plus a trailing parse error -> SyntaxError on any interpreter.
-    # On <3.14 the message must point at the t-string / Python 3.14 requirement.
+    # A t-string plus a trailing parse error gives a SyntaxError on every
+    # interpreter. On Python 3.13 or earlier the message must name the
+    # t-string and Python 3.14.
     src = tmp_path / "doc.py"
     _ = src.write_text('__pytex__ = t"{x}"\n(\n')
     _force_py313(monkeypatch)
@@ -81,7 +83,8 @@ def test_tstring_syntaxerror_hints_python_314(monkeypatch, tmp_path):
 
 
 def test_plain_syntaxerror_without_tstring_gets_no_hint(monkeypatch, tmp_path):
-    # A syntax error with no t-string must not gain the (misleading) 3.14 hint.
+    # A syntax error without a t-string must not get the Python 3.14 hint,
+    # because that hint would name the wrong cause.
     src = tmp_path / "doc.py"
     _ = src.write_text("def (:\n")
     _force_py313(monkeypatch)
@@ -95,8 +98,8 @@ def test_plain_syntaxerror_without_tstring_gets_no_hint(monkeypatch, tmp_path):
     reason="needs a real >=3.14 interpreter where t-strings parse",
 )
 def test_tstring_no_hint_on_python_314_plus(tmp_path):
-    # On the real (>=3.14) interpreter a t-string parses; force a different
-    # syntax error and confirm no spurious downgrade hint is appended.
+    # On Python 3.14 or later a t-string parses. This file still fails on the
+    # trailing parse error, and the message must carry no version hint.
     src = tmp_path / "doc.py"
     _ = src.write_text('__pytex__ = t"{x}"\n(\n')
     with pytest.raises(BuildError) as exc:
@@ -124,5 +127,4 @@ def test_get_tex_node_does_not_render(tmp_path):
     src = tmp_path / "doc.tex"
     _ = src.write_text(r"\emph{x}")
     node = get_tex_node(src)
-    # A node is returned without forcing a render.
     assert node.rendered == r"\emph{x}"

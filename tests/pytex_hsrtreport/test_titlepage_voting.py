@@ -5,8 +5,9 @@ from pytex_hsrtreport.titlepage import TitlePage, TitlePageDataLine
 
 def test_titlepage_wraps_in_titlepage_env():
     out = TitlePage("Title").rendered
-    # The env is bracketed by the HSRTTitlePage flag toggles so footer_logo_hook
-    # can suppress the footer logos on the title page only.
+    # `\HSRTTitlePagetrue` and `\HSRTTitlePagefalse` bracket the environment.
+    # The hook from `footer_logo_hook` reads that flag, and it leaves the
+    # footer logos out on the title page only.
     assert out.startswith(r"\HSRTTitlePagetrue\begin{titlepage}")
     assert out.endswith(r"\end{titlepage}\HSRTTitlePagefalse")
 
@@ -45,11 +46,13 @@ def test_titlepage_uses_huge_big_font():
 
 
 def test_titlepage_title_has_no_first_line_optical_kern():
-    # A leading \hspace*{-2.5pt} only shifts the first line, so a wrapped title
-    # would have its later lines misaligned. It must be gone.
+    # A leading `\hspace*{-2.5pt}` moves the first line only. A title that
+    # wraps then has its later lines out of alignment, so the kern must be
+    # gone.
     out = TitlePage("Some very long title").rendered
     assert r"\hspace*{-2.5pt}" not in out
-    # \Huge is still terminated (so the first title word is not read as a macro).
+    # A space still ends the `\Huge` control word, so TeX does not read the
+    # first word of the title as part of the macro name.
     assert r"\Huge Some very long title" in out
 
 
@@ -91,7 +94,7 @@ def test_voting_uses_textbf_not_raw():
 
 def test_voting_columnbreak_between_boxes():
     out = VotingResults(yes=1, no=1, abstain=1).rendered
-    # Two columnbreaks separate the three columns
+    # Three columns need exactly two column breaks between them.
     assert out.count(r"\columnbreak") == 2
 
 

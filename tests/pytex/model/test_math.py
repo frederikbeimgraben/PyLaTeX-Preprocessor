@@ -40,14 +40,16 @@ def test_display_math():
 
 
 def test_math_strips_outer_whitespace():
-    # TeX math ignores boundary whitespace; strip it (interior is kept).
+    # TeX math ignores space at the start and at the end. `Math` and
+    # `DisplayMath` remove that space and keep the space inside.
     assert DisplayMath("  x = 1 \n").rendered == r"\[x = 1\]"
     assert Math("  y  ").rendered == r"\(y\)"
     assert DisplayMath("a + b").rendered == r"\[a + b\]"
 
 
 def test_display_math_drops_blank_lines_at_boundary():
-    # A leading/trailing blank line would be a \par inside math (a LaTeX error).
+    # A blank line at the start or at the end becomes a `\par` inside math.
+    # A `\par` inside math is a hard LaTeX error.
     assert DisplayMath("\n\n x \n\n").rendered == r"\[x\]"
 
 

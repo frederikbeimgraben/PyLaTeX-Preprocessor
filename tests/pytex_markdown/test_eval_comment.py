@@ -17,7 +17,9 @@ def test_eval_comment_uses_registry_namespace():
 
 
 def test_non_comment_link_ref_def_renders_nothing():
-    # A real link reference definition (label != "//") stays empty.
+    # The converter evaluates a link reference definition only when the label
+    # is `//` and the destination is `#`. Any other link reference definition
+    # renders to nothing.
     out = Markdown('[ref]: https://example.com "title"').rendered
     assert out.strip() == ""
 

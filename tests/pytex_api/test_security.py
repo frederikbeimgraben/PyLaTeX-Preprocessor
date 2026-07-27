@@ -1,4 +1,4 @@
-"""Unit tests for the standalone security helpers."""
+"""Unit tests for the security helpers of `pytex_api`."""
 
 import pytest
 
@@ -41,7 +41,7 @@ def test_unsafe_asset_names_rejected(name):
         validate_asset_name(name)
 
 
-# -- markdown eval-comment stripping ---------------------------------------
+# -- strip the Markdown eval comments --------------------------------------
 
 
 def test_strip_removes_eval_comment_lines():
@@ -56,7 +56,7 @@ def test_strip_keeps_ordinary_links():
     assert strip_markdown_eval_comments(text) == text
 
 
-# -- package extraction & enforcement --------------------------------------
+# -- the package allowlist check --------------------------------------------
 
 
 def test_extract_packages_handles_options_and_lists():
@@ -78,19 +78,19 @@ def test_non_allowlisted_package_rejected_for_untrusted():
 
 def test_allowlisted_package_accepted_for_untrusted():
     policy = policy_for(TrustLevel.UNTRUSTED)
-    enforce_packages(r"\usepackage{amsmath}\usepackage{graphicx}", policy)  # no raise
+    enforce_packages(r"\usepackage{amsmath}\usepackage{graphicx}", policy)  # no error
 
 
 def test_trusted_skips_package_checks():
     policy = policy_for(TrustLevel.TRUSTED)
-    enforce_packages(r"\usepackage{minted}\usepackage{anything}", policy)  # no raise
+    enforce_packages(r"\usepackage{minted}\usepackage{anything}", policy)  # no error
 
 
 def test_dangerous_and_allowlist_are_disjoint():
     assert not (DANGEROUS_PACKAGES & PACKAGE_ALLOWLIST)
 
 
-# -- log truncation & rlimits ----------------------------------------------
+# -- log truncation and resource limits -------------------------------------
 
 
 def test_truncate_log_caps_length():

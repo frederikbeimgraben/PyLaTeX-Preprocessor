@@ -1,4 +1,4 @@
-"""Trust-level -> capability mapping."""
+"""Tests for the capabilities that the trust policy gives to each trust level."""
 
 from pytex_api import TrustLevel, policy_for
 
@@ -22,13 +22,13 @@ def test_sandboxed_still_blocks_code_and_shell_but_widens_packages():
     assert not p.allow_shell_escape
     assert not p.allow_network
     assert p.enforce_package_allowlist
-    # Wider than untrusted.
     assert policy_for(TrustLevel.UNTRUSTED).package_allowlist < p.package_allowlist
 
 
 def test_eurosym_allowlisted_so_euro_glyph_renders_untrusted():
-    # The Markdown converter emits eurosym's \euro{} for `€`; it must be allowed
-    # for non-trusted builds or such a document would be refused.
+    # The Markdown converter rewrites `€` to the `\euro{}` macro of eurosym.
+    # A non-trusted build refuses a document that needs a package outside the
+    # package allowlist. So eurosym must stay on the package allowlist.
     for level in (TrustLevel.UNTRUSTED, TrustLevel.SANDBOXED):
         assert "eurosym" in policy_for(level).package_allowlist
 

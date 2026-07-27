@@ -32,9 +32,9 @@ def test_includes_vote_counts():
 
 
 def test_requires_calc_for_nested_box_arithmetic():
-    # The nested ColoredBox uses infix length arithmetic; without `calc` it
-    # leaks "-0.5cm-2pt" as text. requires must carry calc since the box is
-    # built inside `.rendered`.
+    # The nested colored box uses infix length arithmetic. Without `calc`,
+    # LaTeX prints "-0.5cm-2pt" as text. `VotingResults` builds that box
+    # inside `.rendered`, so `requires` must name `calc` as well.
     from pytex.packages import CALC
 
     assert CALC in VotingResults(yes=1, no=0, abstain=0).requires

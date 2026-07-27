@@ -11,8 +11,9 @@ TABLE = """\
 
 def test_table_becomes_tabularx_with_wrapping_alignment_spec():
     out = Markdown(TABLE).rendered
-    # tabularx at \linewidth with X columns so content wraps instead of
-    # overflowing the page; alignment encoded via >{...} prefixes.
+    # The `X` columns at `\linewidth` make the content wrap. Without them the
+    # content runs over the page edge. The `>{...}` prefixes hold the column
+    # alignment.
     spec = (
         r">{\raggedright\arraybackslash}X"
         r">{\centering\arraybackslash}X"
@@ -23,7 +24,8 @@ def test_table_becomes_tabularx_with_wrapping_alignment_spec():
 
 
 def test_table_wrapped_in_vertical_space():
-    # Tables get breathing room above and below via \addvspace (in vmode).
+    # `\addvspace` adds vertical space above and below the table. It works
+    # only in vertical mode, so `\par` comes first.
     out = Markdown(TABLE).rendered
     assert out.count(r"\par\addvspace{0.8\baselineskip}") == 2
     before = out.index(r"\par\addvspace{0.8\baselineskip}")
@@ -57,8 +59,9 @@ def test_table_pulls_in_booktabs_and_tabularx_packages():
 
 
 def test_image_becomes_includegraphics_with_absolute_path():
-    # Local image paths are made absolute so \includegraphics resolves them
-    # from the build directory (the .tex is compiled there, not next to the md).
+    # The converter makes a local image path absolute. The build compiles the
+    # rendered `.tex` file in the build directory, not next to the Markdown
+    # file. A relative path would not resolve there.
     from pathlib import Path
 
     out = Markdown("![alt](pics/foo.png)").rendered
@@ -80,14 +83,16 @@ def test_code_block_uses_lstlisting_with_breaklines():
 
 
 def test_code_block_body_on_own_lines():
-    # lstlisting reads code on the line after \begin and \end on its own line.
+    # `lstlisting` reads the code from the line after `\begin`. The `\end`
+    # needs its own line.
     out = Markdown(CODE).rendered
     assert "[breaklines=true]\ndef f():" in out
     assert 'margin"\n\\end{lstlisting}' in out
 
 
 def test_code_block_omits_language():
-    # listings aborts on unknown languages, so the info string is dropped.
+    # listings stops with an error on a language it does not know, so the
+    # converter drops the info string.
     out = Markdown(CODE).rendered
     assert "language=" not in out
 

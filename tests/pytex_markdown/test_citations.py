@@ -37,7 +37,7 @@ def test_narrative_citation_becomes_textcite():
 
 
 def test_trailing_punctuation_not_part_of_key():
-    # A sentence-final period must not be swallowed into the key.
+    # The converter must keep a sentence-final period out of the citation key.
     out = Markdown("As @knuth1984.").rendered
     assert r"\textcite{knuth1984}." in out
 

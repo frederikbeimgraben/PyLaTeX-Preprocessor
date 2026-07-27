@@ -1,4 +1,4 @@
-"""Tests for the static document analysis."""
+"""Tests for the analysis pass, which runs static checks on a node tree."""
 
 from pytex.commands.builtin import Label, Ref
 from pytex.commands.cleveref import Cref
@@ -25,7 +25,6 @@ def test_duplicate_label_is_warned():
 
 
 def test_cref_comma_separated_labels_resolve():
-    # Cref("a", "b") references two labels; both defined -> no issue.
     assert analyze(Concat(Label("a"), Label("b"), Cref("a", "b"))) == []
 
 
@@ -48,6 +47,6 @@ def test_existing_image_is_ok(tmp_path):
 
 
 def test_label_inside_raw_text_is_not_a_reference():
-    # A label name only counts when carried by a \label control sequence,
-    # not when it appears in arbitrary text.
+    # The analysis pass reads only `Label` and `Ref` nodes. A control sequence
+    # inside a `Raw` node stays plain text, so `\ref{x}` is not a reference.
     assert analyze(Raw(r"see \ref{x}")) == []

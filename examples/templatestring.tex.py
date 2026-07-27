@@ -1,11 +1,14 @@
-"""`.tex.py` example: build a document with t-string templates (Python 3.14+).
+"""Example `.tex.py` file that builds a document with t-string templates.
 
     pytex examples/templatestring.tex.py --build
 
-Requires Python 3.14 (PEP 750 template strings) — or a prebuilt pytex binary,
-which is 3.14 regardless of the host. ``tex(t"...")`` keeps the static text as
-literal LaTeX, LaTeX-escapes interpolated values, and splices ``TeX`` nodes
-as-is (lists and nested templates too).
+This example needs Python 3.14 or later for PEP 750 template strings. A
+prebuilt `pytex` binary also works, because that binary always contains
+Python 3.14.
+
+`tex(t"...")` keeps the static text as literal LaTeX. It splices a TeX node
+into the node tree without a change. It does the same for a list and for a
+nested template. It escapes every other interpolated value for LaTeX.
 """
 
 from pytex import tex
@@ -13,7 +16,7 @@ from pytex.commands.builtin import Bold, Emph, Enumerate, MakeTitle, Section, Ti
 from pytex.model.document import Document
 from pytex.model.math import Frac, InlineMath
 
-author = "Q. Walz & R&D (50% time)"  # specials get escaped when interpolated
+author = "Q. Walz & R&D (50% time)"  # `tex()` escapes `&` and `%` for LaTeX
 points = [Bold("native nodes"), Emph("nested templates"), "plain text"]
 
 __pytex__ = Document(

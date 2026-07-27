@@ -1,15 +1,17 @@
-"""`.tex.py` kitchen-sink example: a Reutlingen University (HSRT) report.
+"""Example `.tex.py` file for a Reutlingen University (HSRT) report.
 
     pytex examples/hsrtreport.tex.py --build   # -> build/hsrtreport.out.pdf
 
-Exercises *every* `HSRTReport` flag (title page, ToC, glossary, acronyms,
-bibliography, footer logos) plus the bundled components (callout boxes, voting
-tally, citations, watermark, smart sections, page-break helpers) so a single
-build smoke-tests the whole package.
+This example turns on every `HSRTReport` flag. The flags cover the title
+page, the table of contents, the glossary, the acronyms, the bibliography and
+the footer logos. The document also uses each component of the package.
+The components are the colored boxes, the voting result, the citations, the
+watermark, the smart sections and the page-break helpers. One build then
+tests the whole package.
 
-Compiling needs `biber` (biblatex) and `makeindex` (glossaries); tectonic runs
-both automatically. The bibliography is embedded via `filecontents`, so no
-external `.bib` file is required.
+To compile this document you need `biber` for biblatex and `makeindex` for
+the glossaries. tectonic runs both without further setup. The `filecontents`
+block holds the bibliography, so you need no separate `.bib` file.
 """
 
 from pytex.commands.biblatex import (
@@ -61,7 +63,8 @@ from pytex_hsrtreport import (
 )
 from pytex_hsrtreport.titlepage import TitlePageDataLine
 
-# -- Embedded bibliography (filecontents -> \jobname.bib, read by biber) -------
+# `filecontents` writes this bibliography to `\jobname.bib`, and biber reads
+# that file during the build.
 _BIB = r"""\begin{filecontents}[noheader]{\jobname.bib}
 @book{knuth1984texbook,
   author    = {Knuth, Donald E.},
@@ -78,14 +81,17 @@ _BIB = r"""\begin{filecontents}[noheader]{\jobname.bib}
 \end{filecontents}
 """
 
-# -- Preamble: watermark, wordcount macros, glossary/acronym entries, bib ------
 _PREAMBLE = Concat(
-    # Draft watermark tiled across every page (declares the `it` counter first).
+    # `DraftWatermark` needs the `it` counter, so `WatermarkCounter` must come
+    # first. The watermark then repeats across every page.
     WatermarkCounter(),
     DraftWatermark("ENTWURF"),
-    # \quickwordcount / \detailtexcount macros (defined only; need texcount).
+    # This factory only defines `\quickwordcount` and `\detailtexcount`. The
+    # body never calls them, so the build needs no texcount and no
+    # shell-escape.
     WordcountCommands(),
-    # Glossary terms (used via \gls in the body, printed in the back matter).
+    # The body uses these terms through `\gls`. LaTeX prints them in the
+    # glossary at the end of the document.
     Newglossaryentry(
         "preprocessor",
         {
@@ -102,16 +108,13 @@ _PREAMBLE = Concat(
             + "Python-Objekten erzeugt",
         },
     ),
-    # Acronyms (used via \acrshort / \acrlong / \acrfull).
     Newacronym("hsrt", "HSRT", "Hochschule Reutlingen"),
     Newacronym("inf", "INF", "Fakultät Informatik"),
-    # Bibliography resource.
     Raw(_BIB),
     Addbibresource(r"\jobname.bib"),
 )
 
 __pytex__ = HSRTReport(
-    # -- every flag on ---------------------------------------------------------
     variant=Variant.INF,
     show_toc=True,
     show_titlepage=True,
@@ -121,7 +124,6 @@ __pytex__ = HSRTReport(
     show_footer_logos=True,
     inline_logos=True,
     inline_fonts=True,
-    # -- title-page metadata ---------------------------------------------------
     title="HSRT Report — Feature Demo",
     author="PyTeX",
     abstract=Concat(
@@ -139,7 +141,6 @@ __pytex__ = HSRTReport(
     ),
     user_preamble=_PREAMBLE,
     body=Concat(
-        # -- Chapter 1: callout boxes -----------------------------------------
         Chapter("Callout boxes"),
         Label("chap:boxes"),
         "The HSRT callouts render as nestable colored boxes:",
@@ -154,7 +155,6 @@ __pytex__ = HSRTReport(
         ),
         CustomBox("A custom box with a chosen icon and colour.", "rocket", "navyblue"),
         DiscussionBox("An open question for discussion."),
-        # -- Chapter 2: glossary, acronyms, citations -------------------------
         Chapter("Terminology and sources"),
         "A ",
         Gls("preprocessor"),
@@ -187,9 +187,9 @@ __pytex__ = HSRTReport(
             ".",
         ),
         Footnote(Concat("See also ", Parencite("knuth1984texbook"), ".")),
-        # Pull both entries into the bibliography even if not all are cited.
+        # `Nocite` puts both entries in the bibliography, also when the body
+        # cites only one of them.
         Nocite("*"),
-        # -- Chapter 3: math, lists, voting -----------------------------------
         Chapter("Math, lists and voting"),
         Smartsection("Math and lists", "Math/lists"),
         Concat("Inline math like ", Math("a^2 + b^2 = c^2"), " works as usual:"),
@@ -199,9 +199,9 @@ __pytex__ = HSRTReport(
         Quote("A short block quotation, set apart from the body text."),
         Subsection("Voting result"),
         VotingResults(yes=12, no=3, abstain=2, body="Motion to adopt PyTeX:"),
-        # -- page-break helpers ------------------------------------------------
-        # Keeptogether wraps a \linewidth minipage, so it needs its own
-        # paragraph; \par before and after keeps it in vertical mode.
+        # `Keeptogether` wraps the text in a `\linewidth` minipage. The
+        # minipage needs a paragraph of its own. The `\par` after it puts
+        # LaTeX back into vertical mode.
         Subsection("Page-break helpers"),
         Keeptogether(
             Concat(

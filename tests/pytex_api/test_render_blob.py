@@ -1,8 +1,10 @@
-"""End-to-end behaviour of ``render_blob`` / ``render_blob_async``.
+"""Tests for the behavior of `render_blob` and `render_blob_async`.
 
-Focus: the trust model actually gates the code-execution vectors, and
-concurrent async renders stay isolated. All assertions are on the rendered
-``.tex`` (OutputKind.TEX), so none of these need a tectonic binary.
+These tests check two things. The trust policy gates every code-execution
+surface. Concurrent async renders stay isolated from each other.
+
+Every assertion reads the rendered `.tex` file, so no test needs the tectonic
+binary.
 """
 
 import asyncio
@@ -63,7 +65,7 @@ def test_result_metadata_is_populated():
     assert isinstance(res.warnings, tuple)
 
 
-# -- exec vector 1: Python import (.tex.py / .py) --------------------------
+# -- code-execution surface 1: the import of a `.tex.py` file --------------
 
 _PY_SIDE_EFFECT = (
     b"import pathlib\n"
@@ -80,7 +82,8 @@ def test_python_input_rejected_without_trust(trust):
 
 
 def test_python_input_runs_only_when_trusted(tmp_path, monkeypatch):
-    # Run in an empty cwd so the side-effect file (if it were written) is local.
+    # Run in an empty directory. The module body writes a file, and that file
+    # must land in the temporary directory of the test.
     monkeypatch.chdir(tmp_path)
     out = _tex(_PY_SIDE_EFFECT, InputKind.TEX_PY, TrustLevel.TRUSTED)
     assert out == b"ok"
@@ -90,11 +93,12 @@ def test_untrusted_python_does_not_execute_side_effect(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with pytest.raises(TrustError):
         _tex(_PY_SIDE_EFFECT, InputKind.TEX_PY, TrustLevel.UNTRUSTED)
-    # The module body never ran, so no file was written.
+    # A missing file proves that PyTeX rejected the input before the import,
+    # and not after the module body already ran.
     assert not (tmp_path / "pwned.txt").exists()
 
 
-# -- exec vector 2: Markdown eval comments ---------------------------------
+# -- code-execution surface 2: Markdown eval comments ----------------------
 
 _MD_EVAL = b"# T\n\n[//]: # \"Raw('INJECTED')\"\n\nbody\n"
 
@@ -114,7 +118,7 @@ def test_markdown_eval_comment_runs_when_trusted():
     assert b"INJECTED" in out
 
 
-# -- exec vector 3: .tex pytex(...) replacements ---------------------------
+# -- code-execution surface 3: inline `pytex(...)` markers -----------------
 
 _TEX_REPL = rb"\iffalse{pytex('AA' + 'BB')}\fi tail"
 
@@ -122,7 +126,7 @@ _TEX_REPL = rb"\iffalse{pytex('AA' + 'BB')}\fi tail"
 def test_tex_replacement_inert_when_untrusted():
     out = _tex(_TEX_REPL, InputKind.TEX, TrustLevel.UNTRUSTED)
     assert b"AABB" not in out
-    assert b"pytex" in out  # preserved as a literal
+    assert b"pytex" in out  # PyTeX keeps the marker as literal text
 
 
 def test_tex_replacement_evaluated_when_trusted():
@@ -130,7 +134,7 @@ def test_tex_replacement_evaluated_when_trusted():
     assert b"AABB" in out
 
 
-# -- exec vector 4: dangerous packages / shell-escape surface --------------
+# -- code-execution surface 4: packages that use shell-escape --------------
 
 
 def test_minted_package_rejected_for_untrusted():
@@ -208,11 +212,11 @@ def test_non_utf8_source_raises_api_error():
         _tex(b"\xff\xfe\x00bad", InputKind.TEX, TrustLevel.UNTRUSTED)
 
 
-# -- malformed source -> typed CompileError (Red-Team O1-O3) ----------------
+# -- broken input becomes a typed CompileError (red team O1-O3) -------------
 #
-# A broken document must surface as a CompileError (an ApiError), never a bare
-# Exception forcing a blanket 500. The message must stay generic: no temp path,
-# no stacktrace leaked to the caller.
+# A broken document must raise a `CompileError`, which is an `ApiError`. A bare
+# `Exception` would force the caller to answer with a blanket HTTP 500. The
+# message must stay generic. It must not leak a temporary path or a traceback.
 
 
 def _expect_clean_compile_error(
@@ -227,7 +231,7 @@ def _expect_clean_compile_error(
 
 
 def test_python_syntax_error_becomes_compile_error(tmp_path, monkeypatch):
-    # O1: a Python SyntaxError in .tex.py source.
+    # Red team item O1: a Python `SyntaxError` in a `.tex.py` file.
     monkeypatch.chdir(tmp_path)
     _expect_clean_compile_error(
         b"def (:\n    pass\n", InputKind.TEX_PY, TrustLevel.TRUSTED
@@ -235,7 +239,7 @@ def test_python_syntax_error_becomes_compile_error(tmp_path, monkeypatch):
 
 
 def test_non_node_pytex_becomes_compile_error(tmp_path, monkeypatch):
-    # O2: __pytex__ is not a TeX node.
+    # Red team item O2: the `__pytex__` node is not a TeX node.
     monkeypatch.chdir(tmp_path)
     _expect_clean_compile_error(
         b"__pytex__ = 42\n", InputKind.TEX_PY, TrustLevel.TRUSTED
@@ -243,27 +247,30 @@ def test_non_node_pytex_becomes_compile_error(tmp_path, monkeypatch):
 
 
 def test_missing_pytex_var_becomes_compile_error(tmp_path, monkeypatch):
-    # O2: module defines no __pytex__ at all.
+    # Red team item O2: the module defines no `__pytex__` node.
     monkeypatch.chdir(tmp_path)
     _expect_clean_compile_error(b"x = 1\n", InputKind.TEX_PY, TrustLevel.TRUSTED)
 
 
 def test_eval_error_in_tex_replacement_becomes_compile_error():
-    # O3: a pytex(...) replacement that raises while being eval'd.
+    # Red team item O3: an inline `pytex(...)` marker that raises when PyTeX
+    # evaluates it.
     _expect_clean_compile_error(
         rb"\iffalse{pytex(1 / 0)}\fi", InputKind.TEX, TrustLevel.TRUSTED
     )
 
 
 def test_typed_errors_still_propagate_unchanged():
-    # The wrapper must not swallow our own ApiError subclasses into CompileError.
+    # The wrapper must not turn a PyTeX `ApiError` subclass into a
+    # `CompileError`. The caller needs the exact error type.
     with pytest.raises(TrustError):
         _tex(rb"\usepackage{minted}", InputKind.TEX, TrustLevel.UNTRUSTED)
 
 
-# -- async isolation (the Part 1 <-> Part 2 link) --------------------------
+# -- async isolation (the link between part 1 and part 2) ------------------
 
-# Nested callouts -> nested ColoredBox -> exercises the _render_depth ContextVar.
+# Nested callouts make nested colored boxes. The nesting uses the
+# `_render_depth` ContextVar.
 _NESTED_BOXES = (
     b"> [!NOTE]\n> outer\n>\n> > [!WARNING]\n> > middle\n> >\n"
     b"> > > [!TIP]\n> > > inner\n"
@@ -287,14 +294,18 @@ def test_concurrent_async_renders_are_isolated():
         return [r.output for r in results]
 
     outputs = asyncio.run(_run())
-    # Every concurrent render must match the single-threaded reference: if the
-    # depth ContextVar leaked across tasks, box opacities would diverge.
+    # Every concurrent render must match the single-thread reference. If the
+    # depth ContextVar leaked between tasks, the box opacities would differ.
     assert all(out == reference for out in outputs)
 
 
 def test_markdown_report_variant_materialises_inline_fonts(tmp_path):
-    """Report/protocol variants embed ``Path=fonts/...``; the bundled TTFs must be
-    written into the compile workdir, or XeTeX cannot find e.g. ``Blender-Medium``."""
+    """The report and protocol variants need their fonts on disk.
+
+    These variants render a `Path=fonts/...` font option. PyTeX must write the
+    inline assets to disk next to the rendered `.tex` file. If a font file is
+    missing, XeTeX cannot find a face such as `Blender-Medium`.
+    """
     from pytex_api._policy import policy_for
     from pytex_api._render import _render_markdown_source
 
@@ -312,9 +323,14 @@ def test_markdown_report_variant_materialises_inline_fonts(tmp_path):
 
 
 def test_markdown_report_variant_materialises_inline_logos(tmp_path):
-    """The tikz title/footer overlays reference logos by the relative ``logos/<file>``
-    path, so the (svg->pdf) logo files must be written into the compile workdir, or
-    tectonic fails with "Unable to load picture or PDF file 'logos/...'"."""
+    """The report and protocol variants need their logos on disk.
+
+    The tikz title and footer overlays name each logo by the relative path
+    `logos/<file>`. PyTeX converts the SVG logos to PDF and must write the
+    inline assets to disk next to the rendered `.tex` file. If a logo file is
+    missing, the tectonic binary stops with "Unable to load picture or PDF
+    file 'logos/...'".
+    """
     from pytex_api._policy import policy_for
     from pytex_api._render import _render_markdown_source
 
@@ -332,7 +348,7 @@ def test_markdown_report_variant_materialises_inline_logos(tmp_path):
 
 
 def test_markdown_plain_variant_writes_no_fonts(tmp_path):
-    """``plain`` documents have no bundled fonts — nothing is written (no-op)."""
+    """The `plain` variant has no fonts, so PyTeX writes no font file to disk."""
     from pytex_api._policy import policy_for
     from pytex_api._render import _render_markdown_source
 

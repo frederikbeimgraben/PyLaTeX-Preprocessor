@@ -1,7 +1,8 @@
-"""Tests for the tectonic/biber/makeindex helpers.
+"""Tests for the tectonic, biber, and makeindex helpers.
 
-External tools are never actually run: shutil.which and subprocess.run are
-monkeypatched so the platform/version/glossary logic is exercised in isolation.
+These tests never start an external tool. Each test monkeypatches
+`shutil.which` and `subprocess.run`, so the platform logic, the version logic,
+and the makeindex step run alone.
 """
 
 from io import StringIO
@@ -48,7 +49,8 @@ def test_cache_dir_falls_back_to_home_cache(monkeypatch):
 
 
 def test_cache_dir_home_unset_falls_back_to_tempdir_with_warning(monkeypatch):
-    # HOME unset -> Path.home() raises; cache must degrade, never crash.
+    # If HOME is unset, `Path.home()` raises. The cache directory must fall
+    # back to the temporary directory instead of failing the build.
     monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
 
     def _boom(_cls):
@@ -63,7 +65,8 @@ def test_cache_dir_home_unset_falls_back_to_tempdir_with_warning(monkeypatch):
 
 
 def test_cache_dir_not_under_tempdir_by_default(monkeypatch):
-    # The whole point of P4: a normal session caches in $HOME, not /tmp.
+    # P4 moved the binary cache out of /tmp, where a reboot deletes it. A
+    # normal session must cache under $HOME.
     monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
     monkeypatch.setattr(tec.Path, "home", classmethod(lambda _cls: Path("/home/u")))
     path, _warning = _resolve_cache_dir()
@@ -82,7 +85,8 @@ def test_ensure_tectonic_missing_curl_hints_manual_install(monkeypatch):
 
 
 def test_ensure_tectonic_download_failure_hints_manual_install(monkeypatch, tmp_path):
-    # tectonic absent (so it downloads), curl+sh present, script exits non-zero.
+    # The tectonic binary is absent, so PyTeX downloads it. curl and sh exist,
+    # but the install script exits with a non-zero code.
     monkeypatch.setattr(
         tec.shutil,
         "which",
@@ -122,7 +126,8 @@ def test_biber_candidates_first(monkeypatch, system, machine, first_asset):
 
 
 def test_biber_candidates_linux_x86_64_prefers_musl_then_glibc(monkeypatch):
-    # The static musl build (no libnsl.so.1 dependency) is tried before glibc.
+    # The static musl build needs no libnsl.so.1, so PyTeX tries it before the
+    # glibc build.
     monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
     monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
     assets = [asset for _, _, asset in _biber_candidates("2.17")]
@@ -149,8 +154,12 @@ def test_biber_candidates_unsupported_raises(monkeypatch):
 def test_ensure_biber_falls_back_when_first_candidate_does_not_execute(
     monkeypatch, tmp_path
 ):
-    """The musl build is offered first but cannot exec on a glibc host; ensure the
-    download loop verifies execution and falls back to the glibc candidate."""
+    """The musl build cannot execute on a glibc host.
+
+    PyTeX offers the musl build first. The download loop must run each
+    extracted binary. When the musl build does not execute, the loop must take
+    the glibc build.
+    """
     monkeypatch.setattr(tec.platform, "system", lambda: "Linux")
     monkeypatch.setattr(tec.platform, "machine", lambda: "x86_64")
     monkeypatch.setattr(tec, "_biber_cached", lambda v: tmp_path / v / "biber")
@@ -165,12 +174,11 @@ def test_ensure_biber_falls_back_when_first_candidate_does_not_execute(
 
     monkeypatch.setattr(tec, "_download_to", _fake_download)
     monkeypatch.setattr(tec, "_extract_biber_binary", lambda tmp, _v: tmp.read_bytes())
-    # Only the glibc binary "runs" here.
+    # This fake host executes the glibc binary only.
     monkeypatch.setattr(tec, "_biber_runs", lambda p: p.read_bytes() == b"glibc-bytes")
 
     out = tec._ensure_biber("2.17", _console())
     assert out.read_bytes() == b"glibc-bytes"
-    # the musl candidate was tried first (and rejected), then glibc
     assert any("musl" in u for u in downloaded)
     assert any(u.endswith("biber-2.17-linux_x86_64.tar.gz") for u in downloaded)
 
@@ -303,7 +311,8 @@ def testbiber_for_build_malformed_bcf_returns_none(tmp_path):
 
 
 def test_run_makeindex_no_targets_returns_false(tmp_path):
-    # No .glo/.acn and no .ist style file present.
+    # The build directory holds no `.glo` file, no `.acn` file, and no `.ist`
+    # style file, so the makeindex step has no target.
     assert run_makeindex("job", tmp_path, console=_console()) is False
 
 

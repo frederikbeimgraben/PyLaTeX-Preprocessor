@@ -1,4 +1,4 @@
-"""Tests for Markdown output variants (--variant / --config)."""
+"""Tests for the Markdown variants and the document-class parameters."""
 
 import pytest
 
@@ -34,14 +34,15 @@ def test_report_derives_title_from_first_heading():
     assert isinstance(report, HSRTReport)
     assert report.title == "Derived Title"
     assert report.show_titlepage is True
-    # The heading also stays in the body as a big, unnumbered chapter (not a
-    # numbered \chapter, which would duplicate the title-page heading number).
+    # The heading also stays in the body as an unnumbered chapter. A numbered
+    # `\chapter` would repeat the number that the title page already shows.
     assert r"\chapter*{Derived Title}" in report.rendered
     assert r"\chapter{Derived Title}" not in report.rendered
 
 
 def test_report_derived_title_unnumbered_heading_only_when_derived():
-    # A frontmatter title is not pulled from the body, so no \chapter* is added.
+    # The frontmatter gives the title here, so the Markdown converter takes no
+    # title from the body and adds no `\chapter*`.
     out = build_document("---\ntitle: T\n---\n# Top\n\nbody", variant="report").rendered
     assert r"\chapter*{" not in out
 
@@ -54,8 +55,9 @@ def test_report_explicit_title_wins_over_heading():
 
 
 def test_report_top_headings_become_chapters_not_0x_sections():
-    # `#` is consumed as the title, so the body's top level is `##`; those must
-    # still render as chapters (not chapterless 0.x sections).
+    # The Markdown converter takes `#` as the title, so the top level of the
+    # body is `##`. Each `##` must still become a chapter. A section without a
+    # chapter would number as 0.1.
     out = build_document(
         "# Title\n\n## One\n\ntext\n\n## Two\n\nmore", variant="report"
     ).rendered
@@ -122,17 +124,20 @@ def test_report_makers_uses_makers_logos_and_footer():
     report = build_document("# MAKERS Bericht\n\nbody", variant="report-makers")
     assert isinstance(report, HSRTReport)
     assert report.variant is Variant.MAKERS
-    # MAKERS branding shows on the title page and in the page footer.
+    # The MAKERS variant shows a logo on the title page and in the footer.
     assert report.show_footer_logos is True
     assert report.show_titlepage is True
     out = report.rendered
-    # Left-aligned logo on the title page, right-aligned in the footer.
+    # The title page shows the left-aligned logo. The footer shows the
+    # right-aligned logo, which is a separate file.
     assert "logos/MAKERS.pdf" in out
     assert "logos/MAKERS-RAlign.pdf" in out
 
 
 def test_plain_report_keeps_inf_logos_and_no_footer():
-    # The default report is unchanged: INF variant, footer logos off.
+    # Regression guard: the MAKERS variant must not change the `report`
+    # variant. The `report` variant keeps the INF logos and shows no footer
+    # logo.
     report = build_document("# Bericht\n\nbody", variant="report")
     assert isinstance(report, HSRTReport)
     assert report.variant is Variant.INF

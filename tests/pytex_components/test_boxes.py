@@ -78,19 +78,20 @@ def test_top_level_renders_no_parent():
 
 
 def test_concurrent_render_depth_isolation():
-    """Concurrent renders must not clobber each other's nesting depth.
+    """Two renders at the same time must not overwrite each other's depth.
 
-    The render-time depth counter is per-context (a ``ContextVar``), so a
-    top-level box always renders at level 1 even while other threads are
-    rendering deeply-nested boxes that drive the counter up. With a plain
-    module global this races: a sibling render's depth leaks in and the
-    top-level box gets a too-high opacity.
+    The depth counter is per-context, because it is a `ContextVar`. A
+    top-level colored box always renders at level 1. Other threads can render
+    deeply nested boxes at the same time and drive the counter up. A plain
+    module global races here. The depth of another render leaks in, and the
+    top-level box gets an opacity that is too high.
     """
     from concurrent.futures import ThreadPoolExecutor
 
-    # level 1 -> round((0.05 + 0.075) * 100) == 12 (banker's rounding of 12.5).
+    # Level 1 gives round((0.05 + 0.075) * 100) == 12. Python uses banker's
+    # rounding, so the half value 12.5 becomes the even number 12.
     expected = f"backgroundcolor=blue!{round((0.05 + 0.075) * 100)}"
-    assert expected in InfoBox("x").rendered  # serial baseline
+    assert expected in InfoBox("x").rendered  # baseline before the threads start
 
     def render_top_level(_: int) -> str:
         return InfoBox("x").rendered
@@ -99,7 +100,7 @@ def test_concurrent_render_depth_isolation():
         node: ColoredBox = InfoBox("inner")
         for _ in range(8):
             node = WarningBox(node)
-        return node.rendered  # spins the depth counter up to 9 while rendering
+        return node.rendered  # drives the depth counter up to 9 during the render
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         top_level = [pool.submit(render_top_level, i) for i in range(500)]

@@ -54,7 +54,7 @@ def test_hyperref_with_brand_colors():
     out = HSRTReport(Section("Hi")).rendered
     assert "hypersetup" in out
     assert "linkcolor=hsrtlink" in out
-    # color walker emits \definecolor for the named HSRT colours
+    # The color walker renders a `\definecolor` line for each named HSRT color.
     assert "definecolor{hsrtlink}" in out
     assert "definecolor{hsrtcite}" in out
 
@@ -75,32 +75,30 @@ def test_variant_default_inf():
 
 
 def test_center_footer_shows_on_all_pages_including_backmatter():
-    """The "Seite X von Y" centre footer must render on every numbered page.
+    """The `Seite X von Y` center footer must render on every numbered page.
 
-    Regression: it used to be wrapped in ``\\ifHSRTBackMatter\\else ... \\fi``,
-    so it vanished on back-matter pages (e.g. the bibliography, which is the
-    document's last page). The footer content must not be gated by
-    ``\\ifHSRTBackMatter``.
+    This test guards a regression. An earlier version wrapped the footer in
+    `\\ifHSRTBackMatter\\else ... \\fi`, so the footer disappeared on
+    back-matter pages. The bibliography is such a page, and it is the last
+    page of the document. `\\ifHSRTBackMatter` must not gate the footer.
     """
     out = HSRTReport(Section("Hi")).rendered
     assert r"\cfoot{Seite~\thepage\ifHSRTNumberedBody~von~\pageref{LastPage}\fi}" in out
-    # The centre footer must NOT be suppressed in back matter.
     assert r"\cfoot{\ifHSRTBackMatter" not in out
 
 
 def test_lastpage_suffix_uses_numbered_body_flag():
-    """ "von \\pageref{LastPage}" must survive \\backmatter.
+    """The suffix `von \\pageref{LastPage}` must survive `\\backmatter`.
 
-    ``\\backmatter`` sets ``\\@mainmatterfalse``, so gating the suffix on
-    ``\\if@mainmatter`` dropped it on back-matter pages. ``\\ifHSRTNumberedBody``
-    is set at ``\\mainmatter`` and never reset, so it stays true through back
-    matter while remaining false in (roman) front matter.
+    `\\backmatter` sets `\\@mainmatterfalse`. So a gate on `\\if@mainmatter`
+    dropped the suffix on back-matter pages. The redefined `\\mainmatter`
+    sets `\\ifHSRTNumberedBody` true, and nothing resets that flag. So the flag
+    stays true through the back matter, and it stays false in the front
+    matter, which uses roman page numbers. The suffix must use the new flag.
     """
     out = HSRTReport(Section("Hi")).rendered
     assert r"\newif\ifHSRTNumberedBody" in out
-    # The redefined \mainmatter turns the flag on.
     assert r"\HSRTNumberedBodytrue" in out
-    # The suffix is gated on the new flag, not on \if@mainmatter.
     assert r"\ifHSRTNumberedBody~von~\pageref{LastPage}" in out
     assert r"\if@mainmatter~von~\pageref{LastPage}" not in out
 

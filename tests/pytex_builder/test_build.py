@@ -1,7 +1,8 @@
-"""Tests for the CLI driver: arg parsing, the render-only flow, exit codes.
+"""Tests for the `pytex` command: argument parsing, the render path, exit codes.
 
-The build (tectonic) branch is never exercised here - only the render path,
-which is hermetic. main()'s error handling is checked via its exit codes.
+These tests never reach the compile step. They cover the render path only,
+because that path needs no external tool. The exit code of `main` shows how
+the command handles an error.
 """
 
 from io import StringIO
@@ -68,13 +69,13 @@ def test_main_tree_prints_node_tree_and_still_renders(tmp_path, capsys):
     tree = capsys.readouterr().out
     assert r"ControlSequence \section" in tree
     assert "├──" in tree or "└──" in tree
-    # --tree prints the tree but still renders the output.
     assert out.read_text() == r"\section{X}"
 
 
 def test_default_optimize_keeps_output_identical(tmp_path):
-    # The optimize pass (on by default) is render-equivalent: the produced
-    # .tex must be byte-identical to the --force (no-optimize) output.
+    # The optimize pass runs by default and is render-equivalent. `--force`
+    # skips the optimize pass, so the rendered `.tex` file must stay
+    # byte-identical to the file that `--force` renders.
     src = tmp_path / "in.py"
     _ = src.write_text(
         "from pytex.model.concat import Concat\n"
@@ -95,10 +96,11 @@ def test_main_analysis_blocks_missing_image(tmp_path):
         "__pytex__ = IncludeImage('does-not-exist.png')\n"
     )
     out = tmp_path / "in.out.tex"
-    # Default: pre-flight analysis aborts before writing the output.
+    # By default the analysis pass stops the run before PyTeX writes the
+    # rendered `.tex` file.
     assert main([str(src), "-o", str(out)]) == 1
     assert not out.exists()
-    # --force skips analysis and renders anyway.
+    # `--force` skips the analysis pass and writes the rendered `.tex` file.
     assert main([str(src), "-o", str(out), "--force"]) == 0
     assert out.exists()
 
@@ -154,8 +156,8 @@ def test_untrusted_and_trust_level_are_mutually_exclusive():
 
 
 def test_untrusted_blocks_python_exec(tmp_path, capsys):
-    # A .py input executes arbitrary code on import; --untrusted must refuse it
-    # at the trust gate, before exec_module ever runs.
+    # A `.py` input file runs code on import. The trust policy must refuse the
+    # file before `exec_module` runs.
     src = tmp_path / "evil.py"
     _ = src.write_text(
         "import pathlib\n"
@@ -166,7 +168,7 @@ def test_untrusted_blocks_python_exec(tmp_path, capsys):
     code = main([str(src), "-o", str(out), "--untrusted"])
     assert code == 1
     assert not out.exists()
-    # The malicious import side effect never ran.
+    # The import writes this file, so its absence proves that no code ran.
     assert not (tmp_path / "pwned").exists()
     err = capsys.readouterr().err
     assert "error:" in err
@@ -174,8 +176,9 @@ def test_untrusted_blocks_python_exec(tmp_path, capsys):
 
 
 def test_untrusted_blocks_shell_escape_package(tmp_path):
-    # `minted` is the shell-escape vector; the untrusted policy rejects every
-    # code/shell-surface package regardless of the allowlist.
+    # `minted` needs shell-escape. At trust level `untrusted` the trust policy
+    # rejects every package with a code-execution surface. The package
+    # allowlist does not change this.
     src = tmp_path / "in.tex"
     _ = src.write_text("\\usepackage{minted}\nhi\n")
     out = tmp_path / "out.tex"
@@ -185,8 +188,9 @@ def test_untrusted_blocks_shell_escape_package(tmp_path):
 
 
 def test_untrusted_tex_renders_with_replacements_inert(tmp_path):
-    # A benign .tex still renders untrusted, but the pytex(...) replacement is
-    # NOT evaluated - the marker survives verbatim instead of running code.
+    # A safe `.tex` file still renders at trust level `untrusted`. PyTeX does
+    # not evaluate the inline `pytex(...)` marker. The marker text survives in
+    # the rendered `.tex` file, so no code runs.
     src = tmp_path / "in.tex"
     _ = src.write_text(r"Today \iffalse{pytex(Today())}\fi.")
     out = tmp_path / "out.tex"
@@ -197,7 +201,8 @@ def test_untrusted_tex_renders_with_replacements_inert(tmp_path):
 
 
 def test_trusted_default_still_executes_py(tmp_path):
-    # Regression guard: the default (no flag) path is unchanged and runs .py.
+    # Regression guard: the trust flags must not change the default path.
+    # Without a flag the command still runs a `.py` input file.
     src = tmp_path / "in.py"
     _ = src.write_text("from pytex.model.raw import Raw\n__pytex__ = Raw(r'\\hi')\n")
     out = tmp_path / "in.out.tex"
@@ -217,5 +222,4 @@ def test_run_render_only_skips_build_dir(tmp_path):
         shell_escape=True,
     )
     _run(cfg, _console())
-    # Render-only must not create the build directory.
     assert not build_dir.exists()

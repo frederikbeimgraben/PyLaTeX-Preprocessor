@@ -1,4 +1,4 @@
-"""Tests for the Console status writer: level tags, indentation, colour gating."""
+"""Tests for the `Console` status writer: level tags, indentation, and color."""
 
 from io import StringIO
 

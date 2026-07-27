@@ -1,11 +1,12 @@
-"""Optional "does it build at all" smoke for the golden samples.
+"""Optional smoke test that one golden sample builds to a PDF.
 
-This is deliberately *not* a golden test: PDF bytes are non-deterministic and a
-build needs tectonic, so it never runs in CI. It is opt-in (set
-``PYTEX_TEST_PODMAN=1`` with podman installed) and only asserts that a sample
-compiles to a ``%PDF-`` blob through the sandboxed build path -- no hash, no byte
-comparison. The deterministic ``.tex`` goldens in :mod:`test_golden` are the
-actual regression guard.
+This is not a golden test. PDF bytes are not deterministic, and a build needs
+the tectonic binary. So this test never runs in CI. To run it, install Podman
+and set `PYTEX_TEST_PODMAN=1`.
+
+The test builds one sample through the Podman sandbox and checks that the
+output starts with `%PDF-`. It compares no hash and no bytes. The `.tex`
+goldens in `test_golden` are the real regression guard.
 
     PYTEX_TEST_PODMAN=1 pytest tests/golden/test_golden_pdf_smoke.py -q
 """
@@ -40,8 +41,9 @@ _INPUTS = Path(__file__).resolve().parent / "inputs"
     reason="set PYTEX_TEST_PODMAN=1 with podman installed to run the live build",
 )
 def test_plain_sample_builds_pdf() -> None:
-    # One-time privileged warm-up so the offline untrusted build gets a
-    # version-matched tectonic cache hit (mirrors the sandbox suite).
+    # This warm-up runs once and needs more privileges. It gives the offline
+    # `untrusted` build a tectonic cache that matches the tectonic version.
+    # The sandbox suite does the same.
     if not sandbox_image_present():
         build_sandbox_image()
     warm_sandbox_cache()

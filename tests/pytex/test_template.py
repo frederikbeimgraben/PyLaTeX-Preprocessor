@@ -1,7 +1,7 @@
-"""Tests for `tex(t"...")` — PEP 750 template strings (Python 3.14+).
+"""Tests for `tex(t"...")` with PEP 750 template strings.
 
-This file uses t-string syntax and is only collected on 3.14 (see the root
-conftest's `collect_ignore_glob`).
+This file uses t-string syntax. Only Python 3.14 or later can parse it. On an
+older Python, the root conftest excludes the file with `collect_ignore_glob`.
 """
 
 from pytex.commands.builtin import Bold, Section
@@ -15,7 +15,7 @@ def test_plain_value_is_escaped():
 
 
 def test_literal_latex_is_verbatim():
-    # Static parts are author LaTeX; `{{`/`}}` are literal braces.
+    # The static parts are author LaTeX. `{{` and `}}` are literal braces.
     assert tex(rt"\textbf{{x}} and 50\%").rendered == r"\textbf{x} and 50\%"
 
 
@@ -48,7 +48,7 @@ def test_nested_template_recurses():
 
 def test_format_spec_then_escape():
     ratio = 0.5
-    # 0.5 -> "50%" via the format spec, then the % is LaTeX-escaped.
+    # The format spec turns 0.5 into `50%` first. PyTeX then escapes the `%`.
     assert tex(t"{ratio:.0%}").rendered == r"50\%"
 
 
