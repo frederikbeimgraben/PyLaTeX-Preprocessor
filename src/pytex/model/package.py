@@ -17,8 +17,10 @@ class Package(PackageProtocol, TeX):
     """A LaTeX package, which renders as a `\\usepackage` line.
 
     Use `DefinePackage` to make one. `DefinePackage` keeps one instance per
-    package name in `PACKAGES`. A direct `Package(...)` call does not add the
-    instance to `PACKAGES`.
+    package name in `PACKAGES`. A direct `Package(...)` call also registers
+    into `PACKAGES`, but it skips the amend step that `DefinePackage` runs
+    for a name that already exists, so it can leave a second, unrelated
+    instance in circulation.
     """
 
     _name: str
@@ -39,6 +41,9 @@ class Package(PackageProtocol, TeX):
             set(incompatible or set()),
             set(options or set()),
         )
+        # Package has a hand-written __init__, so Python never calls
+        # __post_init__ on its own. Call it here to register the instance.
+        self.__post_init__()
 
     @property
     @override

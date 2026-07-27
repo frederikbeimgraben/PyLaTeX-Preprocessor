@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 __all__ = ["IncludeProtocol", "Protocol", "build_protocol", "render_protocol"]
 
-_PARSER = marko.Markdown()
+_PARSER = marko.Markdown(extensions=["gfm"])
 
 _VARIANTS: dict[str, Variant] = {
     "stupa": Variant.STUPA,

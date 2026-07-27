@@ -1,4 +1,5 @@
 from ..interface.tex import TeX
+from ..model.concat import Concat
 from ..model.control_sequence import ControlSequence, Parameter
 from ..model.raw import Raw
 from ..registry import Registry
@@ -154,4 +155,4 @@ def Def(cs: str, body: TeX | str) -> TeX:
             differs from `Newcommand`, which takes the name with the
             backslash.
     """
-    return Raw(f"\\def\\{cs}{{{body}}}")
+    return Concat(Raw(f"\\def\\{cs}"), Parameter(body))

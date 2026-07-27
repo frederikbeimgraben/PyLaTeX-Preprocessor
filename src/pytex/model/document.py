@@ -53,12 +53,16 @@ class Document(TeX):
         requirement names in its own `after` set.
         """
 
+        def add_with_after(pkg: PackageProtocol, found: set[PackageProtocol]) -> None:
+            if pkg in found:
+                return
+            found.add(pkg)
+            for after in pkg.after:
+                add_with_after(after, found)
+
         def get_packages(obj: TeX, found: set[PackageProtocol]) -> None:
-            found |= {
-                after
-                for pkg in (obj.requires or set[PackageProtocol]())
-                for after in pkg.after | {pkg}
-            }
+            for pkg in obj.requires or set[PackageProtocol]():
+                add_with_after(pkg, found)
 
             for child in obj.children or ():
                 get_packages(child, found)
@@ -111,8 +115,10 @@ class Document(TeX):
     def write_inline_images(self, target_dir: str = ".") -> tuple[str, ...]:
         """Write the inline images to disk under `target_dir`.
 
-        The method converts an SVG source to PDF first. An absolute image path
-        loses its root part and becomes relative to `target_dir`.
+        The method converts an SVG source to PDF first. `rendered` names each
+        inline image by its own resolved path, so an absolute resolved path
+        writes to that same absolute path. A relative resolved path writes
+        under `target_dir`, since `rendered` also names it as relative.
 
         Returns:
             The path of each file written, in the order of the node tree.
@@ -124,8 +130,7 @@ class Document(TeX):
         for img in self.inline_images:
             img.ensure_converted()
             resolved = img.resolved_path
-            rel = Path(*resolved.parts[1:]) if resolved.is_absolute() else resolved
-            dest = base / rel
+            dest = resolved if resolved.is_absolute() else base / resolved
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(img.read_bytes())
             written.append(dest.as_posix())

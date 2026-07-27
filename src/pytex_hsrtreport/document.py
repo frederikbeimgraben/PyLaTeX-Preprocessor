@@ -173,14 +173,24 @@ class HSRTReport(KomaDocument):
     def discovered_colors(self) -> tuple[Color, ...]:
         r"""Return every `Color` that needs a `\definecolor` command.
 
-        The walk covers the body and `user_preamble`. The result also holds
-        the three HSRT hyperref colors. Those live as Python data inside the
-        hypersetup options dictionary, so the walk cannot reach them.
+        The walk covers the body, `user_preamble` and the title-page fields
+        `title`, `abstract`, `keywords` and `data_lines`. The result also
+        holds the three HSRT hyperref colors. Those live as Python data
+        inside the hypersetup options dictionary, so the walk cannot reach
+        them.
         """
         seen: dict[str, Color] = {}
         for c in (HSRT_CITE_COLOR, HSRT_LINK_COLOR, HSRT_URL_COLOR):
             seen.setdefault(c.name, c)
-        for root in (self.body, self.user_preamble):
+        roots: tuple[TeX | str, ...] = (
+            self.body,
+            self.user_preamble,
+            self.title or "",
+            self.abstract or "",
+            self.keywords or "",
+            *(line.value for line in self.data_lines),
+        )
+        for root in roots:
             for color in collect_colors(coerce_tex(root)):
                 seen.setdefault(color.name, color)
         return tuple(seen.values())

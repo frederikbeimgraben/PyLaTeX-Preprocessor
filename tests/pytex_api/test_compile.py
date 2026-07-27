@@ -5,7 +5,9 @@ The last test runs a real build. pytest skips that test when the tectonic
 binary is missing.
 """
 
+import io
 import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -18,8 +20,10 @@ from pytex_api import (
     TrustLevel,
     render_blob,
 )
-from pytex_api._compile import build_tectonic_cmd
+from pytex_api._compile import build_tectonic_cmd, compile_to_pdf
+from pytex_api._models import TrustError
 from pytex_api._policy import policy_for
+from pytex_builder.console import Console
 
 
 def _cmd(level: TrustLevel) -> list[str]:
@@ -54,6 +58,25 @@ def test_cmd_outputs_into_build_dir_and_ends_with_tex():
     assert "--outdir" in cmd
     assert cmd[cmd.index("--outdir") + 1] == "/work/build"
     assert cmd[-1] == "/work/document.tex"
+
+
+def test_asset_named_document_tex_cannot_overwrite_the_screened_latex():
+    req = BuildRequest(
+        source=b"ok",
+        input_kind=InputKind.TEX,
+        output_kind=OutputKind.PDF,
+        trust=TrustLevel.UNTRUSTED,
+        assets={"document.tex": b"ATTACKER CONTENT"},
+    )
+    policy = policy_for(TrustLevel.UNTRUSTED)
+    workdir = Path(tempfile.mkdtemp())
+    console = Console(stream=io.StringIO())
+    try:
+        with pytest.raises(TrustError):
+            compile_to_pdf("BENIGN LATEX", req, policy, workdir, console, req.assets)
+        assert (workdir / "document.tex").read_text() == "BENIGN LATEX"
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
 
 
 @pytest.mark.skipif(

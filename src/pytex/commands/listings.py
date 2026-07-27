@@ -91,9 +91,11 @@ def Lstinline(body: str, delim: str = "|") -> TeX:
 def Lstlisting(body: str, options: dict[str, TeX | str] | None = None) -> TeX:
     """Render a `lstlisting` environment, which prints a block of code.
 
-    The factory adds no line break. listings reads the code from the line
-    after `\\begin{lstlisting}`, and it needs `\\end{lstlisting}` at the start
-    of a line. Start `body` with a newline and end it with a newline.
+    listings reads the code from the line after `\\begin{lstlisting}`, and it
+    needs `\\end{lstlisting}` at the start of a line. The factory strips any
+    newline `body` already starts or ends with, then puts back exactly one
+    on each side, so the code never sits on either line and a caller that
+    already added its own newline does not get a doubled blank line.
 
     Args:
         options: listings options. An empty dictionary gives no optional
@@ -102,4 +104,4 @@ def Lstlisting(body: str, options: dict[str, TeX | str] | None = None) -> TeX:
     params: tuple[Parameter, ...] = ()
     if options:
         params = (Parameter(Raw(_opts_to_str(options)), optional=True),)
-    return Environment("lstlisting", body, params)
+    return Environment("lstlisting", "\n" + body.strip("\n") + "\n", params)

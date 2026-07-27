@@ -137,12 +137,9 @@ def Floatsetup(options: dict[str, str]) -> TeX:
 
 
 @Registry.add
+@with_package("multicol")
 def Multicols(n: int, body: TeX | str) -> TeX:
     """Render a `multicols` environment.
-
-    The environment comes from the `multicol` package, and this factory does
-    not name that package requirement. Wrap the node in `WithPackage` to name
-    the requirement yourself.
 
     Args:
         n: The number of columns. The `multicol` package accepts 2 to 10.
@@ -151,13 +148,9 @@ def Multicols(n: int, body: TeX | str) -> TeX:
 
 
 @Registry.add
+@with_package("multicol")
 def Columnbreak() -> TeX:
-    """Render `\\columnbreak`, which ends the current column.
-
-    The macro comes from the `multicol` package, and this factory does not
-    name that package requirement. Wrap the node in `WithPackage` to name the
-    requirement yourself.
-    """
+    """Render `\\columnbreak`, which ends the current column."""
     return ControlSequence("columnbreak", ())
 
 

@@ -15,7 +15,7 @@ from pytex.commands.builtin import Section
 from pytex.model.concat import Concat
 from pytex.model.document import Document
 
-from pytex_hsrtreport.boxes import SuccessBox
+from pytex_components.boxes import SuccessBox
 from pytex_markdown import IncludeMarkdown, Markdown
 
 __pytex__ = Document(

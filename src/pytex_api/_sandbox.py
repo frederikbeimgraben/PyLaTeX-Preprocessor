@@ -99,6 +99,26 @@ _ARCH_ALIASES: dict[str, str] = {
     "arm64": "aarch64",
 }
 
+# The preamble of every report and meeting protocol variant loads biblatex,
+# so tectonic always calls biber for those variants. The image build installs
+# a pinned biber release and verifies its sha256, for the same reason as
+# tectonic above. The sandbox runs with `--network none`, so biber must
+# already sit in the image; the container cannot fetch it at request time.
+_BIBER_ASSETS: dict[str, tuple[str, str]] = {
+    "x86_64": (
+        "biber-2.19-linux_x86_64.tar.gz",
+        "e2eda3e6ea7ac7e78d60e99a0e2aeb1096829f95791c06b768ed31a12889e58e",
+    ),
+    "aarch64": (
+        "biber-2.19-linux_aarch64.tar.gz",
+        "45571c262e714786ec841320ee1845f0e3e3cf29443bb58769b26c6fc6274766",
+    ),
+}
+_BIBER_MIRROR_URL = (
+    "https://github.com/frederikbeimgraben/PyTeX-Preprocessor"
+    "/releases/download/biber-binaries/{asset}"
+)
+
 
 def _tectonic_url(target: str) -> str:
     """Return the upstream release URL for a `<arch>-<vendor>-<os>-<abi>` target."""
@@ -138,6 +158,8 @@ def _containerfile(machine: str | None = None) -> str:
         )
     target, sha = _TECTONIC_ASSETS[arch]
     url = _tectonic_url(target)
+    biber_asset, biber_sha = _BIBER_ASSETS[arch]
+    biber_url = _BIBER_MIRROR_URL.format(asset=biber_asset)
     return (
         f"FROM {_BASE_IMAGE}\n"
         "RUN microdnf install -y graphite2 openssl-libs libstdc++ libgcc zlib "
@@ -148,6 +170,12 @@ def _containerfile(machine: str | None = None) -> str:
         "&& tar xzf tectonic.tar.gz "
         "&& install -m 0755 tectonic /usr/local/bin/tectonic "
         "&& rm -f tectonic tectonic.tar.gz\n"
+        f"RUN cd /tmp && curl --proto '=https' --tlsv1.2 -fsSL -o biber.tar.gz "
+        f"'{biber_url}' "
+        f'&& echo "{biber_sha}  biber.tar.gz" | sha256sum -c - '
+        "&& tar xzf biber.tar.gz "
+        "&& install -m 0755 biber /usr/local/bin/biber "
+        "&& rm -f biber biber.tar.gz\n"
     )
 
 

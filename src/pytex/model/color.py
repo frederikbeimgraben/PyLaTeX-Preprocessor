@@ -80,6 +80,7 @@ class Color(TeX):
     name: str
     spec: ColorSpec | None
     _parent: "TeX | None"
+    _bases: "tuple[Color, ...]"
 
     def __init__(
         self,
@@ -98,6 +99,7 @@ class Color(TeX):
         else:
             raise TypeError("Color() requires `value` or `name`")
         self._parent = None
+        self._bases = ()
 
     @classmethod
     def hex(cls, value: str, name: str | None = None) -> "Color":
@@ -121,8 +123,16 @@ class Color(TeX):
         for v in (r, g, b):
             if not 0.0 <= float(v) <= 1.0:
                 raise ValueError(f"rgb component out of range [0,1]: {v}")
+        # A 0-255 integer per channel truncates two close floats, for
+        # example 0.5 and 0.501, to the same default name. Scale by 255000
+        # instead, so the name keeps three more decimal digits per channel.
         return cls(
-            name=name or f"crgb{int(r * 255):03d}{int(g * 255):03d}{int(b * 255):03d}",
+            name=name
+            or (
+                f"crgb{round(r * 255000):06d}"
+                f"{round(g * 255000):06d}"
+                f"{round(b * 255000):06d}"
+            ),
             spec=ColorSpec("rgb", f"{r},{g},{b}"),
         )
 
@@ -141,11 +151,24 @@ class Color(TeX):
             percent: How much of this color remains, from 0 to 100. The rest
                 is white. This method does not check the range.
 
+        Raises:
+            ValueError: This color's name already holds a `!`, so appending
+                another tint would build a name xcolor cannot resolve, for
+                example `blue!50!80`.
+
         Returns:
-            A new `Color` with no `spec`, so no `\\definecolor` line comes from
-            it.
+            A new `Color` with no `spec`. Its `children` still hold this
+            color, so `collect_colors` still finds this color's `spec`.
         """
-        return Color(name=f"{self.name}!{percent}", spec=None)
+        if "!" in self.name:
+            raise ValueError(
+                f"cannot tint {self.name!r}; it already mixes or tints a "
+                "colour, and xcolor reads the token after a second '!' as "
+                "another colour name"
+            )
+        new = Color(name=f"{self.name}!{percent}", spec=None)
+        new._bases = (self,)
+        return new
 
     def mix(self, other: "Color", percent: int = 50) -> "Color":
         """Mix this color with `other`, and render `<name>!<percent>!<other>`.
@@ -155,13 +178,16 @@ class Color(TeX):
                 gives an equal mix. This method does not check the range.
 
         Returns:
-            A new `Color` with no `spec`, so no `\\definecolor` line comes from
-            it.
+            A new `Color` with no `spec`. Its `children` still hold this
+            color and `other`, so `collect_colors` still finds both `spec`
+            values.
         """
-        return Color(
+        new = Color(
             name=f"{self.name}!{percent}!{other.name}",
             spec=None,
         )
+        new._bases = (self, other)
+        return new
 
     def __or__(self, other: "Color") -> "Color":
         return self.mix(other)
@@ -186,6 +212,17 @@ class Color(TeX):
     @override
     def rendered(self) -> str:
         return self.name
+
+    @property
+    @override
+    def children(self) -> tuple[TeX, ...]:
+        """The colors that `tint()` or `mix()` derived this color from.
+
+        A color that a constructor made directly has no children. The walk
+        `collect_colors` runs still reaches a derived color's base, so the
+        base color keeps its `\\definecolor` line.
+        """
+        return self._bases
 
     @property
     @override

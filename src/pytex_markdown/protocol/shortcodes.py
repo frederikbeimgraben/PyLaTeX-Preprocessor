@@ -21,6 +21,7 @@ from pytex.helpers.sanitize import escape_latex
 from pytex.model.concat import Concat
 from pytex.model.raw import Raw
 
+from ..glyphs import glyph_node
 from .entries import Timestamp
 
 if TYPE_CHECKING:
@@ -90,7 +91,16 @@ def _vote(args: dict[str, str]) -> TeX:
         count("enthaltung", "enth", "abstain"),
     )
     color = "britishracinggreen" if yes > no else "red" if yes < no else "eggplant"
-    summary = f"Ja {yes} · Nein {no} · Enthaltung {abstain}"
+    # `·` (U+00B7) has no glyph in the bundled DIN font. `glyph_node` rewrites
+    # it to `\cdot`, so the separator needs a node here instead of a bare str.
+    # `Textcolor` writes a str value verbatim and would skip that rewrite.
+    summary = Concat(
+        Raw(f"Ja {yes} "),
+        glyph_node("·"),
+        Raw(f" Nein {no} "),
+        glyph_node("·"),
+        Raw(f" Enthaltung {abstain}"),
+    )
     return Concat(Textbf("Abstimmung: "), Textcolor(color, summary))
 
 
