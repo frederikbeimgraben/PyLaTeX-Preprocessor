@@ -14,6 +14,13 @@ type PackageOption = str | tuple[str, str]
 
 @Registry.add
 class Package(PackageProtocol, TeX):
+    """A LaTeX package, which renders as a `\\usepackage` line.
+
+    Use `DefinePackage` to make one. `DefinePackage` keeps one instance per
+    package name in `PACKAGES`. A direct `Package(...)` call does not add the
+    instance to `PACKAGES`.
+    """
+
     _name: str
     _after: set[Self]
     _incompatible: set[Self]
@@ -58,6 +65,17 @@ class Package(PackageProtocol, TeX):
         after: set[Self] | frozenset[Self] | None = None,
         incompatible: set[Self] | frozenset[Self] | None = None,
     ) -> None:
+        """Add packages to the `after` and the `incompatible` sets.
+
+        `DefinePackage` calls this method when the package name already exists.
+        The change reaches every holder of the instance, because `PACKAGES`
+        keeps one instance per name.
+
+        Args:
+            after: Packages to add. None leaves the `after` set unchanged.
+            incompatible: Packages to add. None leaves the `incompatible` set
+                unchanged.
+        """
         if after is not None:
             self._after |= after
         if incompatible is not None:
@@ -111,6 +129,12 @@ def DefinePackage(
     incompatible: set[Package] | None = None,
     options: set[PackageOption] | None = None,
 ) -> Package:
+    """Get the one `Package` for `name`, and create it when it does not exist.
+
+    When `name` is already in `PACKAGES`, this function amends the existing
+    instance with `after` and `incompatible`, and returns it. It ignores
+    `options` in that case.
+    """
     after, incompatible, options = (
         after or set(),
         incompatible or set(),

@@ -16,7 +16,13 @@ PDF_COMPAT = {".pdf", ".png", ".jpg", ".jpeg", ".eps"}
 
 
 def _convert_to_pdf(src: Path, dst: Path) -> None:
-    """SVG → PDF via inkscape. Raises FileNotFoundError if inkscape absent."""
+    """Convert an SVG file to a PDF file with inkscape.
+
+    Raises:
+        ValueError: `src` does not end with `.svg`.
+        FileNotFoundError: The system has no inkscape binary.
+        subprocess.CalledProcessError: inkscape exits with an error.
+    """
     if src.suffix.lower() != ".svg":
         raise ValueError(f"only SVG conversion supported, got {src.suffix}")
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -30,14 +36,25 @@ def _convert_to_pdf(src: Path, dst: Path) -> None:
 @Registry.add
 @dataclass
 class IncludeImage(TeX):
-    """`\\includegraphics{path}` with optional base64 baking.
+    """An `\\includegraphics` line, with an option to inline the image.
 
-    - Accepts any image format. SVG is converted to PDF via `inkscape` lazily
-      (only when bytes are accessed and `inline_base64=True`).
-    - When `inline_base64=True`, `Document` collects the node and emits a
-      `\\begin{filecontents*}[overwrite,nosearch]{<resolved>.b64}` block at the
-      document start containing the raw base64. A build helper can decode them
-      to disk before the TeX run. The `\\includegraphics` line stays unchanged.
+    `IncludeImage` accepts the formats that LaTeX reads, and it also accepts
+    `.svg`. It converts an SVG source to PDF with inkscape. The conversion is
+    lazy. It runs only when a caller reads the image bytes.
+
+    When `inline_base64` is True, `Document` collects this node and renders a
+    `\\begin{filecontents*}[overwrite,nosearch]{<resolved>.b64}` block at the
+    start of the document. The block holds the base64 text of the image. A
+    build helper can decode the block to disk before the compile pass. The
+    `\\includegraphics` line does not change.
+
+    Attributes:
+        width: A LaTeX length for the `width` key, for example `0.5\\textwidth`.
+            None leaves the key out.
+        height: A LaTeX length for the `height` key. None leaves the key out.
+        scale: A scale factor as a string, for example `0.5`. None leaves the
+            key out.
+        keepaspectratio: True adds the `keepaspectratio` key.
     """
 
     path: Final[str | Path]
@@ -54,27 +71,39 @@ class IncludeImage(TeX):
 
     @property
     def resolved_path(self) -> Path:
-        """Path that `\\includegraphics` references. SVG → PDF in build/."""
+        """The path that `\\includegraphics` references.
+
+        A source that LaTeX reads directly keeps its own path. An SVG source
+        maps to a converted PDF under the literal `build` directory.
+
+        Raises:
+            ValueError: The file extension is neither `.svg` nor one that
+                LaTeX reads.
+        """
         src = self.source_path
         if src.suffix.lower() in PDF_COMPAT:
             return src
         if src.suffix.lower() == ".svg":
-            # Content-address the cache: hash the SVG bytes, not its path, so an
-            # edited source reconverts instead of reusing a stale PDF that
-            # happens to live at the same path-derived name.
+            # The cache key is a hash of the SVG bytes, not of the path. An
+            # edited source therefore gets a new name and inkscape converts it
+            # again. A path-derived name would reuse a stale PDF.
             digest = hashlib.sha1(src.read_bytes()).hexdigest()[:10]
             return Path("build") / f"{src.stem}-{digest}.pdf"
         raise ValueError(f"unsupported image extension: {src.suffix}")
 
     def ensure_converted(self) -> None:
-        """Run SVG→PDF conversion if needed. Idempotent."""
+        """Convert the SVG source to PDF when that PDF does not exist yet.
+
+        The method does nothing for a source that is not an SVG file. You can
+        call it more than once.
+        """
         if self.source_path.suffix.lower() == ".svg":
             target = self.resolved_path
             if not target.exists():
                 _convert_to_pdf(self.source_path, target)
 
     def read_bytes(self) -> bytes:
-        """Return the bytes of the resolved (TeX-compatible) image."""
+        """Read the bytes of the resolved image, and convert an SVG source first."""
         self.ensure_converted()
         return self.resolved_path.read_bytes()
 
@@ -105,7 +134,12 @@ class IncludeImage(TeX):
 
 
 def collect_inline_images(root: TeX) -> tuple[IncludeImage, ...]:
-    """Walk a TeX tree, return all IncludeImage nodes with `inline_base64=True`."""
+    """Find every `IncludeImage` node in a node tree that sets `inline_base64`.
+
+    Returns:
+        One node for each distinct resolved path, in the order the walk first
+        meets it.
+    """
     seen: dict[str, IncludeImage] = {}
 
     def walk(node: TeX) -> None:
@@ -121,14 +155,18 @@ def collect_inline_images(root: TeX) -> tuple[IncludeImage, ...]:
 
 
 def filecontents_b64_block(image: IncludeImage) -> str:
-    """`\\begin{filecontents*}[overwrite,nosearch]{<resolved>.b64}<base64>\\end{filecontents*}`."""
+    """Render a `filecontents*` block that holds the image as base64 text.
+
+    The block writes to the resolved image path plus the `.b64` suffix. The
+    base64 text wraps at 76 characters per line.
+    """
     target = image.resolved_path.as_posix() + ".b64"
     payload = image.base64_payload()
     chunks = [payload[i : i + 76] for i in range(0, len(payload), 76)]
     body = "\n".join(chunks)
-    # Trailing newline is required: LaTeX ignores anything after
-    # \end{filecontents*} on the same line, so without it the next token
-    # (another block, or the preamble) would be silently dropped.
+    # The trailing newline is required. LaTeX ignores the rest of the line
+    # after \end{filecontents*}, so without the newline it drops the next
+    # token. That token is another block or the start of the preamble.
     return (
         f"\\begin{{filecontents*}}[overwrite,nosearch]{{{target}}}\n"
         f"{body}\n"
@@ -136,5 +174,6 @@ def filecontents_b64_block(image: IncludeImage) -> str:
     )
 
 
-# Avoid unused-import warning
+# No node in this module calls `attach`. This binding stops the linter from
+# reporting the import as unused.
 _ = attach

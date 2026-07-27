@@ -1,25 +1,27 @@
-"""Blob-in / blob-out wrapper around PyTeX.
+"""Blob-in and blob-out wrapper around PyTeX.
 
-Hand it **source bytes** (Markdown, ``.tex``, or ``.tex.py``) and a declared
-:class:`InputKind`; get back **result bytes** - rendered ``.tex`` or a compiled
-PDF - without ever touching the filesystem yourself. All I/O happens inside a
-per-request temp directory that is removed when the call returns.
+You give this package source bytes (Markdown, `.tex`, or `.tex.py`) and a
+declared `InputKind`. You get back result bytes. The bytes are a rendered
+`.tex` file or a compiled PDF. You never touch the filesystem yourself. All
+reads and writes happen inside a temporary work directory that PyTeX removes
+when the call returns.
 
-The :class:`TrustLevel` on each request is the security axis, with three levels:
-``UNTRUSTED`` (the default) assumes hostile input and disables every
-code-execution surface (Python import, Markdown ``eval`` comments, ``.tex``
-``pytex(...)`` replacements, shell-escape), enforces the strict package
-allowlist, and caps build resources; ``SANDBOXED`` is semi-trusted - still no
-code or shell surface, but a wider package allowlist
-(:data:`SANDBOXED_EXTRA_PACKAGES`); ``TRUSTED`` unlocks the full pipeline for
-first-party documents.
+The `TrustLevel` of a request is the security axis. It has three values.
+`untrusted` is the default. It assumes hostile input, closes every
+code-execution surface, applies the strict package allowlist, and caps the
+build resources. The closed surfaces are the Python import, the Markdown
+`eval` comments, the inline `pytex(...)` markers, and shell-escape.
 
-``render_blob`` is synchronous; ``render_blob_async`` offloads the blocking work
-under a copied context so concurrent async requests stay isolated (the
-``_render_depth`` ``ContextVar`` fix is what makes that correct).
+`sandboxed` is semi-trusted. It keeps the code surface and the shell surface
+closed, but it adds a wider package allowlist (`SANDBOXED_EXTRA_PACKAGES`).
+`trusted` unlocks the whole pipeline for first-party documents.
 
-Example::
+`render_blob` is synchronous. `render_blob_async` moves the blocking work to
+an executor under a copy of the current context, so concurrent async requests
+stay isolated. The copy is what makes the `_render_depth` `ContextVar`
+correct.
 
+Example:
     from pytex_api import BuildRequest, InputKind, OutputKind, render_blob
 
     result = render_blob(
@@ -94,7 +96,7 @@ __all__ = [
 
 
 def _collect_warnings(log: str) -> tuple[str, ...]:
-    """Pull ``warning:``-tagged lines out of the captured console output."""
+    """Return the text that follows each `warning:` tag in the captured log."""
     return tuple(
         line.split("warning:", 1)[1].strip()
         for line in log.splitlines()
@@ -105,18 +107,28 @@ def _collect_warnings(log: str) -> tuple[str, ...]:
 def _render_or_compile_error(
     req: BuildRequest, policy: TrustPolicy, workdir: Path
 ) -> str:
-    """Render to LaTeX, mapping malformed-source failures to ``CompileError``.
+    """Render to LaTeX and map a malformed-source failure to `CompileError`.
 
-    The render machinery raises raw exceptions on hostile or broken input - a
-    Python ``SyntaxError`` or a non-node ``__pytex__`` (surfaced as a
-    ``pytex_builder`` ``BuildError``), an ``eval`` failure in a ``pytex(...)``
-    replacement, or a Markdown parse error. Those would otherwise reach the
-    caller as a bare :class:`Exception`, forcing a blanket 500. We translate
-    them to a :class:`CompileError` carrying a generic message - the underlying
-    exception is chained for server-side logs but never embedded in the
-    message, so no temp path or stacktrace leaks to the client. Our own typed
-    :class:`ApiError`s (trust gate, limits, package allowlist) pass through
-    unchanged.
+    The render step raises raw exceptions on hostile or broken input. One
+    example is a Python `SyntaxError`. Another is a `__pytex__` name that is
+    not a TeX node, which the render step reports as a `pytex_builder`
+    `BuildError`. A failed `eval` in an inline `pytex(...)` marker and a
+    Markdown parse error do the same. Such an exception reaches the caller as
+    a bare `Exception` and forces a blanket 500.
+
+    This function translates those exceptions into a `CompileError` with a
+    generic message. It chains the original exception for the server-side log,
+    but it never puts that text into the message. So no temporary path and no
+    stack trace leaks to the client. The typed `ApiError` classes of this API
+    pass through unchanged. These cover the trust gate, the limits, and the
+    package allowlist.
+
+    Returns:
+        The rendered LaTeX source.
+
+    Raises:
+        CompileError: The render step failed for a reason other than an
+            `ApiError`.
     """
     try:
         return render_to_latex(req, policy, workdir)
@@ -129,18 +141,27 @@ def _render_or_compile_error(
 
 
 def render_blob(req: BuildRequest) -> BuildResult:
-    """Render a :class:`BuildRequest` to a :class:`BuildResult`, synchronously.
+    """Render a `BuildRequest` to a `BuildResult` synchronously.
 
-    Runs the whole pipeline inside a fresh ``mkdtemp`` workdir that is removed
-    before returning. Raises :class:`TrustError`, :class:`LimitError`, or
-    :class:`CompileError` (all :class:`ApiError`) on policy or build failure.
+    PyTeX runs the whole build inside a fresh temporary work directory from
+    `mkdtemp`, and removes that directory before this function returns. Every
+    error below is a subclass of `ApiError`.
+
+    Returns:
+        The result bytes, the log, the warnings, and the build duration.
+
+    Raises:
+        TrustError: The request asks for a capability that its trust level
+            forbids.
+        LimitError: The input, the output, or the build time passed a limit.
+        CompileError: The render step or the compile step failed.
     """
     start = perf_counter()
     enforce_input_size(req.source, req.limits)
     policy = policy_for(req.trust)
-    # Validate asset names once, up front, and carry the checked dict forward -
-    # the compile step writes *this*, never the raw `req.assets`, so safety no
-    # longer hinges on call order.
+    # Validate the asset names once, up front, and carry the checked dict
+    # forward. The compile step writes this dict and never the raw
+    # `req.assets`, so safety does not depend on the call order.
     assets = filter_assets(req.assets)
 
     stream = io.StringIO()
@@ -166,8 +187,8 @@ def render_blob(req: BuildRequest) -> BuildResult:
             output=pdf,
             output_kind=OutputKind.PDF,
             log=log,
-            # Include tectonic's own `warning:` lines, consistent with the TEX
-            # path (which only has the console stream to draw from).
+            # Include the `warning:` lines of tectonic itself. The TEX path
+            # can read only the console stream.
             warnings=_collect_warnings(full_log),
             duration_s=perf_counter() - start,
         )
@@ -176,12 +197,15 @@ def render_blob(req: BuildRequest) -> BuildResult:
 
 
 async def render_blob_async(req: BuildRequest) -> BuildResult:
-    """Async wrapper: run :func:`render_blob` off the event loop, isolated.
+    """Run `render_blob` off the event loop in an isolated context.
 
-    The work is offloaded to the default executor under a *copied* context, so
-    the ``_render_depth`` ``ContextVar`` (and any future render-time context
-    var) is private to this request - concurrent async builds cannot corrupt
-    each other's box-nesting depth.
+    The default executor runs the build under a copy of the current context.
+    So the `_render_depth` `ContextVar`, and every later render-time context
+    variable, stays private to this request. Concurrent async builds cannot
+    corrupt the box-nesting depth of each other.
+
+    Returns:
+        The same `BuildResult` that `render_blob` returns.
     """
     loop = asyncio.get_running_loop()
     ctx = contextvars.copy_context()
@@ -192,6 +216,5 @@ async def render_blob_async(req: BuildRequest) -> BuildResult:
     return await loop.run_in_executor(None, _call)
 
 
-# Re-exported for callers that build their own limits but want the default
-# numbers as a starting point.
+# A caller that builds its own limits can start from these default numbers.
 DEFAULT_LIMITS: BuildLimits = BuildLimits()

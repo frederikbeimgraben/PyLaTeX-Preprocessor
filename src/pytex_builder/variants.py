@@ -1,21 +1,24 @@
-"""Output styles for Markdown inputs.
+"""The variants for a Markdown input file.
 
-A *variant* maps a Markdown source to a concrete document:
+A variant maps a Markdown source to a concrete document:
 
-* ``plain``          - a bare ``Document`` wrapping the converted Markdown.
-* ``report``         - an HSRT report with title page and table of contents.
-* ``report-makers``  - an HSRT report branded with the MAKERS logo (title page
-  and footer on every page).
-* ``protocol-asta``  - an AStA meeting protocol (HSRT report, AStA logos).
-* ``protocol-stupa`` - a StuPa meeting protocol (HSRT report, StuPa logos).
+* `plain` - a bare `Document` that wraps the converted Markdown.
+* `report` - an HSRT report with a title page and a table of contents.
+* `report-makers` - an HSRT report with the MAKERS logo on the title page and
+  in the footer of every page.
+* `protocol-asta` - an AStA meeting protocol. It is an HSRT report with the
+  AStA logos.
+* `protocol-stupa` - a StuPa meeting protocol. It is an HSRT report with the
+  StuPa logos.
 
-The variant is chosen with ``pytex --variant <name>``; without it the builder
-auto-detects (protocol when the frontmatter looks like a meeting protocol,
-otherwise plain). Document-class parameters come from the YAML frontmatter and
-from ``--config`` JSON (which overrides the frontmatter).
+You pick the variant with `pytex --variant <name>`. Without that option PyTeX
+detects the variant. It picks a protocol variant when the frontmatter looks
+like a meeting protocol, and `plain` otherwise.
 
-For styles with a title page, the title falls back to the first ``#`` heading
-of the document when it is not given via frontmatter/config.
+Document-class parameters come from the YAML frontmatter and from the
+`--config` JSON, and `--config` overrides the frontmatter. For a variant with a
+title page, the title falls back to the first `#` heading of the document when
+neither source gives one.
 """
 
 from __future__ import annotations
@@ -65,7 +68,16 @@ def build_document(
     variant: str | None = None,
     config: Mapping[str, object] | None = None,
 ) -> TeX:
-    """Convert Markdown `text` to a document using the given (or detected) style."""
+    """Convert the Markdown `text` into a document.
+
+    Args:
+        variant: The variant name. `None` lets PyTeX detect the variant from
+            the frontmatter.
+        config: Document-class parameters that override the frontmatter.
+
+    Raises:
+        ValueError: `variant` is not a known variant name.
+    """
     meta, body = split_frontmatter(text)
     options: dict[str, object] = {**meta, **(config or {})}
 
@@ -118,8 +130,9 @@ def _report(
         derived = title is not None
     body_tex: TeX = Markdown(body, base_level=_report_base_level(body))
     if derived and title is not None:
-        # The `#` heading was pulled out for the title page; re-emit it at the
-        # top of the body as a big, unnumbered heading so it is not lost.
+        # `_derive_title` took the `#` heading out of the body for the title
+        # page. Put it back at the top of the body as an unnumbered chapter
+        # heading, so the reader still sees it.
         body_tex = Concat(ChapterStar(escape_latex(title)), Raw("\n\n"), body_tex)
     bibliography = _bibliography(options)
     return HSRTReport(
@@ -143,16 +156,22 @@ def _report(
         or "Keywords",
         data_lines=_data_lines(options),
         logos=_logos(options),
-        # Map the shallowest heading in the body to \chapter, so headings nest
-        # under it. Without this, a doc whose top level is `##` (because `#` was
-        # consumed as the title) would render chapterless sections numbered 0.x.
+        # `body_tex` maps the shallowest heading level in the body to
+        # `\chapter`, so the deeper headings nest under it. A document whose top
+        # level is `##`, because `#` became the title, needs this mapping.
+        # Without it the sections get no chapter and take the numbers 0.x.
         body=body_tex,
         document_class_options=_class_options(options),
     )
 
 
 def _report_base_level(body: str) -> int:
-    """Heading shift mapping the shallowest `#`-level in `body` to `\\chapter`."""
+    """Return the heading shift that maps the shallowest heading to `\\chapter`.
+
+    Returns:
+        The shift for the `base_level` argument of `Markdown`. A body without a
+        heading gives `-1`.
+    """
     levels = [len(m.group(1)) for m in map(_HEADING_RE.match, body.splitlines()) if m]
     return -min(levels) if levels else -1
 
@@ -175,17 +194,22 @@ def _protocol(
 
 # -- helpers ---------------------------------------------------------------
 
-# Self-contained .bib name written next to the .tex via filecontents so biber
-# finds it in the build dir without an external file path.
+# The name of the `.bib` file that `filecontents` writes next to the rendered
+# `.tex` file. biber then finds it in the build directory, and the document
+# needs no external file path.
 _BIB_FILENAME = "pytex-md-refs.bib"
 
 
 def _bibliography(options: Mapping[str, object]) -> str | None:
-    """BibTeX content from the ``bibliography`` frontmatter, or ``None``.
+    """Return the BibTeX content from the `bibliography` frontmatter key.
 
-    The value is either inline BibTeX (a block scalar, recognised by an ``@``
-    entry) or a path to a ``.bib`` file, which is read in. A path that does not
-    resolve to a file is ignored.
+    The value is either inline BibTeX or a path to a `.bib` file. PyTeX treats
+    the value as inline BibTeX when it holds an `@` entry. Otherwise PyTeX
+    reads the file.
+
+    Returns:
+        The BibTeX text. The result is `None` when no key holds a value, or
+        when the path does not name a file.
     """
     value = _str(options, "bibliography", "literatur", "bibliografie", "bib")
     if value is None:
@@ -197,20 +221,24 @@ def _bibliography(options: Mapping[str, object]) -> str | None:
 
 
 def _resolve_logo(item: str) -> str:
-    """A vendored logo name passes through; a file path is made absolute.
+    """Resolve one logo entry.
 
-    Absolute so the logo resolves from the build directory rather than the
-    Markdown source's directory.
+    A vendored logo name passes through unchanged. A path to a file becomes an
+    absolute path. The compile pass runs in the build directory, and a relative
+    path would not resolve there.
     """
     candidate = Path(item).expanduser()
     return str(candidate.resolve()) if candidate.is_file() else item
 
 
 def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
-    """Title-page logos from the ``logos``/``logo`` frontmatter, or ``None``.
+    """Return the title-page logos from the `logos` or `logo` frontmatter key.
 
-    Each entry is a vendored logo name (``INF``, ``MAKERS`` ...) or a path to a
-    custom image; given as a list or a single scalar.
+    Each entry is a vendored logo name, for example `INF` or `MAKERS`, or a
+    path to a custom image. The value is a list or a single scalar.
+
+    Returns:
+        The logo entries, or `None` when neither key holds a usable value.
     """
     raw = options.get("logos", options.get("logo"))
     if isinstance(raw, list):
@@ -223,11 +251,12 @@ def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
 
 
 def _bib_preamble(content: str) -> TeX:
-    """Emit the bibliography as an inline ``filecontents`` .bib + ``\\addbibresource``.
+    """Return the preamble that embeds the bibliography and loads it.
 
-    Writing the .bib via ``filecontents`` keeps the document self-contained: the
-    file lands in the build dir at compile time, so biber resolves it without a
-    separate path (and the numeric biblatex default style applies).
+    The preamble writes the `.bib` file with `filecontents` and then calls
+    `\\addbibresource`. This keeps the document self-contained. The `.bib` file
+    lands in the build directory during the compile pass, so biber resolves it
+    without a separate path. The numeric biblatex default style applies.
     """
     block = (
         f"\\begin{{filecontents*}}[overwrite,noheader]{{{_BIB_FILENAME}}}\n"
@@ -250,7 +279,12 @@ def _escaped(value: str | None) -> str | None:
 
 
 def _keywords(options: Mapping[str, object]) -> str | None:
-    """Title-page keywords from `keywords`/`schlagworte` (string or list)."""
+    """Return the title-page keywords from `keywords` or `schlagworte`.
+
+    Returns:
+        The keywords as one comma-separated string, or `None`. A list value
+        becomes a comma-separated string.
+    """
     for key in ("keywords", "schlagworte"):
         value = options.get(key)
         if isinstance(value, list) and value:
@@ -261,11 +295,11 @@ def _keywords(options: Mapping[str, object]) -> str | None:
 
 
 def _data_lines(options: Mapping[str, object]) -> tuple[TitlePageDataLine, ...]:
-    """Title-page data table from `datalines`/`data`.
+    """Return the title-page data table from `datalines` or `data`.
 
-    Each entry is a ``"Label: value"`` string (frontmatter has no nested maps),
-    given as a block list, flow list, or a single scalar. Entries without a
-    colon are skipped.
+    Each entry is a `"Label: value"` string, because frontmatter has no nested
+    maps. The value is a block list, a flow list, or a single scalar. PyTeX
+    skips an entry without a colon.
     """
     raw = options.get("datalines", options.get("data"))
     if isinstance(raw, list):
@@ -283,10 +317,12 @@ def _data_lines(options: Mapping[str, object]) -> tuple[TitlePageDataLine, ...]:
 
 
 def _derive_title(body: str) -> tuple[str | None, str]:
-    """Pull the first ATX `#` heading out of `body` to use as the title.
+    """Take the first ATX `#` heading out of `body` and use it as the title.
 
-    Returns the title (or `None` if there is no `#` heading) and the body with
-    that heading line removed (so it does not also render as a chapter).
+    Returns:
+        The title and the body. The title is `None` when the body has no `#`
+        heading. The returned body has that heading line removed, so it does
+        not also render as a chapter.
     """
     lines = body.splitlines()
     for index, line in enumerate(lines):
@@ -298,7 +334,10 @@ def _derive_title(body: str) -> tuple[str | None, str]:
 
 
 def _class_options(options: Mapping[str, object]) -> set[PackageOption]:
-    """Read class options from `classoptions` (list, dict, or comma string)."""
+    """Return the class options from the `classoptions` frontmatter key.
+
+    The value is a list, a dict, or one comma-separated string.
+    """
     raw = options.get("classoptions", options.get("class_options"))
     result: set[PackageOption] = set()
     if isinstance(raw, dict):

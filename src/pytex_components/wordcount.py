@@ -9,9 +9,18 @@ __all__ = ["WordcountCommands"]
 
 @Registry.add
 def WordcountCommands() -> TeX:
-    """Define `\\quickwordcount{<doc>}` + `\\detailtexcount{<doc>}` macros.
+    """Define the macros `\\quickwordcount{<doc>}` and `\\detailtexcount{<doc>}`.
 
-    Both shell out to `texcount` and require `-shell-escape` build.
+    Both macros run `texcount` through `\\write18`, so the compile pass needs
+    shell-escape. A build with `--no-shell-escape` fails.
+
+    Both macros write into the directory `Build`. `\\detailtexcount` reads the
+    result back with `\\verbatiminput`. That macro needs the `verbatim`
+    package.
+
+    The directory name is fixed. The macros do not follow `--build-dir`, whose
+    default is `build`. Create a directory named `Build` next to the rendered
+    `.tex` file before the compile pass.
     """
     return Concat(
         Newcommand(

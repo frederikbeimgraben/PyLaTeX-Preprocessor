@@ -1,3 +1,5 @@
+"""hyperref setup and link colors for the HSRT report."""
+
 from typing import Final
 
 from pytex.interface.tex import TeX
@@ -19,9 +21,10 @@ HSRT_HYPER_OPTIONS: Final[dict[str, HyperOption]] = {
     "pdfpagemode": "UseOutlines",
     "bookmarksopen": True,
     "bookmarksopenlevel": 0,
-    # plainpages=false + hypertexnames=true gives roman frontmatter pages their
-    # own named anchors (page.i, ...) so glossary/index \hyperpage links to
-    # those pages resolve instead of dangling against absolute arabic anchors.
+    # `plainpages=false` with `hypertexnames=true` gives the roman-numbered
+    # front-matter pages their own named anchors (`page.i` and so on). The
+    # `\hyperpage` links from the glossary and the index then resolve. With
+    # absolute arabic anchors those links dangle.
     "plainpages": False,
     "hypertexnames": True,
     "colorlinks": True,
@@ -44,6 +47,10 @@ def _format(value: HyperOption) -> str:
 
 @Registry.add
 def HSRTHyperref() -> TeX:
-    """Hypersetup using `HSRT_HYPER_OPTIONS` (structured Python, not a TeX blob)."""
+    r"""Render `\hypersetup` from the `HSRT_HYPER_OPTIONS` dictionary.
+
+    The options stay Python data, not a TeX string, so other code can read
+    and change them.
+    """
     body = ",".join(f"{k}={_format(v)}" for k, v in HSRT_HYPER_OPTIONS.items())
     return ControlSequence("hypersetup", (Parameter(Raw(body)),))

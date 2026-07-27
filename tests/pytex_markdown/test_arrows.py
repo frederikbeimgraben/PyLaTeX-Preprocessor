@@ -29,14 +29,15 @@ def test_long_arrows():
 
 
 def test_longest_match_wins():
-    # `<-->` must not be split into `<-` + `->`.
+    # The converter must not split `<-->` into `<-` and `->`.
     out = Markdown("a <--> b").rendered
     assert r"$\longleftrightarrow$" in out
     assert r"\leftarrow" not in out
 
 
 def test_le_operator_not_an_arrow():
-    # `<=` overwhelmingly means "less than or equal", not a left arrow.
+    # In prose, `<=` almost always means "less than or equal to". The arrow
+    # table has no entry for it.
     out = Markdown("x <= y").rendered
     assert "<=" in out
     assert "arrow" not in out

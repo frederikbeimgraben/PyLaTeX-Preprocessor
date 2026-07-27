@@ -1,9 +1,10 @@
-"""Confined tectonic compile: bytes of LaTeX -> bytes of PDF.
+"""Confined tectonic compile: LaTeX text -> PDF bytes.
 
-Everything runs inside the per-request workdir. For non-trusted builds the
-subprocess is wrapped in POSIX resource limits, a wall-clock timeout, and a
-fresh session/process-group so the whole tree can be killed; shell-escape is
-forced off and ``--only-cached`` blocks any in-request network fetch.
+Every step runs inside the temporary work directory of the request. For a
+non-trusted build, PyTeX wraps the subprocess in POSIX resource limits, a
+wall-clock timeout, and a new session and process group. The new process group
+lets PyTeX kill the whole process tree. PyTeX also forces shell-escape off, and
+`--only-cached` blocks every network fetch during the request.
 """
 
 from __future__ import annotations
@@ -46,7 +47,15 @@ _CONTAINER_BIN_NAME = "tectonic-bin"
 
 
 def _locate_tectonic(policy: TrustPolicy, console: Console) -> Path:
-    """Find a tectonic binary; download only if the policy allows network."""
+    """Find the tectonic binary, and download it only if the policy allows it.
+
+    Returns:
+        The path to the tectonic binary, from PATH or from the cache.
+
+    Raises:
+        CompileError: tectonic is not installed and the policy blocks the
+            network, or the download failed.
+    """
     from pytex_builder.tectonic import CACHE_DIR, BuildError, ensure_tectonic
 
     on_path = shutil.which("tectonic")
@@ -72,11 +81,15 @@ def build_tectonic_cmd(
     build_dir: Path,
     policy: TrustPolicy,
 ) -> list[str]:
-    """Assemble the tectonic argv for ``policy`` (pure; unit-testable).
+    """Assemble the tectonic argv for `policy`.
 
-    Shell-escape is added only when the policy allows it; ``--only-cached`` is
-    added whenever network is disabled, so a build can never trigger a bundle
-    fetch.
+    The function is pure, so a unit test can call it directly. PyTeX adds
+    shell-escape only when the policy allows it. PyTeX adds `--only-cached`
+    whenever the policy blocks the network, so a build can never start a
+    bundle fetch.
+
+    Returns:
+        The tectonic argv, with the input file as the last item.
     """
     cmd: list[str] = [
         str(binary),
@@ -105,20 +118,26 @@ def _kill_group(proc: subprocess.Popen[str]) -> None:  # pragma: no cover - timi
 def _biber_env(
     cmd: list[str], build_dir: Path, policy: TrustPolicy, console: Console
 ) -> dict[str, str] | None:
-    """A child env whose PATH includes the biber matching the document's BCF.
+    """Build a child environment whose PATH holds the biber for this document.
 
-    Mirrors ``pytex_builder.tectonic.run_tectonic``: read the BCF (probing with a
-    no-op biber if it is not written yet) to pick the right biber release, then
-    ensure it (download+cache). Returns ``None`` (inherit env) for documents
-    without biblatex, or when biber can't be obtained (e.g. network disabled) —
-    tectonic then surfaces its own error rather than us masking it.
+    This mirrors `pytex_builder.tectonic.run_tectonic`. PyTeX reads the BCF
+    file to pick the correct biber release, and then downloads and caches that
+    release. If tectonic has not written the BCF file yet, PyTeX first runs a
+    probe compile pass with a no-op biber.
+
+    Returns:
+        A full environment mapping for the child process, or `None` when the
+        caller must inherit the current environment. The result is `None` for
+        a document without biblatex, and when PyTeX cannot get biber, for
+        example because the policy blocks the network. tectonic then reports
+        its own error instead of a masked one.
     """
     tex = build_dir.parent / f"{_JOB}.tex"
     try:
         source = tex.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return None
-    # No biblatex → tectonic never invokes biber; skip the extra probe pass.
+    # Without biblatex, tectonic never calls biber. Skip the extra probe pass.
     if "biblatex" not in source:
         return None
     try:
@@ -145,12 +164,22 @@ def _run_confined(
     apply_rlimits: bool,
     env: Mapping[str, str] | None = None,
 ) -> tuple[int, str]:
-    """Run ``cmd`` with rlimits + a hard wall-clock kill; return (rc, output).
+    """Run `cmd` with resource limits and a hard wall-clock kill.
 
-    ``apply_rlimits`` is the in-process ``setrlimit`` floor; it is switched off
-    for the Podman path, where the container's cgroup flags do the capping (an
-    rlimit on the ``podman`` *client* would not reach the build inside).
-    ``env`` overrides the child environment (e.g. a PATH that includes biber).
+    Args:
+        apply_rlimits: Turn on the in-process `setrlimit` floor. The Podman
+            path passes `False`, because the cgroup flags of the container do
+            the capping there. An rlimit on the `podman` client process would
+            not reach the build inside the container.
+        env: A full replacement for the child environment, for example a PATH
+            that holds biber. `None` inherits the environment of this process.
+
+    Returns:
+        The exit code of the process, and its stdout with stderr merged in.
+
+    Raises:
+        CompileError: The process could not start.
+        LimitError: The process passed the wall-clock limit.
     """
     posix = os.name == "posix"
     preexec = make_rlimit_preexec(limits) if (apply_rlimits and posix) else None
@@ -183,11 +212,14 @@ def _run_confined(
 
 
 def _should_sandbox(policy: TrustPolicy, config: SandboxConfig) -> bool:
-    """Whether this build should run inside the Podman OS sandbox.
+    """Report whether this build runs inside the Podman sandbox.
 
-    Non-trusted builds (those that get rlimits) are sandboxed when ``podman`` is
-    available and the pre-built image is already local - never pulling at
-    request time. ``TRUSTED`` builds run un-containerised.
+    A non-trusted build is a build that gets rlimits. Such a build uses the
+    sandbox when `podman` is on PATH. When `config.tectonic_in_image` is true,
+    the pre-built image must also be local already, because PyTeX must never
+    pull an image at request time. When `config.tectonic_in_image` is false,
+    this function reports true without any image check. A `trusted` build runs
+    without a container.
     """
     if not policy.apply_rlimits or not podman_available():
         return False
@@ -202,11 +234,15 @@ def _run_sandboxed(
     config: SandboxConfig,
     console: Console,
 ) -> tuple[int, str]:
-    """Build the ``podman run`` argv and run the compile confined.
+    """Build the `podman run` argv and run the compile confined.
 
-    With ``tectonic_in_image`` the image's own ``tectonic`` is used; otherwise a
-    located host binary is copied into the workdir (relabelled ``:Z``) and exec'd
-    from there, never from a host system path.
+    With `config.tectonic_in_image` the build uses the tectonic binary of the
+    image. If not, PyTeX copies a host binary into the temporary work
+    directory and runs the copy from there. Podman relabels that directory
+    with `:Z`. PyTeX never runs a binary from a host system path.
+
+    Returns:
+        The exit code of `podman run`, and its stdout with stderr merged in.
     """
     if config.tectonic_in_image:
         container_binary = Path("tectonic")
@@ -235,8 +271,8 @@ def _run_sandboxed(
     try:
         return _run_confined(cmd, workdir, req.limits, apply_rlimits=False)
     except LimitError:
-        # Wall-clock kill hit the podman client; force-remove the container so
-        # the build inside cannot outlive the request.
+        # The wall-clock kill hit the podman client. Force-remove the
+        # container, so the build inside cannot outlive the request.
         _ = subprocess.run(
             ["podman", "rm", "-f", name],
             capture_output=True,
@@ -253,16 +289,31 @@ def compile_to_pdf(
     console: Console,
     assets: Mapping[str, bytes],
 ) -> tuple[bytes, str]:
-    """Compile ``latex`` to PDF bytes inside ``workdir``; return (pdf, log).
+    """Compile `latex` to PDF bytes inside `workdir`.
 
-    ``assets`` is the *name-validated* mapping from :func:`filter_assets`; it is
-    written next to the ``.tex`` so ``\\includegraphics`` can resolve it. Writing
-    this checked dict - rather than re-iterating ``req.assets`` - keeps the
-    workdir-escape guarantee independent of call order. Non-trusted builds run
-    inside a rootless Podman sandbox when ``podman`` is available; otherwise
-    they fall back to the in-process ``setrlimit``/timeout floor (a warning is
-    logged so the weaker confinement is never silent). The PDF is size-capped
-    before it is read back.
+    A non-trusted build runs inside a rootless Podman sandbox when `podman` is
+    available. If the policy demands the sandbox and the sandbox is missing,
+    this function fails closed. If the policy does not demand the sandbox, the
+    build falls back to the in-process `setrlimit` and timeout floor. PyTeX
+    then logs a warning, so the weaker confinement is never silent. PyTeX
+    checks the PDF size before it reads the file.
+
+    Args:
+        assets: The name-validated mapping from `filter_assets`. PyTeX writes
+            these files next to the rendered `.tex` file, so
+            `\\includegraphics` can find them. PyTeX writes this checked dict
+            and never reads `req.assets` again, so the workdir-escape
+            guarantee does not depend on the call order.
+
+    Returns:
+        The PDF bytes, and the compile log truncated to the log limit.
+
+    Raises:
+        CompileError: The policy demands the Podman sandbox and the sandbox is
+            not available. This error also covers a non-zero tectonic exit, a
+            missing PDF, and a PDF that is a symbolic link.
+        LimitError: The compile passed the wall-clock limit, or the PDF is
+            larger than `req.limits.max_output_bytes`.
     """
     tex_file = workdir / f"{_JOB}.tex"
     _ = tex_file.write_text(latex, encoding="utf-8")
@@ -275,9 +326,9 @@ def compile_to_pdf(
     if _should_sandbox(policy, config):
         rc, out = _run_sandboxed(workdir, build_dir, req, policy, config, console)
     elif policy.require_sandbox:
-        # Fail closed: without the OS sandbox the in-process floor does NOT block
-        # \input/\include/\openin of host files, so a downgrade would let
-        # untrusted LaTeX read /etc/passwd into the PDF. Refuse instead.
+        # Fail closed. Without the Podman sandbox, the in-process floor does
+        # not block `\input`, `\include`, or `\openin` of host files. A
+        # downgrade would let untrusted LaTeX read /etc/passwd into the PDF.
         raise CompileError(
             f"the OS sandbox is required for {policy.level.value} PDF builds "
             + "but is unavailable (podman missing, or the image "
@@ -285,7 +336,7 @@ def compile_to_pdf(
             + "the weaker in-process confinement"
         )
     else:
-        if policy.apply_rlimits:  # non-trusted, sandbox not required: warn loudly
+        if policy.apply_rlimits:  # non-trusted, and the sandbox is optional
             console.warn(
                 "Podman sandbox unavailable (no podman, or image "
                 + f"{config.image!r} not built); falling back to in-process "
@@ -294,9 +345,10 @@ def compile_to_pdf(
             )
         binary = _locate_tectonic(policy, console)
         cmd = build_tectonic_cmd(binary, tex_file, build_dir, policy)
-        # biblatex docs (report/protocol) make tectonic shell out to ``biber``;
-        # it is not bundled, so provide a version-matched one on PATH (probe the
-        # BCF, then download+cache the matching biber). Without it tectonic dies
+        # A biblatex document (a report or a meeting protocol) makes tectonic
+        # call `biber`. tectonic does not bundle biber, so put a
+        # version-matched biber on PATH. PyTeX probes the BCF file, then
+        # downloads and caches the matching biber. Without it, tectonic stops
         # with "Running external tool biber ... No such file or directory".
         biber_env = _biber_env(cmd, build_dir, policy, console)
         rc, out = _run_confined(
@@ -313,13 +365,14 @@ def compile_to_pdf(
         raise CompileError(
             f"tectonic failed to produce a PDF (exit {rc}).\n{log}".rstrip()
         )
-    # Refuse a symlinked output before touching it: defense-in-depth against a
-    # build that points document.pdf at a host file (not reachable today - no
-    # shell-escape, \openout only writes regular files - but cheap to deny).
+    # Refuse a symbolic link before PyTeX reads the file. This is
+    # defense-in-depth against a build that points document.pdf at a host
+    # file. No build can do that today, because shell-escape is off and
+    # `\openout` writes only regular files, but the check is cheap.
     if pdf.is_symlink():
         raise CompileError("refusing to read a symlinked output file")
-    # Size-check via stat() *before* reading, so an oversize PDF never lands in
-    # memory; the in-memory check then guards the bytes once read.
+    # Check the size with stat() before the read, so an oversize PDF never
+    # lands in memory. The in-memory check then guards the bytes once read.
     enforce_output_file_size(pdf, req.limits)
     data = pdf.read_bytes()
     enforce_output_size(data, req.limits)

@@ -1,3 +1,5 @@
+"""The vendored HSRT logos and the tikz overlays that place them."""
+
 import hashlib
 from collections.abc import Iterator
 from importlib.resources import files
@@ -32,8 +34,17 @@ KNOWN_LOGOS: Final[dict[str, str]] = {
 def logo_path(name: str) -> Path:
     """Resolve a logo reference to a file.
 
-    ``name`` is either a vendored logo key (``"INF"``, ``"MAKERS"`` ...) or a
-    path to a custom image file (``.svg``/``.pdf``/``.png``/...).
+    Args:
+        name: A vendored logo key such as `INF` or `MAKERS`. A path to a
+            custom image file also works. Such a file has a suffix such as
+            `.svg`, `.pdf` or `.png`.
+
+    Returns:
+        The path of the logo file.
+
+    Raises:
+        ValueError: The name is neither a vendored logo key nor the path of
+            an existing file.
     """
     if name in KNOWN_LOGOS:
         return LOGO_DIR / KNOWN_LOGOS[name]
@@ -46,21 +57,22 @@ def logo_path(name: str) -> Path:
     )
 
 
-# Output dir for logos referenced by the tikz overlays, relative to the .tex
-# file. `HSRTReport.write_inline_logos` copies the (svg->pdf converted) files
-# here. The overlays emit these relative paths instead of absolute source
-# paths so tectonic can read them (absolute paths outside the build cwd trip
-# tectonic's "non-reproducible" warning and forbid reading the .bb bbox file).
+# Directory for the logos that the tikz overlays use, relative to the rendered
+# `.tex` file. `HSRTReport.write_inline_logos` writes the files to disk here
+# and converts SVG to PDF on the way. The overlays name these relative paths,
+# not the absolute source paths. The tectonic binary reports an absolute path
+# outside the build directory as non-reproducible. It also refuses to read the
+# `.bb` bounding-box file for such a path.
 LOGO_OUTPUT_DIR: Final[str] = "logos"
 
 
 def logo_output_name(name: str) -> str:
-    """Filename of a logo as materialised in the output ``logos/`` dir.
+    """Return the file name that a logo gets in the `logos/` directory.
 
-    SVG sources are converted to PDF, so they get a ``.pdf`` suffix. A custom
-    (non-vendored) path is suffixed with a short hash of its absolute location
-    so two custom logos sharing a stem — or clashing with a vendored name —
-    never collide in ``logos/``.
+    PyTeX converts an SVG source to PDF, so an SVG logo gets the `.pdf`
+    suffix. A custom (non-vendored) path also gets a short hash of its
+    absolute location. Two custom logos that share a stem, or that clash with
+    a vendored name, then never collide in `logos/`.
     """
     src = logo_path(name)
     suffix = ".pdf" if src.suffix.lower() == ".svg" else src.suffix
@@ -71,7 +83,11 @@ def logo_output_name(name: str) -> str:
 
 
 def logo_output_rel(name: str) -> str:
-    """Path of a logo relative to the .tex file (e.g. ``logos/INF.pdf``)."""
+    """Return the path of a logo relative to the rendered `.tex` file.
+
+    Example:
+        `logos/INF.pdf`
+    """
     return f"{LOGO_OUTPUT_DIR}/{logo_output_name(name)}"
 
 
@@ -82,7 +98,15 @@ def Logo(
     height: str | None = None,
     inline_base64: bool = True,
 ) -> TeX:
-    """Vendored HSRT logo via `IncludeImage` (auto-bakes base64 by default)."""
+    """Include one logo image.
+
+    Args:
+        name: A vendored logo key or the path of a custom image file.
+        scale: The scale factor. PyTeX ignores it when `height` is set.
+        height: A LaTeX length such as `1.4cm`. It replaces `scale`.
+        inline_base64: When true, PyTeX embeds the image as base64 in the
+            rendered `.tex` file.
+    """
     return IncludeImage(
         path=logo_path(name),
         inline_base64=inline_base64,
@@ -99,7 +123,14 @@ def LogoStrip(
     separator: str = "\\hspace{0.5cm}",
     inline_base64: bool = True,
 ) -> TeX:
-    """Horizontal sequence of vendored logos."""
+    """Place the named logos in a horizontal row.
+
+    Args:
+        separator: Raw LaTeX that PyTeX puts between two logos.
+
+    Returns:
+        The `Empty` node when `names` is empty.
+    """
     if not names:
         from pytex.model.empty import Empty
 
@@ -109,7 +140,6 @@ def LogoStrip(
         for name in names
     )
     sep = _sep(separator)
-    # Interleave a separator before every logo except the first.
     return Concat(
         *(
             piece
@@ -132,6 +162,7 @@ def DefaultLogos(
     height: str | None = None,
     inline_base64: bool = True,
 ) -> TeX:
+    """Place the default logos of a variant in a horizontal row."""
     from .variants import default_logo_names
 
     return LogoStrip(
@@ -150,18 +181,21 @@ def titlepage_logo_overlay(
     node_sep: str = "0.5cm",
     prefix: str = "tplogo",
 ) -> str:
-    """Raw LaTeX: tikz overlay placing logos at the top-left of the page.
+    r"""Return raw LaTeX for a tikz overlay that puts logos at the top left.
 
-    Mirrors the ``\\foreach`` loop in ``tmp/Pages/Titlepage.tex`` but
-    unrolled in Python so no LaTeX arrays or counters are needed.
+    This function mirrors the `\foreach` loop in `tmp/Pages/Titlepage.tex`.
+    Python unrolls the loop, so the LaTeX needs no arrays and no counters.
+
+    Returns:
+        An empty string when `names` is empty.
     """
     if not names:
         return ""
 
     def lines() -> Iterator[str]:
         yield r"\begin{tikzpicture}[overlay, remember picture]"
-        # Invisible dummy anchor at the top-left page corner — the chain
-        # start (logo0), mirroring the DUMMY_FOOT node in the original.
+        # An invisible anchor at the top-left page corner starts the chain.
+        # It mirrors the `DUMMY_FOOT` node in the original template.
         yield (
             "  \\node[anchor=north west, inner sep=0pt, "
             + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
@@ -188,17 +222,22 @@ def footer_logo_hook(
     prefix: str = "fllogo",
     skyline: bool = True,
 ) -> str:
-    """Raw LaTeX: ``\\AddToHook{shipout/background}`` block placing logos at
-    the bottom-right of every page.
+    r"""Return raw LaTeX that puts logos at the bottom right of every page.
 
-    Mirrors the ``\\foreach`` loop in ``tmp/Modules/Layout/Logos.tex`` but
-    unrolled in Python.  Logos are chained right-to-left from a dummy anchor
-    at the page's south-east corner.  The skyline graphic is placed at the
-    south-west corner when ``skyline=True`` (matching the original template).
+    The block is an `\AddToHook{shipout/background}` hook. It mirrors the
+    `\foreach` loop in `tmp/Modules/Layout/Logos.tex`, unrolled in Python. The
+    logos chain from right to left. The chain starts at an anchor in the
+    south-east corner of the page.
 
-    The footer logos are wrapped in ``\\ifHSRTTitlePage\\else...\\fi`` so they
-    are suppressed on the title page (which sets ``\\HSRTTitlePagetrue``); the
-    skyline graphic is unconditional.
+    When `skyline` is true, the hook also places the skyline graphic in the
+    south-west corner. This matches the original template.
+
+    The footer logos sit inside `\ifHSRTTitlePage\else...\fi`. The title page
+    sets `\HSRTTitlePagetrue`, so LaTeX leaves the footer logos out there. The
+    skyline graphic has no such condition.
+
+    Returns:
+        An empty string when `names` is empty and `skyline` is false.
     """
     if not names and not skyline:
         return ""
@@ -207,15 +246,15 @@ def footer_logo_hook(
         yield r"\AddToHook{shipout/background}{%"
         yield r"  \begin{tikzpicture}[overlay, remember picture]"
         if names:
-            # Suppress footer logos on the title page.
+            # Leave the footer logos out on the title page.
             yield r"  \ifHSRTTitlePage\else"
-            # Invisible dummy anchor at the bottom-right page corner.
+            # An invisible anchor at the bottom-right page corner starts the
+            # chain.
             yield (
                 "  \\node[anchor=south east, inner sep=0pt, "
                 + f"xshift={xshift}, yshift={yshift}, opacity=0] ({prefix}0) "
                 + f"at (current page.south east) {{\\rule{{0pt}}{{{logo_height}}}}};"
             )
-            # Chain logos from right to left (anchor=east, stepping west).
             for i, name in enumerate(names, 1):
                 path = logo_output_rel(name)
                 yield (
@@ -238,7 +277,8 @@ def footer_logo_hook(
     return "\n".join(lines())
 
 
-# Keep SelectColor import alive for callers that previously imported via this module
+# `SelectColor` and `Includegraphics` stay here for callers that imported them
+# from this module before.
 __all__ = [
     "LOGO_OUTPUT_DIR",
     "DefaultLogos",

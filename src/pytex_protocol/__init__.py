@@ -1,10 +1,12 @@
-"""Deprecated alias for :mod:`pytex_markdown.protocol`.
+"""The deprecated alias for `pytex_markdown.protocol`.
 
-``pytex_protocol`` was merged into ``pytex_markdown``: the generic
-frontmatter parser moved to :mod:`pytex_markdown.frontmatter` and the
-meeting-protocol rendering to :mod:`pytex_markdown.protocol`. This package
-re-exports that public API so existing imports keep working; prefer the new
-locations.
+PyTeX merged `pytex_protocol` into `pytex_markdown`. The general frontmatter
+parser moved to `pytex_markdown.frontmatter`. The meeting protocol code moved
+to `pytex_markdown.protocol`.
+
+This package re-exports the public names from both new places, so an older
+import keeps working. This package issues a `DeprecationWarning` on import.
+Import from the new places instead.
 """
 
 from __future__ import annotations

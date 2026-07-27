@@ -1,4 +1,7 @@
-"""Tests for `Optimize`: simplify a TeX tree without changing what it renders."""
+"""Tests for the optimize pass, which must stay render-equivalent.
+
+`Optimize` simplifies a node tree. The rendered LaTeX must not change.
+"""
 
 from pytex.commands.builtin import Section
 from pytex.model.comment import Comment
@@ -14,7 +17,7 @@ def _types(node):
 
 
 def _names(node):
-    """Class names of a node's direct children."""
+    """Return the class name of each direct child node."""
     return [type(c).__name__ for c in (node.children or ())]
 
 
@@ -39,7 +42,7 @@ def test_single_arg_command_becomes_control_sequence():
 
 def test_environment_raw_becomes_environment_nodes():
     out = Optimize(Raw(r"\begin{center}hi\end{center}"))
-    # Environment is Concat(\begin{center}, body, \end{center}).
+    # An environment becomes `Concat(\begin{center}, body, \end{center})`.
     assert isinstance(out, Concat)
     assert _names(out)[0] == "ControlSequence"
     assert out.rendered == r"\begin{center}hi\end{center}"
@@ -54,7 +57,6 @@ def test_nested_concats_are_flattened():
     nested = Concat("a", Concat("b", Concat("c", "d")))
     out = Optimize(nested)
     assert isinstance(out, Concat)
-    # Flattened to four Raw children, not nested Concats.
     assert _names(out) == ["Raw", "Raw", "Raw", "Raw"]
     assert out.rendered == "abcd"
 
@@ -70,12 +72,11 @@ def test_whitespace_raw_is_kept():
 
 
 def test_optimize_preserves_rendering_of_real_document():
-    doc = Section("Title")  # ControlSequence with a Parameter subtree
+    doc = Section("Title")  # a `ControlSequence` with a `Parameter` child node
     assert Optimize(doc).rendered == doc.rendered
 
 
 def test_pure_marker_raw_expands_to_native_node():
-    # A whole-Raw marker evaluates to a native node, not a Raw.
     out = Optimize(Raw(r"\iffalse{pytex(Frac('1', '2'))}\fi"))
     assert isinstance(out, ControlSequence)
     assert out.name == "frac"
@@ -86,7 +87,6 @@ def test_mixed_text_and_markers_expand_to_concat():
     raw = Raw(r"x = \iffalse{pytex(Frac('a', 'b'))}\fi and \iffalse{pytex(2 ** 3)}\fi.")
     out = Optimize(raw)
     assert out.rendered == raw.rendered
-    # Literal text is kept as Raw; the markers became their evaluated nodes.
     kinds = _names(out)
     assert "ControlSequence" in kinds  # \frac
     assert kinds[0] == "Raw" and out.children[0].rendered.startswith("x = ")
@@ -105,7 +105,8 @@ def test_comment_is_detected():
 
 
 def test_comment_owns_its_newline():
-    # The comment node carries the terminating newline; no separate Raw("\n").
+    # The `Comment` node carries the newline that ends it. The optimize pass
+    # adds no separate `Raw("\n")`.
     out = Optimize(Raw("% one\n% two\nbody"))
     comments = [c for c in out.children if isinstance(c, Comment)]
     assert [c.text for c in comments] == [" one", " two"]
@@ -113,7 +114,8 @@ def test_comment_owns_its_newline():
 
 
 def test_unterminated_comment_at_eof_stays_text():
-    # No trailing newline -> not turned into a Comment (would add a newline).
+    # The text has no trailing newline. A `Comment` node always renders one.
+    # The optimize pass keeps the text as `Raw` and stays render-equivalent.
     raw = Raw("body % trailing")
     out = Optimize(raw)
     assert not any(isinstance(c, Comment) for c in (out.children or ()))
@@ -130,8 +132,8 @@ def test_escaped_percent_is_not_a_comment():
 def test_display_math_delimiters_become_displaymath():
     raw = Raw(r"see \[ x^2 \] here")
     out = Optimize(raw)
-    # \[ ... \] becomes DisplayMath; its boundary whitespace is trimmed (TeX
-    # ignores it), so the only change from the original is inside the delimiters.
+    # `\[ ... \]` becomes `DisplayMath`. TeX ignores the whitespace next to
+    # the delimiters. The optimize pass trims it and stays render-equivalent.
     assert out.rendered == r"see \[x^2\] here"
     assert _types(out) == ["Raw", "Concat", "Raw"]
     math = out.children[1]
@@ -143,12 +145,13 @@ def test_display_math_delimiters_become_displaymath():
 
 
 def test_inline_paren_math_trims_boundary_whitespace():
-    # \( ... \) -> Math, boundary whitespace dropped (math-equivalent).
+    # TeX ignores the whitespace next to `\(` and `\)`, so the optimize pass
+    # trims it.
     assert Optimize(Raw(r"\( y = 1 \)")).rendered == r"\(y = 1\)"
 
 
 def test_dollar_inline_math_becomes_inlinemath():
-    # `$...$` -> InlineMath = Concat(Raw('$'), body, Raw('$')); rendering kept.
+    # `$...$` becomes `InlineMath`, which is `Concat(Raw("$"), body, Raw("$"))`.
     raw = Raw(r"see $x^2$ here")
     out = Optimize(raw)
     assert out.rendered == raw.rendered

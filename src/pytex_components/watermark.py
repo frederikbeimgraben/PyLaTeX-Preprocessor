@@ -14,7 +14,15 @@ DRAFTWATERMARK: Final = DefinePackage("draftwatermark")
 
 
 def _watermark_text(text: str) -> str:
-    """Build the tiled watermark grid: 100 rows x 16 cols, accessibility-friendly."""
+    """Build the tiled watermark grid of 99 rows and 16 columns.
+
+    Each cell wraps the text in `\\BeginAccSupp{ActualText=}`, so a screen
+    reader skips the watermark.
+
+    The function escapes a brace in `text`. It also doubles a backslash. LaTeX
+    reads a double backslash inside the `tabular` as a new row. If `text` holds
+    a backslash, the grid breaks. Do not put a backslash in `text`.
+    """
     safe = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
     return (
         r"\setcounter{it}{1}"
@@ -38,7 +46,18 @@ def DraftWatermark(
     angle: float = 45,
     color: str = "black!12",
 ) -> TeX:
-    """Configure draftwatermark with tiled accessibility-safe text grid."""
+    """Set the draftwatermark options to a tiled grid of `text`.
+
+    Args:
+        text: The watermark text. Do not put a backslash in `text`. LaTeX
+            reads the escaped backslash as a new row of the grid.
+        angle: The rotation of the watermark in degrees.
+        color: An xcolor color name, for example `black!12`.
+
+    Note:
+        The grid needs the counter `it`. Put `WatermarkCounter` in the
+        preamble before you use this factory.
+    """
     body = (
         f"scale={scale},angle={angle},"
         + f"text={{\\begin{{tabular}}{{c}}{_watermark_text(text)}\\end{{tabular}}}},"
@@ -49,13 +68,21 @@ def DraftWatermark(
 
 @Registry.add
 def WatermarkCounter() -> TeX:
-    """Declares the `it` counter used by DraftWatermark. Emit once in preamble."""
+    """Declare the counter `it` that `DraftWatermark` uses.
+
+    Put the result in the preamble one time only. A second `\\newcounter{it}`
+    is a LaTeX error.
+    """
     return Raw("\\newcounter{it}")
 
 
 @Registry.add
 def WatermarkPackages() -> TeX:
-    """Render `\\usepackage` lines for all packages required by watermark."""
+    """Require every package that the draft watermark needs.
+
+    The node renders `\\RequirePackage{draftwatermark}` and names the other
+    watermark packages as package requirements, so the preamble loads them.
+    """
     return ControlSequence(
         "RequirePackage",
         (Parameter("draftwatermark"),),

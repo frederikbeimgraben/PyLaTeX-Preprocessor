@@ -1,12 +1,15 @@
-"""`.tex.py` example: `hsrtreport.tex.py` rebuilt with t-string templates.
+"""Example `.tex.py` file that rebuilds `hsrtreport.tex.py` with t-strings.
 
     pytex examples/hsrtreport-tstrings.tex.py --build
 
-Same document as `hsrtreport.tex.py`, but the prose-heavy parts (abstract and
-body) are written with `tex(t"...")` instead of `Concat(...)`: the running text
-is literal, and the boxes / sections / citations / math are spliced in as
-interpolations. Needs Python 3.14 (or a prebuilt pytex binary). Compiling needs
-`biber` and `makeindex`, run automatically by tectonic.
+This file builds the same document as `hsrtreport.tex.py`. The abstract and
+the body hold most of the prose, and they use `tex(t"...")` in place of
+`Concat(...)`. The running text stays literal. The boxes, the sections, the
+citations and the math come in as interpolations.
+
+This example needs Python 3.14 or later. A prebuilt `pytex` binary also
+works. To compile this document you need `biber` and `makeindex`. tectonic
+runs both without further setup.
 """
 
 from pytex import tex
@@ -59,7 +62,8 @@ from pytex_hsrtreport import (
 )
 from pytex_hsrtreport.titlepage import TitlePageDataLine
 
-# -- Embedded bibliography (filecontents -> \jobname.bib, read by biber) -------
+# `filecontents` writes this bibliography to `\jobname.bib`, and biber reads
+# that file during the build.
 _BIB = r"""\begin{filecontents}[noheader]{\jobname.bib}
 @book{knuth1984texbook,
   author    = {Knuth, Donald E.},
@@ -76,7 +80,8 @@ _BIB = r"""\begin{filecontents}[noheader]{\jobname.bib}
 \end{filecontents}
 """
 
-# Preamble is all factory calls (no prose), so t-strings buy nothing here.
+# The preamble holds only factory calls and no prose. A t-string gives no
+# advantage here, so this part keeps `Concat`.
 _PREAMBLE = Concat(
     WatermarkCounter(),
     DraftWatermark("ENTWURF"),
@@ -103,7 +108,8 @@ _PREAMBLE = Concat(
     Addbibresource(r"\jobname.bib"),
 )
 
-# Nested nodes pre-built so the big body template stays flat and readable.
+# This file builds the nested nodes first. The large body template below then
+# stays flat and easy to read.
 _NESTED_WARNING = WarningBox(
     tex(t"Be careful here.{InfoBox('Boxes nest, with a darker background per level.')}")
 )

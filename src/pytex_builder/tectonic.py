@@ -1,10 +1,10 @@
-"""Locate, download and drive the ``tectonic`` engine plus ``makeindex``.
+"""Find, download and run the tectonic binary, biber and the makeindex step.
 
-The tectonic binary is fetched once into a persistent user cache
-(``$XDG_CACHE_HOME/pytex`` or ``~/.cache/pytex``) so it survives a reboot
-instead of being re-downloaded out of ``/tmp``. The official install script
-drops a self-contained binary into its working directory - we point that at the
-cache dir.
+PyTeX downloads the tectonic binary once into a persistent user cache. The
+cache is `$XDG_CACHE_HOME/pytex`, or `~/.cache/pytex`. The binary then survives
+a reboot. A binary in `/tmp` does not. The official install script writes a
+self-contained binary into its working directory, so PyTeX runs the script
+inside the cache directory.
 """
 
 from __future__ import annotations
@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from .console import Console
 
 INSTALL_URL = "https://drop-sh.fullyjustified.net"
-# Where to put a manually-installed tectonic if the auto-download cannot run.
 INSTALL_HINT = (
     "install tectonic manually and put it on PATH"
     " (see https://tectonic-typesetting.github.io/install.html)"
@@ -43,13 +42,17 @@ INSTALL_HINT = (
 
 
 def _resolve_cache_dir() -> tuple[Path, str | None]:
-    """Return ``(cache_dir, warning)`` for the persistent binary cache.
+    """Return the directory of the persistent binary cache.
 
-    Prefers ``$XDG_CACHE_HOME/pytex``, else ``~/.cache/pytex``. When neither is
-    resolvable - e.g. ``HOME`` unset on a headless/RDP session, where
-    ``Path.home()`` raises ``RuntimeError`` - it falls back to the system temp
-    dir and returns a warning, so the cache degrades to non-persistent instead
-    of crashing the build.
+    The function prefers `$XDG_CACHE_HOME/pytex`, then `~/.cache/pytex`. When
+    neither resolves, it falls back to the system temp directory. `Path.home()`
+    raises `RuntimeError` when `HOME` is unset, for example on a headless
+    session or an RDP session. The fallback keeps the build alive, but the
+    cache is no longer persistent.
+
+    Returns:
+        The cache directory and a warning text. The warning is `None` when the
+        cache directory is persistent.
     """
     xdg = os.environ.get("XDG_CACHE_HOME")
     if xdg:
@@ -68,8 +71,8 @@ def _resolve_cache_dir() -> tuple[Path, str | None]:
 
 CACHE_DIR, _CACHE_WARNING = _resolve_cache_dir()
 
-# BCF control-file format version -> compatible biber release.
-# Pattern: BCF minor = biber minor - 9  (holds for biber 2.14+)
+# BCF control-file format version -> the biber release that reads it.
+# The pattern is: BCF minor = biber minor - 9. It holds for biber 2.14 and later.
 BCF_TO_BIBER: dict[str, str] = {
     "3.5": "2.14",
     "3.6": "2.15",
@@ -86,18 +89,19 @@ BIBER_RELEASE_URL = (
     "biblatex-biber/{version}/binaries/{sf_dir}/{filename}/download"
 )
 
-# Mirror of the upstream biber binaries, hosted as release assets so builds
-# survive SourceForge outages (it periodically gates downloads behind a
-# Cloudflare challenge that curl cannot pass). Tried before SourceForge.
+# A mirror of the upstream biber binaries, hosted as release assets. SourceForge
+# sometimes puts a download behind a Cloudflare challenge that curl cannot pass,
+# so a build must not depend on it. PyTeX tries the mirror before SourceForge.
 BIBER_MIRROR_URL = (
     "https://github.com/frederikbeimgraben/PyTeX-Preprocessor"
     "/releases/download/biber-binaries/{asset}"
 )
 
-# SHA256 of each biber binary, keyed by the versioned mirror asset name. Used
-# to verify downloads from either source and to reject HTML error pages a CDN
-# might serve with a 200 status. Covers every mirrored platform (glibc/musl
-# Linux x86_64, Linux aarch64, macOS x86_64/universal, Windows x86_64).
+# The SHA256 of each biber binary, keyed by the versioned mirror asset name.
+# PyTeX checks a download from both sources against these values. The check also
+# rejects an HTML error page that a CDN can serve with status 200. The table
+# covers every mirrored platform: glibc and musl Linux x86_64, Linux aarch64,
+# macOS x86_64 and universal, and Windows x86_64.
 BIBER_SHA256: dict[str, str] = {
     "biber-2.11-darwin_x86_64.tar.gz": "4e3343574f917d7825148e4c9ccb665154476ec0817abf67f1fea052fb8cc728",
     "biber-2.11-linux_x86_64-musl.tar.gz": "a6b7e61446ee8b23cc0b6b1eaffd4a8e0d271f06874ad22b025cc41f74050617",
@@ -142,7 +146,7 @@ BIBER_SHA256: dict[str, str] = {
 
 
 class BuildError(RuntimeError):
-    """Raised when an external tool is missing or exits non-zero."""
+    """An external tool is missing, or it exited with a non-zero status."""
 
 
 def _cached_binary() -> Path:
@@ -150,7 +154,14 @@ def _cached_binary() -> Path:
 
 
 def ensure_tectonic(console: Console) -> Path:
-    """Return a path to a usable ``tectonic`` binary, downloading if needed."""
+    """Return the path to a usable tectonic binary.
+
+    The function prefers a tectonic binary on `PATH`, then the cached one. When
+    neither exists, it downloads tectonic into the cache.
+
+    Raises:
+        BuildError: `curl` or `sh` is missing, or the download failed.
+    """
     on_path = shutil.which("tectonic")
     if on_path:
         return Path(on_path)
@@ -189,31 +200,38 @@ def ensure_tectonic(console: Console) -> Path:
     return cached
 
 
-# macOS binaries lived under OSX_Intel up to biber 2.16 and moved to MacOS
-# from 2.17 on; the SourceForge fallback URL needs the right subdir per version.
+# On SourceForge the macOS binaries were under OSX_Intel up to biber 2.16. From
+# 2.17 on they are under MacOS. The SourceForge fallback URL needs the right
+# subdirectory for each version.
 _OLD_MAC_DIRS: frozenset[str] = frozenset(
     {"2.11", "2.12", "2.13", "2.14", "2.15", "2.16"}
 )
 
 
 def _biber_candidates(version: str) -> list[tuple[str, str, str]]:
-    """``(sf_subdir, sf_filename, mirror_asset)`` for this platform, best first.
+    """Return the biber download candidates for this platform, best first.
 
-    More than one candidate is returned where a fallback helps:
+    Each candidate is the SourceForge subdirectory, the SourceForge file name,
+    and the mirror asset name. The function returns more than one candidate
+    where a fallback helps.
 
-    * Linux x86_64 prefers the statically-linked *musl* build, which has no
-      shared-library dependencies (the glibc build needs e.g. ``libnsl.so.1``,
-      absent on many minimal systems), then falls back to the glibc build.
-    * macOS prefers the *universal* build (the only arm64-native option, added
-      in 2.17), then the x86_64 build (runs under Rosetta on Apple silicon).
+    * On Linux x86_64 the statically linked musl build comes first, because it
+      needs no shared library. The glibc build needs `libnsl.so.1`, and many
+      minimal systems do not have it. The glibc build is the fallback.
+    * On macOS the universal build comes first. It is the only arm64-native
+      option, and it exists from 2.17 on. The x86_64 build is the fallback, and
+      it runs under Rosetta on Apple silicon.
 
-    Candidates upstream never published for a given version simply 404, and the
-    download loop moves on to the next one.
+    A candidate that upstream never published for a version returns 404, and
+    the download loop then tries the next one.
+
+    Raises:
+        BuildError: PyTeX has no biber download for this platform.
     """
     system = platform.system()
     machine = platform.machine()
     mac_dir = "OSX_Intel" if version in _OLD_MAC_DIRS else "MacOS"
-    # biber 2.19 renamed the musl tarball; earlier releases use the old name.
+    # biber 2.19 renamed the musl tarball. Every other release uses the old name.
     musl_file = (
         "biber-linux-musl_x86_64.tar.gz"
         if version == "2.19"
@@ -263,12 +281,12 @@ def _biber_cached(version: str) -> Path:
 
 
 def _is_biber_member(name: str) -> bool:
-    """Whether an archive member is the biber executable.
+    """Report whether an archive member is the biber executable.
 
-    Most archives hold a plain ``biber`` (``biber.exe`` on Windows), but a few
-    musl tarballs name the binary after the tarball (e.g.
-    ``biber-linux_x86_64-musl``). AppleDouble sidecars (``._biber``) are
-    excluded. The largest matching member is chosen by the callers.
+    Most archives hold a plain `biber`, or `biber.exe` on Windows. A few musl
+    tarballs name the binary after the tarball, for example
+    `biber-linux_x86_64-musl`. This function excludes an AppleDouble sidecar,
+    whose name starts with `._`. The callers pick the largest matching member.
     """
     base = Path(name).name
     if base.startswith("._"):
@@ -277,7 +295,15 @@ def _is_biber_member(name: str) -> bool:
 
 
 def _extract_biber_binary(archive: Path, version: str) -> bytes:
-    """Read the biber executable out of a ``.tar.gz`` or ``.zip`` archive."""
+    """Read the biber executable out of a `.tar.gz` or a `.zip` archive.
+
+    Returns:
+        The bytes of the executable.
+
+    Raises:
+        BuildError: The archive holds no biber executable, or the member cannot
+            be read.
+    """
     if zipfile.is_zipfile(archive):
         with zipfile.ZipFile(archive) as zf:
             members = [
@@ -306,7 +332,15 @@ def _extract_biber_binary(archive: Path, version: str) -> bytes:
 
 
 def _download_to(url: str, dest: Path, sha: str | None, console: Console) -> bool:
-    """Fetch *url* into *dest*; return True only on success and matching checksum."""
+    """Download `url` into `dest` and check the SHA256 of the result.
+
+    Args:
+        sha: The expected SHA256 hex digest. `None` skips the check.
+
+    Returns:
+        `True` when the download succeeded and the checksum matched. On a
+        checksum mismatch the function deletes `dest` and returns `False`.
+    """
     proc = subprocess.run(
         ["curl", "-fsSL", "-o", str(dest), url],
         capture_output=True,
@@ -324,12 +358,16 @@ def _download_to(url: str, dest: Path, sha: str | None, console: Console) -> boo
 
 
 def _biber_runs(binary: Path) -> bool:
-    """``True`` if ``binary`` actually executes here (``biber --version`` exits 0).
+    """Report whether `binary` runs on this host.
 
-    The musl build is offered first (no glibc shared-lib deps) but is *dynamically*
-    linked against the musl loader; on a glibc-only host (e.g. Debian-slim) it
-    cannot exec at all ("No such file or directory"). Running it is the only
-    reliable cross-check, so we verify and fall back to the glibc build."""
+    The check runs `biber --version` and looks for exit status 0.
+
+    PyTeX offers the musl build first, because it needs no glibc shared
+    library. That build links dynamically against the musl loader. On a
+    glibc-only host, for example Debian slim, it cannot exec at all and the
+    kernel reports "No such file or directory". Running the binary is the only
+    reliable check, so PyTeX runs it and falls back to the glibc build.
+    """
     try:
         proc = subprocess.run(
             [str(binary), "--version"], capture_output=True, timeout=30
@@ -340,15 +378,20 @@ def _biber_runs(binary: Path) -> bool:
 
 
 def _ensure_biber(version: str, console: Console) -> Path:
-    """Return a path to biber *version*, downloading from the mirror or SourceForge.
+    """Return the path to biber `version`, downloading it when needed.
 
-    Each platform candidate (musl first, then glibc) is downloaded, extracted and
-    **test-run**; the first one that actually executes here is cached. This makes
-    the choice robust on hosts that lack the musl loader or a glibc dependency."""
+    PyTeX downloads each platform candidate in order, the musl build first and
+    the glibc build second. It extracts the binary and runs it. It caches the
+    first candidate that runs on this host. This keeps the choice correct on a
+    host that lacks the musl loader or a glibc shared library.
+
+    Raises:
+        BuildError: `curl` is missing, or no candidate gave a working biber.
+    """
     cached = _biber_cached(version)
     if cached.exists():
-        # Re-validate: a cache poisoned by an earlier release (e.g. a musl binary
-        # that cannot exec here) must be replaced, not blindly reused.
+        # Check the cached binary again. An earlier release can have cached a
+        # musl binary that cannot exec here, and PyTeX must replace it.
         if _biber_runs(cached):
             return cached
         console.detail("cached biber does not execute here; re-downloading")
@@ -405,7 +448,17 @@ def _ensure_biber(version: str, console: Console) -> Path:
 
 
 def biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:
-    """Return a correctly-versioned biber if the BCF file reveals a mismatch."""
+    """Return a biber that matches the BCF file of this build.
+
+    The function reads the format version from `<build_dir>/<job>.bcf` and maps
+    it through `BCF_TO_BIBER`. When the system biber already reports that
+    version, the function returns it and downloads nothing.
+
+    Returns:
+        The path to a matching biber. The result is `None` when the BCF file is
+        absent or unreadable, or when its format version is not in
+        `BCF_TO_BIBER`.
+    """
     bcf = build_dir / f"{job}.bcf"
     if not bcf.exists():
         return None
@@ -420,7 +473,7 @@ def biber_for_build(build_dir: Path, job: str, console: Console) -> Path | None:
     if biber_ver is None:
         console.warn(f"unknown BCF version {bcf_ver!r}; using system biber")
         return None
-    # System biber may already be the right version - avoid downloading.
+    # The system biber can already be the right version, so avoid a download.
     system_biber = shutil.which("biber")
     if system_biber:
         result = subprocess.run(
@@ -438,12 +491,12 @@ def env_with_biber(biber: Path) -> dict[str, str]:
 
 
 def probe_bcf(cmd: list[str]) -> None:
-    """Run tectonic with a no-op biber so the BCF file is written to build_dir.
+    """Run tectonic with a no-op biber, so that it writes the BCF file.
 
-    Tectonic cleans up intermediates when biber fails, so the BCF is never
-    persisted on a real failed run. A fake biber that exits 0 lets the TeX
-    pass finish and tectonic copy the BCF into ``build_dir``. Output is
-    suppressed - the real pass immediately follows.
+    Tectonic deletes the intermediates when biber fails, so a real failed run
+    never keeps the BCF file. A fake biber that exits 0 lets the TeX run finish
+    and lets tectonic copy the BCF file into the build directory. This function
+    suppresses the output, because the real compile pass follows at once.
     """
     tmpdir = Path(tempfile.mkdtemp(prefix="pytex-fakeb-"))
     try:
@@ -463,7 +516,11 @@ def run_tectonic(
     shell_escape: bool,
     console: Console,
 ) -> None:
-    """Run a single tectonic pass, keeping intermediates for the glossary step."""
+    """Run one compile pass and keep the intermediates for the makeindex step.
+
+    Raises:
+        BuildError: tectonic exited with a non-zero status.
+    """
     cmd: list[str] = [
         str(binary),
         "--outdir",
@@ -473,17 +530,18 @@ def run_tectonic(
         "--synctex",
     ]
     if shell_escape:
-        # shell-escape (and a stable cwd for it) is required so inline images
-        # can decode their base64 payloads at compile time.
+        # An inline image decodes its base64 data during the compile pass, so
+        # it needs shell-escape and a stable working directory for it.
         cmd += ["-Z", "shell-escape"]
         cmd += ["-Z", f"shell-escape-cwd={tex_file.parent.resolve()}"]
     cmd.append(str(tex_file))
 
     job = tex_file.stem
 
-    # Determine the right biber from the BCF. If no BCF exists yet (first build
-    # or after a clean), run a silent probe pass with a no-op biber so tectonic
-    # writes the BCF to build_dir without actually needing biber installed.
+    # The BCF file names the biber version this document needs. On the first
+    # build, and after a clean, no BCF file exists yet. A silent probe pass with
+    # a no-op biber makes tectonic write the BCF file into the build directory,
+    # and it needs no installed biber.
     biber = biber_for_build(build_dir, job, console)
     if biber is None:
         probe_bcf(cmd)
@@ -505,15 +563,18 @@ def run_makeindex(
     *,
     console: Console,
 ) -> bool:
-    """Resolve glossary/acronym indices for ``glossaries``.
+    """Run the makeindex step for the `glossaries` package.
 
-    Returns ``True`` if any index was (re)built, meaning a further tectonic
-    pass is needed. Missing ``makeindex`` is a warning, not a fatal error.
+    A missing `makeindex` gives a warning, not a build failure.
+
+    Returns:
+        `True` when makeindex rebuilt at least one index. The document then
+        needs one more compile pass.
     """
     makeindex = shutil.which("makeindex")
     style = build_dir / f"{job}.ist"
 
-    # (input, log, output) triples produced by the glossaries package.
+    # The (input, log, output) triples that the `glossaries` package produces.
     targets = [
         (f"{job}.glo", f"{job}.glg", f"{job}.gls"),
         (f"{job}.acn", f"{job}.alg", f"{job}.acr"),

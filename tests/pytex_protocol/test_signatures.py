@@ -18,7 +18,7 @@ def test_signature_lines_render_rule_name_role():
 def test_bare_role_leaves_blank_name_line():
     out = SignatureLines("Vorstand").rendered
     assert "Vorstand" in out
-    assert r"~\\" in out  # blank name placeholder above the role
+    assert r"~\\" in out  # an empty name line above the role
 
 
 def test_no_signers_renders_empty():
@@ -28,7 +28,7 @@ def test_no_signers_renders_empty():
 def test_block_from_meta_pulls_names_by_role():
     meta = {
         "sitzungsleitung": "A. Muster",
-        "protokoll": "B. Beispiel",  # Schriftführung maps to the protokoll key
+        "protokoll": "B. Beispiel",  # the `Schriftführung` role reads `protokoll`
         "vorstand": "C. Chef",
         "unterschriften": ["Sitzungsleitung", "Schriftführung", "Vorstand"],
     }

@@ -32,8 +32,9 @@ def Makeglossaries() -> TeX:
 @Registry.add
 @with_package(GLOSSARIES)
 def Newglossaryentry(label: str, fields: dict[str, str]) -> TeX:
-    # Brace each value so commas inside it (common in descriptions) are not
-    # parsed as key=value separators by the glossaries key-val list.
+    # `Newglossaryentry` puts braces around each value. Without the braces the
+    # `glossaries` package reads a comma inside a value as a key-value
+    # separator. A description often contains a comma.
     opts = ",".join(f"{key}={{{value}}}" for key, value in fields.items())
     return ControlSequence(
         "newglossaryentry",

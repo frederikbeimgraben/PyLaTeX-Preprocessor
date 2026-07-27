@@ -43,9 +43,10 @@ def test_get_unknown_raises():
 
 
 def test_fill_keys_are_disjoint():
-    # `\fill` exists both as a rubber length (pytex.commands.lengths) and as a
-    # TikZ path command (pytex_tikz). They must occupy distinct registry keys so
-    # the reverse lookup is deterministic regardless of import order.
+    # Two modules define `\fill`. In `pytex.commands.lengths` it is a rubber
+    # length. In `pytex_tikz` it is a TikZ path command. Each definition needs
+    # its own registry key. The reverse lookup then gives the same result for
+    # every import order.
     import pytex.commands.lengths as lengths
     import pytex_tikz.tikz as tikz
 
@@ -63,8 +64,8 @@ def test_lengths_fill_deprecated_alias():
 
 
 def test_no_duplicate_fill_key_on_fresh_import():
-    # A fresh interpreter that imports both modules must not log a duplicate-key
-    # collision on "Fill". The registry's warning is emitted on stderr.
+    # A fresh interpreter that imports both modules must not report a duplicate
+    # registry key for `Fill`. The registry writes that warning to stderr.
     import os
     import subprocess
     import sys

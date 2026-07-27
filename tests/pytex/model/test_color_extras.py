@@ -109,7 +109,7 @@ def test_register_then_named_works():
     from pytex.model.color import register_named_color
 
     register_named_color("hsrtgreen")
-    Color.named("hsrtgreen")  # no raise
+    Color.named("hsrtgreen")  # This call must not raise.
 
 
 def test_named_blue_no_spec():

@@ -13,7 +13,7 @@ META = {
 def test_time_shortcode():
     out = expand_shortcode("time 18:30", META).rendered
     assert "18:30" in out
-    assert "hanblue" in out  # styled in HSRT blue
+    assert "hanblue" in out  # `hanblue` is the HSRT blue
 
 
 def test_field_reference():
@@ -40,7 +40,7 @@ def test_vote_shortcode_red_when_no_wins():
 
 
 def test_unknown_shortcode_is_rendered_verbatim():
-    # Escaped braces so the typo is visible in the PDF.
+    # The braces stay escaped, so the reader sees the typo in the PDF.
     out = expand_shortcode("nonsense foo", META).rendered
     assert "nonsense foo" in out
 

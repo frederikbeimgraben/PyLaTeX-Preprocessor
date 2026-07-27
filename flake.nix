@@ -19,9 +19,9 @@
         build-system = [ python.pkgs.setuptools ];
         dependencies = with python.pkgs; [ pydantic marko ];
 
-        # The test suite relies on Python 3.14 t-string syntax and an external
-        # tectonic/biber toolchain, so it is not run inside the sandboxed build.
-        # Use the devShell + `pytest` for the full suite.
+        # The test suite needs Python 3.14 t-string syntax and an external
+        # tectonic and biber toolchain. The sandboxed build has neither, so it
+        # skips the tests. Run the full suite with `pytest` in the devShell.
         doCheck = false;
 
         pythonImportsCheck = [ "pytex" "pytex_builder" ];
@@ -50,8 +50,9 @@
         shellHook = ''
           echo "PyTeX-Preprocessor dev shell — python ${python.version}, ruff, basedpyright, pytest"
           echo "Install the package editable with: pip install -e . (in a venv) — or use the provided interpreter."
-          # Drop into the user's interactive zsh (loads ~/.zshrc); guarded so
-          # `nix develop -c <cmd>` and non-interactive uses still run in bash.
+          # Start the interactive zsh of the user, which loads ~/.zshrc. The
+          # guard keeps `nix develop -c <cmd>` and other non-interactive uses
+          # in bash.
           [[ $- == *i* ]] && exec ${pkgs.zsh}/bin/zsh
         '';
       };

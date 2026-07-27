@@ -22,8 +22,8 @@ def test_bare_url_becomes_href():
 
 
 def test_relative_file_link_drops_dead_target():
-    # A repo-relative path has no meaning in a PDF (hyperref would point at a
-    # non-existent LICENSE.pdf), so only the link text survives.
+    # A repository-relative path has no meaning in a PDF. hyperref would point
+    # at a `LICENSE.pdf` file that does not exist. Only the link text stays.
     out = Markdown("[`LICENSE`](LICENSE)").rendered
     assert r"\href" not in out
     assert r"\texttt{LICENSE}" in out

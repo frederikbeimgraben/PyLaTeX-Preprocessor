@@ -1,10 +1,12 @@
-"""Mapped Unicode chars render under every trust level.
+"""Tests that every mapped Unicode character renders at every trust level.
 
-The Markdown converter rewrites ``€`` to eurosym's ``\\euro{}``; eurosym must
-therefore be on the package allowlist or an UNTRUSTED/SANDBOXED build would be
-refused with a ``TrustError``. The math targets (``→ ↔ ≤ ≥ ·``) pull no package.
-All assertions are on the rendered ``.tex`` (OutputKind.TEX), so no tectonic
-binary and no network are involved.
+The Markdown converter rewrites `€` to the `\\euro{}` macro of eurosym. If
+eurosym leaves the package allowlist, an `untrusted` or `sandboxed` build
+stops with a `TrustError`. So eurosym must stay on the package allowlist. The
+math characters `→ ↔ ≤ ≥ ·` need no package requirement.
+
+Every assertion reads the rendered `.tex` file. No test needs the tectonic
+binary or the network.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from pytex_api import (
     render_blob,
 )
 
-# Every char the converter maps to a font-independent node.
+# Every character that the converter maps to a font-independent TeX node.
 ALL_MAPPED = "€ → ↔ ≤ ≥ ·"
 
 
@@ -37,7 +39,8 @@ def _render(trust: TrustLevel) -> str:
 
 @pytest.mark.parametrize("trust", [TrustLevel.UNTRUSTED, TrustLevel.SANDBOXED])
 def test_all_mapped_chars_render_without_trust_error(trust: TrustLevel):
-    # No TrustError: eurosym is allowlisted, the math macros need no package.
+    # The render raises no `TrustError`. eurosym is on the package allowlist,
+    # and the math macros need no package requirement.
     out = _render(trust)
     assert r"\euro{}" in out
     assert r"\rightarrow" in out

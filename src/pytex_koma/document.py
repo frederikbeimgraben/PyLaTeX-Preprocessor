@@ -75,8 +75,14 @@ class KomaDocument(Document):
         )
 
     def _class_option_flags(self) -> Iterator[PackageOption]:
-        """Translate the typed KOMA fields into raw class options."""
-        # Value-bearing options: a known keyword flag, otherwise a key=value pair.
+        """Turn the typed KOMA fields into raw document-class options.
+
+        Yields:
+            A bare keyword such as `twoside`, or a `(key, value)` pair such
+            as `("DIV", "12")`. A field that is `None` yields nothing.
+        """
+        # Options that carry a value. A known keyword becomes a bare flag.
+        # Any other value becomes a key=value pair.
         if self.paper is not None:
             yield self.paper if self.paper in PAPER_FLAGS else ("paper", self.paper)
         if self.fontsize is not None:
@@ -92,7 +98,9 @@ class KomaDocument(Document):
         if self.pagesize is not None:
             yield ("pagesize", self.pagesize)
 
-        # Boolean toggles mapped to their on/off keywords.
+        # Boolean toggles that map onto an on keyword and an off keyword.
+        # KOMA-Script has no off keyword for `landscape`, so `landscape=False`
+        # yields nothing.
         if self.two_side is not None:
             yield _on_off(self.two_side, "twoside", "oneside")
         if self.two_column is not None:
@@ -111,7 +119,8 @@ class KomaDocument(Document):
         if self.appendix_prefix is not None:
             yield ("appendixprefix", _on_off(self.appendix_prefix, "true", "false"))
 
-        # Plain key=value options taken verbatim from same-named fields.
+        # Plain key=value options. The KOMA-Script key and the field have the
+        # same name, so the value goes through without a change.
         for key in (
             "headings",
             "parskip",

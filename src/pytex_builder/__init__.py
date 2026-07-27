@@ -1,6 +1,6 @@
-"""Build tooling for PyTeX: render ``.py``/``.tex`` sources and compile PDFs.
+"""Build tools for PyTeX: render an input file, then compile it to PDF.
 
-Exposes the ``pytex`` console script via :func:`pytex_builder.build.main`.
+This package provides the `pytex` command through `pytex_builder.build.main`.
 """
 
 from .build import main

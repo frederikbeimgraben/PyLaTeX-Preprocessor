@@ -1,16 +1,31 @@
-"""Reusable, template-agnostic document components.
+"""Document components that any document class can use.
 
-These widgets and preamble helpers carry no HSRT branding and depend only on
-the core ``pytex`` library, so any document or report style can use them:
+These components carry no HSRT branding. In Python they import only the core
+`pytex` package, so any document or report style can use them. Read the note
+below for the LaTeX side.
 
-* :class:`~pytex_components.boxes.ColoredBox` and its presets (info / success /
-  warning / important / discussion / custom) — nested-aware coloured callouts.
-* :class:`~pytex_components.voting.VotingResults` — a yes/no/abstain tally box.
-* draft watermark, word-count macros, conditional/​smart page breaks.
-* :func:`~pytex_components.citations.Fcite` — a clickable author-year citation.
-* :func:`~pytex_components.cleveref_names.GermanCrefNames` — German cleveref labels.
+* `ColoredBox` and its presets. The presets are `InfoBox`, `SuccessBox`,
+  `WarningBox`, `ImportantBox`, `DiscussionBox` and `CustomBox`. Each one
+  renders a colored box that knows its own nesting depth.
+* `VotingResults`, a box that shows a yes, no and abstain tally.
+* `DraftWatermark`, `WatermarkCounter` and `WatermarkPackages` for a draft
+  watermark.
+* `WordcountCommands` for the word-count macros.
+* `Conditionalpagebreak`, `Keeptogether`, `Critical`, `Smartsection` and
+  `Smartsubsection` for page breaks.
+* `Fcite`, a clickable citation that shows the author and the year.
+* `GermanCrefNames`, the German cleveref labels.
 
-``pytex_hsrtreport`` re-exports these for backwards compatibility.
+`pytex_hsrtreport` re-exports these names, so older imports keep working.
+
+Note:
+    `VotingResults` and `DiscussionBox` name the xcolor colors
+    `britishracinggreen`, `eggplant` and `hanblue`. Only
+    `pytex_hsrtreport.colors` defines them. A document that does not load
+    those color definitions fails to compile.
+
+    The page-break components use `\\needspace`, but they do not require the
+    `needspace` package. The document must load that package itself.
 """
 
 from .boxes import (

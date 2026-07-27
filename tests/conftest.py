@@ -11,8 +11,9 @@ import pytex_koma  # noqa: F401,E402
 import pytex_markdown.protocol  # noqa: F401,E402
 import pytex_tikz.tikz  # noqa: F401,E402
 
-# `tex(t"...")` tests use PEP 750 syntax that does not parse before 3.14; skip
-# collecting them (importing the file would raise SyntaxError) on older Pythons.
+# The `tex(t"...")` tests use PEP 750 syntax. Python 3.13 and earlier cannot
+# parse that syntax and raise SyntaxError on import. On such a Python,
+# `collect_ignore_glob` keeps the file out of collection.
 collect_ignore_glob: list[str] = []
 if sys.version_info < (3, 14):
     collect_ignore_glob.append("pytex/test_template.py")

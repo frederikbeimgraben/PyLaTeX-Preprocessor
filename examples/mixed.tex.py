@@ -1,9 +1,14 @@
-"""`.tex.py` example: mix the Python API with embedded Markdown.
+"""Example `.tex.py` file that mixes the Python API with Markdown.
 
     pytex examples/mixed.tex.py --build     # -> build/mixed.out.pdf
 
-Shows ``Markdown`` / ``IncludeMarkdown`` and an HSRT colored box used directly
-alongside hand-built nodes.
+This example uses the Markdown converter through `Markdown` and
+`IncludeMarkdown`. It also puts an HSRT colored box next to nodes that the
+file builds by hand.
+
+`IncludeMarkdown` reads its path relative to the working directory. Start
+`pytex` in the repository root. From another directory PyTeX does not find
+`examples/notes.md`.
 """
 
 from pytex.commands.builtin import Section

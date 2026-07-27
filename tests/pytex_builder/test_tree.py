@@ -1,4 +1,4 @@
-"""Tests for the TeX-node tree renderer (`--tree`)."""
+"""Tests for the node tree view that `--tree` prints."""
 
 from pytex.commands.builtin import Itemize, Section
 from pytex.commands.cleveref import Cref
@@ -29,15 +29,15 @@ def test_tree_document_root_descends_preamble_and_body():
 
 
 def test_tree_with_package_shows_package_connected():
-    # WithPackage wrappers collapse onto the wrapped node, tagged with the
-    # package they attach (Cref requires cleveref).
+    # The tree folds a `WithPackage` wrapper into its child node and tags that
+    # node with the package requirement. `Cref` requires cleveref.
     tree = render_tree(Cref("fig:1"))
     assert "WithPackage" not in tree
     assert r"ControlSequence \cref [+cleveref]" in tree
 
 
 def test_tree_distinguishes_space_from_empty():
-    # A single-space Raw must not render the same as an empty one.
+    # A `Raw` that holds one space must not look like an empty `Raw`.
     assert 'Raw " "' in render_tree(Concat(Raw(" "), Raw("x")))
 
 
@@ -46,8 +46,9 @@ def test_tree_escapes_newlines_in_raw():
 
 
 def test_tree_shows_environments_as_environment_nodes():
-    # `Itemize` is a Concat(\begin{itemize}, ..., \end{itemize}); the tree
-    # collapses that to a single Environment node, hiding the begin/end.
+    # `Itemize` is a `Concat` of `\begin{itemize}`, the items, and
+    # `\end{itemize}`. The tree shows one `Environment` node instead and hides
+    # the two control sequences.
     tree = render_tree(Itemize("a", "b"))
     assert tree.splitlines()[0] == "Environment {itemize}"
     assert r"\begin" not in tree
@@ -60,7 +61,7 @@ def test_tree_shows_math_nodes_by_name():
     assert render_tree(DisplayMath("x")).splitlines()[0] == "DisplayMath"
     assert render_tree(Math("x")).splitlines()[0] == "Math"
     assert render_tree(InlineMath("x")).splitlines()[0] == "InlineMath"
-    # The delimiters are hidden; the body shows underneath.
+    # The tree hides the math delimiters and shows the body under the node.
     assert r"\[" not in render_tree(DisplayMath("x"))
 
 

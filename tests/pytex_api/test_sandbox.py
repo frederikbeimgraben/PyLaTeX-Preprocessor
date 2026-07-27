@@ -1,8 +1,9 @@
-"""Podman sandbox wrapper: pure argv-flag assertions + an opt-in live build.
+"""Tests for the Podman sandbox wrapper.
 
-The flag tests mirror the ``--only-cached`` style from ``test_compile.py`` and
-need no podman. The integration test is opt-in (``PYTEX_TEST_PODMAN=1`` and a
-podman binary) because it pulls an image and pre-warms the tectonic bundle.
+Most tests only inspect the `podman run` argv, so they need no Podman. The
+last test runs a live build. That test is opt-in, because it pulls an image
+and warms the tectonic bundle cache. To run it, install `podman` first. Then
+set `PYTEX_TEST_PODMAN=1`.
 """
 
 import os
@@ -59,8 +60,9 @@ def test_network_is_disabled():
 
 
 def test_untrusted_path_never_gets_host_network():
-    # The untrusted compile argv must be offline-only: network none, and never
-    # the `host` netns that only the one-time privileged warm-up uses.
+    # The untrusted compile runs offline. The argv must set the network to
+    # `none`. The `host` network namespace belongs to the one-time privileged
+    # warm-up only, so it must never appear here.
     for cfg in (
         SandboxConfig(mount_fonts=False),
         SandboxConfig(mount_fonts=False, tectonic_in_image=False),
@@ -91,7 +93,8 @@ def test_no_new_privileges_set():
 
 
 def test_default_seccomp_is_not_disabled():
-    # No explicit profile -> podman's default applies; we must never weaken it.
+    # Without an explicit profile, Podman applies its default seccomp profile.
+    # PyTeX must never weaken that default.
     assert "seccomp=unconfined" not in _cmd()
     assert not any("seccomp" in arg for arg in _cmd())
 
@@ -110,7 +113,8 @@ def test_memory_cap_present_above_floor():
 
 
 def test_memory_floor_enforced_when_zero_or_negative():
-    # A 0/negative limit must not drop --memory; it is floored, never absent.
+    # A limit of 0 or less must not remove `--memory`. PyTeX raises the value
+    # to the floor and always passes the flag.
     for bad in (0, -1):
         cmd = _cmd(max_memory_bytes=bad)
         assert "--memory" in cmd
@@ -136,7 +140,8 @@ def test_fsize_ulimit_present_above_floor():
 
 
 def test_fsize_floored_when_zero_or_negative():
-    # Mirrors --memory: a 0/negative limit is floored, never dropped.
+    # This mirrors `--memory`. PyTeX raises a limit of 0 or less to the floor
+    # and always passes the flag.
     from pytex_api._sandbox import FSIZE_FLOOR_BYTES
 
     for bad in (0, -1):
@@ -182,8 +187,9 @@ def test_existing_font_dirs_mounted_read_only(tmp_path):
             mount_fonts=True, font_dirs=(str(fonts), "/does/not/exist")
         )
     )
-    # Plain :ro - NOT relabelled (:z of shared system dirs is rejected rootless;
-    # see _existing_font_mounts). Missing dirs are skipped.
+    # The mount stays a plain `:ro` mount without a relabel. Rootless Podman
+    # refuses `:z` on a shared system directory. See `_existing_font_mounts`.
+    # PyTeX skips a directory that does not exist.
     assert f"{fonts}:{fonts}:ro" in cmd
     assert "/does/not/exist:/does/not/exist:ro" not in cmd
 
@@ -199,7 +205,9 @@ def test_name_flag_added_when_given():
     assert cmd[cmd.index("--name") + 1] == "pytex-abc"
 
 
-# -- _should_sandbox truth table (no podman needed; helpers mocked) --------
+# -- the truth table of `_should_sandbox` ----------------------------------
+#
+# These tests mock the Podman helpers, so they need no Podman.
 
 
 def _patch_podman(monkeypatch, *, available, image_present):
@@ -238,7 +246,8 @@ def test_should_sandbox_true_when_podman_and_image(monkeypatch):
 
 
 def test_should_sandbox_true_for_host_binary_without_image(monkeypatch):
-    # tectonic_in_image=False mounts a host binary, so no image is needed.
+    # With `tectonic_in_image=False`, PyTeX mounts a host binary. The sandbox
+    # then needs no pre-built image.
     _patch_podman(monkeypatch, available=True, image_present=False)
     assert compile_mod._should_sandbox(
         policy_for(TrustLevel.UNTRUSTED),
@@ -246,13 +255,14 @@ def test_should_sandbox_true_for_host_binary_without_image(monkeypatch):
     )
 
 
-# -- fail-closed (BLOCKER) -------------------------------------------------
+# -- the build fails closed (blocker) --------------------------------------
 
 
 @pytest.mark.parametrize("trust", [TrustLevel.UNTRUSTED, TrustLevel.SANDBOXED])
 def test_pdf_build_fails_closed_without_sandbox(monkeypatch, trust):
-    # No usable sandbox + require_sandbox -> refuse, never downgrade to the
-    # in-process floor (which would not block \input of host files).
+    # The policy requires the Podman sandbox and no sandbox is available. The
+    # build must fail. It must never fall back to the in-process floor,
+    # because that floor does not block `\input` of a host file.
     _patch_podman(monkeypatch, available=False, image_present=False)
     with pytest.raises(CompileError, match="sandbox is required"):
         render_blob(
@@ -271,7 +281,7 @@ def test_require_sandbox_set_for_non_trusted_only():
     assert not policy_for(TrustLevel.TRUSTED).require_sandbox
 
 
-# -- timeout cleanup: container force-removed ------------------------------
+# -- after a timeout, PyTeX runs `podman rm -f` ----------------------------
 
 
 def test_timeout_force_removes_container(monkeypatch, tmp_path):
@@ -319,7 +329,7 @@ def test_timeout_force_removes_container(monkeypatch, tmp_path):
 
 
 class _Console:
-    """Minimal console capturing warnings."""
+    """A console that keeps every warning message in a list."""
 
     def __init__(self) -> None:
         self.warnings: list[str] = []
@@ -332,7 +342,7 @@ def test_fallback_warns_when_sandbox_not_required(monkeypatch, tmp_path):
     import dataclasses
 
     _patch_podman(monkeypatch, available=False, image_present=False)
-    # A non-trusted policy that explicitly does NOT require the sandbox.
+    # A non-trusted policy that does not require the Podman sandbox.
     policy = dataclasses.replace(
         policy_for(TrustLevel.UNTRUSTED), require_sandbox=False
     )
@@ -340,7 +350,7 @@ def test_fallback_warns_when_sandbox_not_required(monkeypatch, tmp_path):
     monkeypatch.setattr(compile_mod, "_locate_tectonic", lambda *_a: Path("tectonic"))
 
     def _fake_run(_cmd, cwd, _limits, *, apply_rlimits, env=None):
-        # apply_rlimits stays on for the in-process floor.
+        # The in-process floor keeps the resource limits on.
         assert apply_rlimits is True
         (Path(cwd) / "build" / "document.pdf").write_bytes(b"%PDF-1.5\n")
         return 0, "ok"
@@ -361,7 +371,7 @@ def test_fallback_warns_when_sandbox_not_required(monkeypatch, tmp_path):
     assert any("falling back" in w for w in console.warnings)
 
 
-# -- size cap before read (BLOCKER 2) --------------------------------------
+# -- PyTeX checks the size cap before it reads the file (blocker 2) --------
 
 
 def test_output_file_size_checked_before_read(tmp_path):
@@ -374,7 +384,8 @@ def test_output_file_size_checked_before_read(tmp_path):
 
 
 def test_symlinked_output_rejected(monkeypatch, tmp_path):
-    # A build whose document.pdf is a symlink must be refused before any read.
+    # If the `document.pdf` of a build is a symlink, PyTeX must refuse the
+    # build before it reads the file.
     build_dir = tmp_path / "build"
     build_dir.mkdir()
     secret = tmp_path / "secret.bin"
@@ -405,10 +416,10 @@ def test_symlinked_output_rejected(monkeypatch, tmp_path):
         )
 
 
-# -- arch-aware Containerfile (P3) -----------------------------------------
+# -- the Containerfile follows the architecture (P3) ------------------------
 
-# Pinned upstream sha256s (must match _TECTONIC_ASSETS); a wrong asset on ARM
-# is the "exec format error" footgun this guards against.
+# These are the pinned upstream sha256 sums. They must match `_TECTONIC_ASSETS`.
+# A wrong asset on ARM makes the tectonic binary stop with "exec format error".
 _X86_SHA = "f3c825128095dc3399ea11c08c18035b33050a216930c295c79e8eb11bd21de4"
 _ARM_SHA = "f9aa39017dbd51f111fdb93dda222178cbe51c8193508fc567b523cc74fff9c1"
 
@@ -430,8 +441,8 @@ def test_containerfile_aarch64_uses_musl_asset_and_sha():
 @pytest.mark.parametrize(
     ("machine", "needle"),
     [
-        ("AMD64", "x86_64-unknown-linux-gnu"),  # platform.machine() casing varies
-        ("arm64", "aarch64-unknown-linux-musl"),  # macOS/BSD spelling of aarch64
+        ("AMD64", "x86_64-unknown-linux-gnu"),  # `platform.machine()` case varies
+        ("arm64", "aarch64-unknown-linux-musl"),  # macOS and BSD spell it so
     ],
 )
 def test_containerfile_machine_aliases(machine, needle):
@@ -468,7 +479,7 @@ def test_build_sandbox_image_feeds_arch_containerfile(monkeypatch):
     assert _X86_SHA in str(captured["input"])
 
 
-# -- warm-up: representative preambles (P2) --------------------------------
+# -- the warm-up compiles one sample preamble per variant (P2) -------------
 
 
 def test_warm_podman_cmd_flags():
@@ -477,8 +488,9 @@ def test_warm_podman_cmd_flags():
         Path("/work"),
         "warm-2.tex",
     )
-    # One-time privileged warm-up runs WITH host network (not the untrusted
-    # path); cache is shared-relabelled :z; the workdir is the rw mount.
+    # The one-time privileged warm-up runs with the host network, unlike the
+    # untrusted path. Podman relabels the cache as shared with `:z`. The
+    # temporary work directory is the only read-write mount.
     assert cmd[cmd.index("--network") + 1] == "host"
     assert f"/host/cache:{CONTAINER_CACHE}:z" in cmd
     assert f"/work:{CONTAINER_WORKDIR}:rw,Z" in cmd
@@ -487,8 +499,9 @@ def test_warm_podman_cmd_flags():
 
 
 def test_warm_cache_compiles_every_variant_sample(monkeypatch, tmp_path):
-    # Mock the render+write step and podman so no real build/network is needed;
-    # assert one compile per representative sample, each on its own .tex.
+    # The mocks replace the render step and Podman, so the test needs no real
+    # build and no network. The warm-up must start one compile pass per
+    # sample, and each pass gets its own `.tex` file.
     names = ["warm-0.tex", "warm-1.tex", "warm-2.tex", "warm-3.tex"]
     monkeypatch.setattr(sandbox_mod, "_write_warm_documents", lambda _work: names)
     runs: list[list[str]] = []
@@ -526,7 +539,8 @@ def test_warm_cache_raises_with_failing_tex_name(monkeypatch, tmp_path):
 
 
 def test_write_warm_documents_renders_all_variants(tmp_path):
-    # Real render (no network): every sample produces a full document preamble.
+    # This test runs a real render and needs no network. Every sample must
+    # render into a document with a full preamble.
     names = sandbox_mod._write_warm_documents(tmp_path)
     assert len(names) == len(sandbox_mod._WARM_SAMPLES)
     for name in names:
@@ -534,7 +548,7 @@ def test_write_warm_documents_renders_all_variants(tmp_path):
         assert r"\documentclass" in text
 
 
-# -- live confined build (opt-in) ------------------------------------------
+# -- live build inside the Podman sandbox (opt-in) --------------------------
 
 
 @pytest.mark.skipif(
@@ -548,14 +562,16 @@ def test_untrusted_build_runs_through_podman_sandbox():
         warm_sandbox_cache,
     )
 
-    # Privileged warm-up (online, one-time): build the image and populate the
-    # bundle cache with the IMAGE's own tectonic, so the offline untrusted run
-    # gets a version-matched cache hit (--network none + --only-cached).
+    # The privileged warm-up runs once and needs the network. It builds the
+    # image. The tectonic binary of the image then fills the bundle cache, so
+    # the offline untrusted run gets a cache hit for the matching tectonic
+    # version.
     if not sandbox_image_present():
         build_sandbox_image()
     warm_sandbox_cache()
 
-    # The real test: untrusted input compiled fully offline inside the sandbox.
+    # This is the real check. PyTeX compiles untrusted input offline inside
+    # the Podman sandbox.
     res = render_blob(
         BuildRequest(
             source=b"# Sandboxed\n\nHello from inside Podman.",

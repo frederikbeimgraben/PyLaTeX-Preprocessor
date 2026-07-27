@@ -31,7 +31,9 @@ def test_explicit_output_overrides_build_dir():
 
 
 def test_default_output_slugifies_spaces():
-    # Spaces in the stem would break the TeX jobname (biber/.bcf); collapse them.
+    # The stem becomes the TeX jobname. A space in the jobname breaks the
+    # `.bcf` file that biber reads, so `_slug` replaces each space with an
+    # underscore.
     out = _default_output(Path("Meetings/2026-06-15 STUPA.md"), Path("build"))
     assert out == Path("build/2026-06-15_STUPA.md.out.tex")
     assert " " not in out.name

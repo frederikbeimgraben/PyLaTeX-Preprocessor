@@ -1,4 +1,4 @@
-"""Tests for pytex-tex2py: .tex -> .tex.py conversion."""
+"""Tests for `pytex-tex2py`, which serializes a `.tex` file to a `.tex.py` file."""
 
 from pathlib import Path
 

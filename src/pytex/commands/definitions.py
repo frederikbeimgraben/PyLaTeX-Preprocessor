@@ -144,5 +144,14 @@ def Renewenvironment(
 
 @Registry.add
 def Def(cs: str, body: TeX | str) -> TeX:
-    """Low-level TeX \\def — use sparingly."""
+    """Define a control sequence with the low-level TeX `\\def`.
+
+    `\\def` replaces a control sequence that already exists. It gives no
+    warning. Use `Newcommand` when you can.
+
+    Args:
+        cs: The control sequence name without the leading backslash. This
+            differs from `Newcommand`, which takes the name with the
+            backslash.
+    """
     return Raw(f"\\def\\{cs}{{{body}}}")

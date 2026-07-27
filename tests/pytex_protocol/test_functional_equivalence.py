@@ -1,8 +1,10 @@
-"""Old-vs-new equivalence for the functionally-refactored protocol helpers.
+"""Equivalence tests for the rewritten meeting protocol helpers.
 
-Pins the rewritten generator/comprehension versions of ``_join``,
-``_leaf_texts`` (pytex_protocol.convert) and ``expand_inline_shortcodes``
-(pytex_protocol.shortcodes) to their original imperative implementations.
+A rewrite replaced the loops in `_join` and `_leaf_texts`
+(`pytex_markdown.protocol.convert`) and in `expand_inline_shortcodes`
+(`pytex_markdown.protocol.shortcodes`) with generators and comprehensions.
+This file keeps a copy of each original loop version and compares the two
+against the same input.
 """
 
 from __future__ import annotations
@@ -29,11 +31,11 @@ if TYPE_CHECKING:
 
 
 def _node(children: object) -> SimpleNamespace:
-    """Tiny marko-like stand-in: a node is anything with a ``children`` attr."""
+    """Make a marko-like node, which is any object with a `children` attribute."""
     return SimpleNamespace(children=children)
 
 
-# -- reference (old) implementations ---------------------------------------
+# -- the original loop versions, kept as the reference ----------------------
 
 
 def _old_join(blocks: list[TeX]) -> list[TeX]:
@@ -84,7 +86,7 @@ def test_join_matches_reference():
 
 
 def test_leaf_texts_matches_reference():
-    # Nested tree: leaves are str-children nodes, in source order.
+    # A leaf is a node whose `children` is a string. The source order counts.
     tree = _node(
         [
             _node("first"),
@@ -94,7 +96,6 @@ def test_leaf_texts_matches_reference():
     )
     assert _leaf_texts(tree) == _old_leaf_texts(tree)
     assert _leaf_texts(tree) == ["first", "second", "third", "fourth"]
-    # Empty container yields nothing.
     assert _leaf_texts(_node([])) == []
 
 
@@ -109,13 +110,13 @@ SHORTCODE_SAMPLES = [
     "no shortcodes here",
     "{{datum}}",
     "leading {{datum}} trailing",
-    "{{datum}}{{gremium}}",  # adjacent: empty prose gap between
+    "{{datum}}{{gremium}}",  # adjacent shortcodes, with no prose between them
     "a{{gremium}}b",
     "count: {{count anwesend}}",
     "{{time 18:30}} start",
     "{{unknown_code}} stays verbatim",
     "escape me: 100% & _ then {{datum}}",
-    "{{datum}}",  # edge-only, no surrounding prose
+    "{{datum}}",  # the whole text is one shortcode, with no prose around it
 ]
 
 

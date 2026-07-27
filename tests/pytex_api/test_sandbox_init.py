@@ -1,7 +1,10 @@
-"""``pytex-sandbox-init`` console script: preflight, flow, and error mapping.
+"""Tests for the `pytex-sandbox-init` console script.
 
-No podman is ever invoked; the build/warm/preflight helpers are monkeypatched
-so only the orchestration and friendly-message logic is exercised.
+The tests cover the checks that run first, the order of the steps, and the
+mapping from a raw error to a helpful message.
+
+No test starts Podman. The mocks replace the build, warm-up and check
+helpers, so the tests see only the step order and the message text.
 """
 
 from io import StringIO
@@ -44,7 +47,7 @@ def _stub_steps(monkeypatch, *, podman=True, image_present=False, rootless=True)
     return calls
 
 
-# -- subuid/subgid preflight -----------------------------------------------
+# -- the check of the subuid and subgid ranges ------------------------------
 
 
 def test_has_subid_range_matches_user_or_uid(tmp_path):
@@ -60,14 +63,16 @@ def test_has_subid_range_missing_file_is_false(tmp_path):
 
 
 def test_subid_configured_true_when_no_user_keys(monkeypatch):
-    # Unidentifiable user -> skip the check (never a false "misconfigured").
+    # If PyTeX cannot identify the user, it skips the check. A skip prevents a
+    # wrong report that the system is not configured.
     monkeypatch.setattr(init, "_current_user_keys", set)
     assert _subid_configured() is True
 
 
 def test_subid_configured_requires_both_files(monkeypatch):
     monkeypatch.setattr(init, "_current_user_keys", lambda: {"alice"})
-    # Only /etc/subuid has a range; /etc/subgid does not -> not configured.
+    # Only `/etc/subuid` holds a range. `/etc/subgid` holds none, so the
+    # system is not configured.
     monkeypatch.setattr(
         init, "_has_subid_range", lambda path, _keys: "subuid" in str(path)
     )
@@ -80,7 +85,7 @@ def test_subid_configured_true_when_both_present(monkeypatch):
     assert _subid_configured() is True
 
 
-# -- friendly error mapping ------------------------------------------------
+# -- the mapping from a raw error to a helpful message ----------------------
 
 
 def test_friendly_error_subuid():
@@ -102,7 +107,7 @@ def test_friendly_error_falls_back_to_raw():
     assert _friendly_error("some novel failure") == "some novel failure"
 
 
-# -- main flow -------------------------------------------------------------
+# -- the step order of `main` -----------------------------------------------
 
 
 def test_main_fails_without_podman(monkeypatch):
@@ -136,7 +141,7 @@ def test_main_skips_build_when_image_present(monkeypatch):
     calls = _stub_steps(monkeypatch, image_present=True)
     console = _console()
     assert main([], console=console) == 0
-    assert calls["build"] == []  # present + not forced -> no rebuild
+    assert calls["build"] == []  # the image is there and no flag forces a build
     assert calls["warm"] == 1
     assert "already present" in _text(console)
 
@@ -164,11 +169,11 @@ def test_main_translates_build_failure(monkeypatch):
     assert main([], console=console) == 1
     out = _text(console)
     assert "sandbox initialisation failed" in out
-    assert "subuid/subgid" in out  # raw stderr translated to a hint
+    assert "subuid/subgid" in out  # the script turns raw stderr into a hint
 
 
 def test_main_warns_when_not_rootless(monkeypatch):
     _stub_steps(monkeypatch, rootless=False)
     console = _console()
-    assert main([], console=console) == 0  # warn-only, not fatal
+    assert main([], console=console) == 0  # the script warns and continues
     assert "rootless podman may not be fully configured" in _text(console)

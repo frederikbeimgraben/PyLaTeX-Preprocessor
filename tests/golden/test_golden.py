@@ -1,28 +1,25 @@
-"""Golden-file regression tests for the deterministic ``.tex`` render layer.
+"""Golden-file regression tests for the render layer.
 
-Each sample input (Markdown variants plus one ``.tex.py`` node tree) is rendered
-to a LaTeX *string* in memory -- no tectonic, no PDF, no subprocess -- and
-compared byte-for-byte against a checked-in golden file under
-``tests/golden/expected/``. A diff fails the test, freezing the render output so
-future refactors cannot silently change it.
+Each sample input is a Markdown file or one `.tex.py` file. The test renders
+the input to a LaTeX string in memory. It runs no tectonic binary, it makes no
+PDF, and it starts no subprocess. The test then compares the string
+byte-for-byte with a golden file under `tests/golden/expected/`. A difference
+fails the test, so a later refactor cannot change the render output in silence.
 
-Regenerating goldens
---------------------
-Set ``PYTEX_UPDATE_GOLDEN=1`` to rewrite every golden from the current render::
+To rewrite every golden from the current render, set `PYTEX_UPDATE_GOLDEN=1`:
 
     PYTEX_UPDATE_GOLDEN=1 pytest tests/golden -q
 
-Review the resulting diff before committing -- an intended output change shows up
-there, an accidental one is the regression this suite is meant to catch.
+Read the resulting diff before you commit. An intended change of the render
+output appears there. An accidental change is the regression that this suite
+must catch.
 
-Determinism
------------
-The render layer has no timestamps, randomness, or counters tied to set/dict
-iteration. The one machine-dependent source is ``Path.resolve()`` on relative
-image/logo *paths*; the samples avoid those (no relative images; vendored logo
-names only). :func:`_normalise` additionally strips the worktree's absolute path
-as defence in depth, so a leaked path would surface as a stable token rather than
-a flapping golden.
+The render layer has no timestamps, no randomness, and no counters that depend
+on set order or dict order. The one machine-dependent source is
+`Path.resolve()` on a relative image path or logo path. The samples avoid such
+a path. They use no relative image, and they name vendored logos only.
+`_normalise` also replaces the absolute path of the worktree. A leaked path
+then becomes a stable token, and the golden stays the same on every machine.
 """
 
 from __future__ import annotations
@@ -45,7 +42,14 @@ _UPDATE = os.environ.get("PYTEX_UPDATE_GOLDEN") == "1"
 
 @dataclass(frozen=True)
 class Case:
-    """One golden case: an input file, its render variant, and a golden name."""
+    """One golden case: an input file, a variant, and a golden file name.
+
+    Attributes:
+        name: The stem of the golden file under `tests/golden/expected/`.
+        source: The file name under `tests/golden/inputs/`.
+        variant: The variant for a Markdown input. It is None for a `.tex.py`
+            file, because such a file takes no variant.
+    """
 
     name: str
     source: str
@@ -62,10 +66,10 @@ CASES: tuple[Case, ...] = (
 
 
 def _normalise(rendered: str) -> str:
-    """Replace machine-specific absolute paths with a stable token.
+    """Replace a machine-specific absolute path with a stable token.
 
-    The samples are written to avoid path leakage, so in practice this is a
-    no-op; it keeps the golden stable if a future code path starts emitting an
+    The samples avoid path leakage, so this function usually changes nothing.
+    It keeps the golden stable if a later code path starts to render an
     absolute path under the worktree.
     """
     return rendered.replace(str(_REPO_ROOT), "<REPO>")

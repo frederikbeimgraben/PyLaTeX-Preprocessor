@@ -1,4 +1,4 @@
-"""Render a `TeX` node tree in the style of the `tree` command.
+"""Render a node tree in the style of the `tree` command.
 
     Document
     ├── ControlSequence \\title
@@ -7,9 +7,9 @@
         ├── ControlSequence \\maketitle
         └── ...
 
-Walks the canonical `TeX.children`, so every node that exposes its structural
-children shows up. `Package` instances are skipped — they are document
-dependencies, not part of the syntax tree.
+This module walks the canonical `TeX.children`, so every node that exposes its
+child nodes appears. The module skips a `Package` instance. A package is a
+package requirement of the document, not a part of the node tree.
 """
 
 from __future__ import annotations
@@ -47,8 +47,12 @@ def _package_name(pkg: object) -> str:
 
 
 def _unwrap(node: TeX) -> tuple[TeX, list[str]]:
-    """Collapse `WithPackage` wrappers, returning the wrapped node and the
-    packages it attaches (so they can be shown connected to that node)."""
+    """Collapse the `WithPackage` wrappers around a node.
+
+    Returns:
+        The wrapped node and the names of the packages that the wrappers
+        attach. The caller shows those names next to that node.
+    """
     packages: list[str] = []
     current: TeX = node
     while isinstance(current, WithPackage):
@@ -58,8 +62,13 @@ def _unwrap(node: TeX) -> tuple[TeX, list[str]]:
 
 
 def _cs_arg_text(cs: ControlSequence[Parameters]) -> str | None:
-    """Text of a control sequence's first argument (e.g. the env name in
-    ``\\begin{name}``)."""
+    """Return the text of the first argument of a control sequence.
+
+    One example is the environment name in `\\begin{name}`.
+
+    Returns:
+        The argument text, or `None` when no argument holds text.
+    """
     for param in cs.params or ():
         value = getattr(param, "value", None)
         if isinstance(value, Raw):
@@ -70,8 +79,12 @@ def _cs_arg_text(cs: ControlSequence[Parameters]) -> str | None:
 
 
 def _as_environment(node: TeX) -> tuple[str, list[TeX]] | None:
-    """If `node` is the `Concat(\\begin{X}, body..., \\end{X})` shape produced by
-    `Environment`, return ``(X, body_children)``; otherwise `None`."""
+    """Recognize the `Concat(\\begin{X}, body..., \\end{X})` shape of `Environment`.
+
+    Returns:
+        The environment name and its body child nodes. The result is `None`
+        when `node` does not have that shape.
+    """
     if not isinstance(node, Concat):
         return None
     kids = list(node.children or ())
@@ -92,9 +105,15 @@ def _as_environment(node: TeX) -> tuple[str, list[TeX]] | None:
 
 
 def _as_math(node: TeX) -> tuple[str, list[TeX]] | None:
-    """If `node` is one of the math Concats produced by `Math` (`\\(..\\)`),
-    `DisplayMath` (`\\[..\\]`) or `InlineMath` (`$..$`), return ``(label,
-    body)``; otherwise `None`."""
+    """Recognize a math `Concat` node and return its label and its body.
+
+    `Math` produces `\\(..\\)`, `DisplayMath` produces `\\[..\\]`, and
+    `InlineMath` produces `$..$`.
+
+    Returns:
+        The label, which is `Math`, `DisplayMath` or `InlineMath`, and the body
+        child nodes. The result is `None` when `node` is not a math node.
+    """
     if not isinstance(node, Concat):
         return None
     kids = list(node.children or ())
@@ -124,9 +143,9 @@ def _children(node: TeX) -> list[TeX]:
 
 
 def _short(text: str, limit: int = 50) -> str:
-    # Show whitespace literally so a single space (e.g. the separator in
-    # `\item x`) is distinguishable from an empty string. Newlines/tabs become
-    # visible escapes rather than being collapsed away.
+    # Show a newline and a tab as a visible escape. Keep a single space visible
+    # too, so the reader can tell the separator in `\item x` from an empty
+    # string.
     shown = text.replace("\n", "\\n").replace("\t", "\\t")
     if len(shown) > limit:
         shown = shown[: limit - 1] + "…"
@@ -191,7 +210,7 @@ def _walk(node: TeX, prefix: str, color: bool, lines: list[str]) -> None:
 
 
 def render_tree(node: TeX, color: bool = False) -> str:
-    """Return the node tree as a multi-line, `tree`-style string."""
+    """Return the node tree as a multi-line string in the style of `tree`."""
     lines = [_label(node, color)]
     _walk(node, "", color, lines)
     return "\n".join(lines)

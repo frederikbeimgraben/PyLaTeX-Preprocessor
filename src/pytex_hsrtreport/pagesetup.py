@@ -1,3 +1,5 @@
+"""Page setup for the HSRT report, loaded from a shipped `.tex` file."""
+
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -8,8 +10,9 @@ from pytex.registry import Registry
 
 __all__ = ["HSRTPageSetup"]
 
-# The full preamble lives in tex/pagesetup.tex (too large to inline as a raw
-# string); it is shipped as package data and loaded verbatim at render time.
+# The full page setup lives in `tex/pagesetup.tex`. It is too large for a raw
+# string in Python. The package ships it as package data, and PyTeX reads it
+# verbatim at render time.
 SETUP_TEX: Final[Path] = Path(
     str(files("pytex_hsrtreport").joinpath("tex/pagesetup.tex"))
 )
@@ -17,17 +20,22 @@ SETUP_TEX: Final[Path] = Path(
 
 @Registry.add
 def HSRTPageSetup() -> TeX:
-    """KOMA scrheadings, section fonts, chapter-name tracking, typography.
+    r"""Set up the KOMA `scrheadings` style, the section fonts and typography.
 
-    Mirrors ``Config/PageSetup.tex``, ``Config/Sections.tex``, and
-    ``Config/Typography.tex`` from the original HSRTReport template.
+    This node also tracks the current chapter name. It mirrors
+    `Config/PageSetup.tex`, `Config/Sections.tex` and `Config/Typography.tex`
+    from the original HSRT report template.
 
-    Must be emitted in the preamble *before* font setup: the ``\\providecommand``
-    fallbacks here define ``\\blenderfont``/``\\dinfont`` as safe defaults, and
-    ``HSRTFontSetup`` then overrides them with ``\\renewcommand`` once the real
-    font families are declared.
+    Put this node in the preamble **before** the font setup. The
+    `\providecommand` fallbacks here define `\blenderfont` and `\dinfont` as
+    safe defaults. `HSRTFontSetup` then replaces both with `\renewcommand`
+    after LaTeX declares the real font families.
 
-    Defines ``\\ifHSRTBackMatter`` — set it to true in back matter to suppress
-    chapter-specific headers/footers without calling mode-sensitive KOMA commands.
+    The node also defines `\ifHSRTBackMatter`. Set the flag to true in the
+    back matter. LaTeX then leaves the chapter name out of the page header.
+    With the flag you need none of the KOMA commands that depend on the
+    current mode.
+    The flag does not gate the page footer. The `Seite N von M` line (page N
+    of M) stays on every numbered page.
     """
     return IncludeTeX(SETUP_TEX, allow_replacements=False)

@@ -1,4 +1,4 @@
-"""Checks run over a `TeX` node tree to flag problems before compilation."""
+"""The static checks that the analysis pass runs over a `TeX` node tree."""
 
 from __future__ import annotations
 
@@ -19,8 +19,9 @@ if TYPE_CHECKING:
 
 __all__ = ["Issue", "Severity", "analyze"]
 
-# Control sequences that reference a label by name. Each takes a single
-# (possibly comma-separated) argument of label names.
+# Control sequences that point to a label by name. Each one takes a single
+# argument. That argument can hold more than one label name, separated by
+# commas.
 _REF_COMMANDS = frozenset(
     {"ref", "pageref", "nameref", "autoref", "eqref", "vref", "cref", "Cref"}
 )
@@ -45,7 +46,13 @@ def _walk(node: TeX) -> Iterator[TeX]:
 
 
 def _first_required_text(cs: ControlSequence[Parameters]) -> str | None:
-    """Text of the first non-optional parameter of `cs`, if it is plain text."""
+    """Return the text of the first required parameter of `cs`.
+
+    Returns:
+        The parameter text. The result is `None` when `cs` has no required
+        parameter, or when the first required parameter is neither a string
+        nor a `Raw` node.
+    """
     for param in cs.params or ():
         if isinstance(param, Parameter) and not param.optional:
             value = param.value
@@ -58,10 +65,19 @@ def _first_required_text(cs: ControlSequence[Parameters]) -> str | None:
 
 
 def analyze(node: TeX) -> list[Issue]:
-    """Return the problems found in the tree rooted at `node`.
+    """Return the problems found in the node tree at `node`.
 
-    Pure and side-effect free: only reads the tree (and, for images, checks
-    whether source files exist on disk).
+    The pass reads `node` and every child node below it. It changes nothing.
+    For an image it also checks whether the source file exists on disk.
+
+    The checks see a label or a reference only in a `ControlSequence` node.
+    A `\\label` inside a `Raw` string stays invisible. The optimize pass
+    converts a `Raw` that holds only that one control sequence. It leaves a
+    `\\label` inside a longer `Raw` string as text.
+
+    Returns:
+        The issues in this order: missing image files in node-tree order,
+        then duplicate labels by name, then undefined references by name.
     """
     label_counts: Counter[str] = Counter()
     references: list[str] = []

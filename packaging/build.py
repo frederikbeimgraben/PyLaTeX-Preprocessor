@@ -2,10 +2,11 @@
 
     python packaging/build.py
 
-Installs PyInstaller and the bundle.toml `requirements` into the current
-environment, then freezes the binary into `dist/pytex` (use a fresh virtualenv;
-this mutates the active one). `pytex` itself must already be installed (e.g.
-`pip install -e .`).
+This script installs PyInstaller and the `requirements` from `bundle.toml`
+into the active environment. It then freezes the binary into `dist/pytex`.
+
+The script changes the active environment, so run it in a new virtualenv.
+You must install `pytex` first, for example with `pip install -e .`.
 """
 
 from __future__ import annotations
@@ -20,6 +21,15 @@ _SPEC = _HERE / "pytex.spec"
 
 
 def main() -> int:
+    """Install the bundle requirements, then freeze the `pytex` binary.
+
+    Returns:
+        Always 0.
+
+    Raises:
+        subprocess.CalledProcessError: A pip step or a PyInstaller step exits
+            with a non-zero status.
+    """
     bundle = tomllib.loads((_HERE / "bundle.toml").read_text())
     requirements: list[str] = bundle["bundle"]["requirements"]
 

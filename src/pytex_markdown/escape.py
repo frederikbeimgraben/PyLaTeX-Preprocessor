@@ -1,7 +1,7 @@
-"""LaTeX text escaping (re-exported from pytex core).
+"""LaTeX text escaping, re-exported from the `pytex` core.
 
-The canonical implementation lives in :mod:`pytex.helpers.sanitize` so the
-markdown converter and :func:`pytex.helpers.sanitize.Sanitize` stay in sync.
+The one implementation lives in `pytex.helpers.sanitize`. The Markdown
+converter and `Sanitize` use the same escape rules.
 """
 
 from __future__ import annotations

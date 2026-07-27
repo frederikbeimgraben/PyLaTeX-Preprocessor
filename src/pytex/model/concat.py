@@ -12,22 +12,31 @@ __all__ = ["Concat"]
 
 
 def _is_empty(node: TeX) -> bool:
-    """A node that renders to nothing and can be dropped from a `Concat`."""
+    """Report whether the node renders to nothing, so `Concat` can drop it."""
     return isinstance(node, EmptyTeX) or (isinstance(node, Raw) and node.content == "")
 
 
 @Registry.add
 @dataclass(frozen=True, init=False)
 class Concat(TeX):
+    """Child nodes that render one after the other, with no separator.
+
+    `Concat` drops every `EmptyTeX` child and every `Raw` child with empty
+    content. It then collapses the trivial cases. With no child left it returns
+    `Empty`. With one child left it returns that child unwrapped. So a
+    `Concat(...)` call can return a node that is not a `Concat`.
+    """
+
     elements: Final[tuple[TeX, ...]]
 
     def __new__(cls, *elements: TeX | str) -> TeX:
         coerced = tuple(
             node for node in map(coerce_tex, elements) if not _is_empty(node)
         )
-        # Collapse trivial concatenations: nothing -> Empty, a single child ->
-        # that child unwrapped. (`__init__` is a no-op, so returning a node of
-        # any type here is safe.)
+        # Collapse the trivial cases: no child -> Empty, one child -> that
+        # child unwrapped. Python calls `__init__` only when `__new__` returns
+        # a `Concat`, and `__init__` does nothing, so a node of any type is
+        # safe to return here.
         if not coerced:
             return Empty
         if len(coerced) == 1:
@@ -39,9 +48,9 @@ class Concat(TeX):
         return instance
 
     def __init__(self, *elements: TeX | str) -> None:
-        # All construction happens in `__new__`; this keeps the call signature
-        # and prevents dataclass from generating an `__init__` that would
-        # overwrite the already-built instance.
+        # `__new__` builds the instance. This method only holds the call
+        # signature. It also stops the dataclass decorator from generating an
+        # `__init__` that would overwrite the instance that `__new__` built.
         pass
 
     @property

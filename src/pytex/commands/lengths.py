@@ -203,10 +203,10 @@ def Fill_len() -> Length:
 
 
 def __getattr__(name: str) -> object:
-    # `Fill` (the ``\fill`` rubber length) was renamed to `Fill_len` so its
-    # registry key no longer collides with `pytex_tikz.Fill` (the ``\fill`` path
-    # command). The suffix mirrors `Arraystretch_len`, which already dodges the
-    # `Arraystretch` table command the same way. Kept as a deprecated alias.
+    # PyTeX renamed `Fill`, the `\fill` rubber length, to `Fill_len`. The old
+    # registry key collided with `pytex_tikz.Fill`, the `\fill` path command.
+    # The suffix matches `Arraystretch_len`, which avoids the `Arraystretch`
+    # table command in the same way. `Fill` stays as a deprecated alias.
     if name == "Fill":
         warnings.warn(
             "pytex.commands.lengths.Fill was renamed to Fill_len to free the "

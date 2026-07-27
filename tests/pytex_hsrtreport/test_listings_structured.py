@@ -51,7 +51,8 @@ def test_rendered_emits_all_styles():
 
 
 def test_font_objects_render_zero_arg():
-    # Sanity that the building blocks are bare switches, not wrappers
+    # These font factories must render a bare switch. They must not wrap an
+    # argument, because the listing styles concatenate the switches.
     assert footnotesize().rendered == r"\footnotesize"
     assert scriptsize().rendered == r"\scriptsize"
     assert Ttfamily().rendered == r"\ttfamily"

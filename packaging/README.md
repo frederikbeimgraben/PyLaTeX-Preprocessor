@@ -1,28 +1,31 @@
 # Standalone binary
 
-A single-file `pytex` executable built with [PyInstaller](https://pyinstaller.org/).
-It bundles its own Python interpreter, the pytex packages (with their data —
-HSRT fonts/logos/tex), and the extra packages in [`bundle.toml`](bundle.toml),
-so a user needs neither Python nor `pip` — just the binary (and `tectonic` for
-`--build`, which pytex downloads on first use).
+[PyInstaller](https://pyinstaller.org/) builds a single-file `pytex`
+executable. It bundles its own Python interpreter, the PyTeX packages with
+their data, and the extra packages in [`bundle.toml`](bundle.toml). The package
+data holds the HSRT fonts, logos and tex files. A user needs only the binary,
+not Python and not `pip`. PyTeX needs the tectonic binary for `--build`. PyTeX
+downloads the tectonic binary on first use.
 
 ## Why the bundle list
 
-The binary runs `.tex.py` files and `pytex(...)` markers inside its **own**
-frozen interpreter, which cannot see the user's `site-packages`. Anything a
-document might `import` must be baked in. `bundle.toml` lists those packages:
+The binary runs a `.tex.py` file and an inline `pytex(...)` marker inside its
+**own** frozen interpreter. That interpreter cannot see the `site-packages` of
+the user. The build must include every package that a document can `import`.
+`bundle.toml` lists those packages:
 
-- `requirements` — pip names installed into the build environment.
-- `collect` — the *import* names PyInstaller pulls in wholesale (these differ
-  from the pip name for some packages: `Pillow` → `PIL`, `PyYAML` → `yaml`,
-  `python-calamine` → `python_calamine`).
+- `requirements` — the pip names. The build installs them into the build
+  environment.
+- `collect` — the *import* names that PyInstaller collects in full. The two
+  names differ for some packages. `Pillow` imports as `PIL`, `PyYAML` imports
+  as `yaml`, and `python-calamine` imports as `python_calamine`.
 
-Add a package to both lists to make it importable from documents.
+To make a package importable from a document, add the package to both lists.
 
 ## Build locally
 
-Use a throwaway virtualenv — the build installs PyInstaller and every bundle
-requirement into the active environment:
+Use a throwaway virtualenv. The build installs PyInstaller and every bundle
+requirement into the active environment.
 
 ```sh
 python -m venv /tmp/pytex-build && . /tmp/pytex-build/bin/activate
@@ -31,12 +34,16 @@ python packaging/build.py   # -> dist/pytex
 ./dist/pytex --version
 ```
 
-Built on Python 3.14, the binary's interpreter is 3.14, so documents may use
-`tex(t"...")` / t-strings even on machines without 3.14 installed.
+If you build with Python 3.14, the interpreter inside the binary is also 3.14.
+A document can then use `tex(t"...")` and t-strings on a machine that has no
+Python 3.14.
 
 ## CI
 
-The `binaries` job in [`.github/workflows/release.yml`](../.github/workflows/release.yml)
-builds one binary per OS (Linux/macOS/Windows) on a tag push, smoke-tests it
-(runs `--version`, renders an example, and renders a document that imports a
-bundled package), and attaches the binaries to the GitHub Release.
+A push of a version tag starts the workflow in
+[`.github/workflows/release.yml`](../.github/workflows/release.yml). The
+`binaries` job builds one binary for each of four targets: Linux x86_64, Linux
+arm64, macOS arm64 and Windows x86_64. The job then tests each binary. The test
+runs `--version`, renders an example, and renders a document that imports a
+bundled package. The `github-release` job attaches the binaries to the GitHub
+Release.

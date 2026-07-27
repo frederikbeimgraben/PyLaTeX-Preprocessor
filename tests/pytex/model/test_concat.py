@@ -23,12 +23,13 @@ def test_empty_children_are_stripped():
 
 
 def test_stripping_does_not_change_rendering():
-    # Empty/blank children render to nothing, so dropping them is invisible.
+    # An empty child renders to nothing, so `Concat` can drop it and still
+    # render the same string.
     assert Concat("a", Raw(""), "", "b").rendered == "ab"
 
 
 def test_whitespace_children_are_kept():
-    # A single space is meaningful (e.g. between \item and its body).
+    # A single space carries meaning, for example between `\item` and its body.
     assert Concat("a", " ", "b").rendered == "a b"
 
 
@@ -48,7 +49,7 @@ def test_render_idempotent():
 def test_children_only_tex():
     c = Concat("a", Raw("b"), "c")
     children = c.children
-    assert len(children) == 3  # str coerced to Raw via coerce_tex
+    assert len(children) == 3  # `coerce_tex` makes a `Raw` node from each `str`.
     assert all(hasattr(ch, "rendered") for ch in children)
 
 

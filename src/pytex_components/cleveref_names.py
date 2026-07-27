@@ -37,7 +37,11 @@ GERMAN_NAMES: Final[dict[str, tuple[str, str]]] = {
 
 @Registry.add
 def GermanCrefNames() -> TeX:
-    """All Cref/crefname pairs for German typesetting. Emit once in preamble."""
+    """Return every `\\crefname` and `\\Crefname` pair for German documents.
+
+    Put the result in the preamble one time only. A second copy overwrites
+    the same names with the same values and adds nothing.
+    """
     return Concat(
         *(
             make_name(typ, sg, pl)

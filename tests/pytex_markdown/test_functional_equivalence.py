@@ -1,9 +1,9 @@
-"""Old-vs-new equivalence for the functionally-refactored helpers.
+"""Equivalence tests for the refactored helpers in `pytex_markdown.convert`.
 
-The accumulator loops in :mod:`pytex_markdown.convert` were rewritten as inline
-generator expressions / comprehensions. Each test here pins the new output to
-a reference *old* implementation (the original imperative loop) over a battery
-of inputs, so any behavioural drift in escaping, ordering or spacing fails.
+A refactor replaced the accumulator loops with generator expressions and
+comprehensions. Each test here compares the new output against a reference
+implementation of the original loop over many inputs. A change in escaping,
+order, or spacing makes a test fail.
 """
 
 from __future__ import annotations
@@ -37,12 +37,13 @@ if TYPE_CHECKING:
 
 PARSER = marko.Markdown(extensions=["gfm"])
 
-# The euro sign drove the original imperative `_prose`; the reference
-# implementation below still splits on it (it is now the first entry of the
-# data-driven glyph table, but the old code is reproduced verbatim here).
+# The euro sign drove the original `_prose`, and the reference implementation
+# below still splits the text on it. The converter now holds the euro sign as
+# the first entry of the glyph table. The old code stays here word for word.
 EURO_SIGN = "€"
 
-# Prose covering arrows, euros, adjacency, edges, and LaTeX special chars.
+# These samples cover arrows, euro signs, adjacent glyphs, the string edges,
+# and the LaTeX special characters.
 PROSE_SAMPLES = [
     "",
     "plain text",
@@ -50,10 +51,10 @@ PROSE_SAMPLES = [
     "a <- b <-> c <=> d",
     "chain a --> b <-- c <--> d => e",
     "->leading and trailing<-",
-    "-><-",  # adjacent arrows: empty gap between them
+    "-><-",  # two arrows with an empty gap between them
     "50€",
     "€ 50",
-    "€€",  # adjacent euros: empty middle segment
+    "€€",  # two euro signs with an empty middle segment
     "€leading",
     "trailing€",
     "mix 5€ -> 10€ and a <=> b",
@@ -62,7 +63,7 @@ PROSE_SAMPLES = [
 ]
 
 
-# -- reference (old) implementations ---------------------------------------
+# -- reference implementations ---------------------------------------------
 
 
 def _old_escape_text(text: str) -> str:
@@ -99,7 +100,7 @@ def _old_interleave(blocks: list[TeX]) -> list[TeX]:
 
 
 class _OldConverter(MarkdownConverter):
-    """Converter using the original imperative table assembly."""
+    """Converter that builds a table with the original loops."""
 
     @override
     def _table_row(self, node: object) -> TeX:
@@ -156,19 +157,20 @@ def test_interleave_matches_reference():
     new = Concat(*_interleave(blocks)).rendered
     old = Concat(*_old_interleave(blocks)).rendered
     assert new == old
-    # Empties are dropped; remaining blocks separated by exactly one parbreak.
+    # `_interleave` drops each `Empty` block. Exactly one parbreak separates
+    # the blocks that stay.
     assert new == "a\n\nb\n\nc"
 
 
 TABLES = [
-    # header + body, mixed alignment
+    # a header row and two body rows, with a different alignment per column
     "| Name | Age | City |\n|:-----|:---:|-----:|\n"
     "| Bob | 30 | NYC |\n| Ann | 25 | LA |\n",
-    # single column, header only
+    # one column only
     "| Solo |\n|------|\n| one |\n",
-    # cells needing escaping
+    # cells that need LaTeX escaping
     "| a & b | 100% |\n|---|---|\n| _x_ | #1 |\n",
-    # header-only table (no body rows)
+    # a header row and no body row
     "| H1 | H2 |\n|---|---|\n",
 ]
 

@@ -50,5 +50,6 @@ def test_user_preamble_color_collected():
 def test_named_only_color_not_emitted():
     Color.named("red")
     out = HSRTReport(Concat(Section("Hi"), Color.named("red"))).rendered
-    # `red` is a base named colour — no \definecolor for it
+    # xcolor already knows the base name `red`, so the preamble needs no
+    # `\definecolor` line for it.
     assert "definecolor{red}" not in out

@@ -97,7 +97,7 @@ def test_or_operator_aliases_mix():
 def test_register_named_color():
     register_named_color("hsrtgray")
     assert is_known_color_name("hsrtgray")
-    Color.named("hsrtgray")  # no raise
+    Color.named("hsrtgray")  # This call must not raise.
 
 
 def test_rendered_is_name():

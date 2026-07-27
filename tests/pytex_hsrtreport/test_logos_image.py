@@ -45,9 +45,10 @@ def test_logo_output_name_disambiguates_custom_paths(tmp_path):
     for p in (a, b):
         p.parent.mkdir(parents=True)
         p.write_bytes(b"\x89PNG")
-    # Same stem, different dirs -> different output names (no logos/ collision).
+    # Two custom logos share the stem `logo` but sit in different directories.
+    # Their output names must differ, or they collide in `logos/`.
     assert logo_output_name(str(a)) != logo_output_name(str(b))
-    # Vendored names keep their clean stem.
+    # A vendored name keeps its clean stem.
     assert logo_output_name("INF") == "INF.pdf"
 
 
@@ -97,7 +98,8 @@ def test_makers_ralign_logo_path_resolves_to_vendored_svg():
 
 
 def test_default_logos_for_makers():
-    # SVG sources resolve to a converted PDF reference.
+    # PyTeX converts an SVG logo to PDF. So the rendered `.tex` file names the
+    # converted `.pdf` file, not the `.svg` source.
     out = DefaultLogos(Variant.MAKERS, inline_base64=False).rendered
     assert "MAKERS" in out and ".pdf" in out
 
@@ -105,7 +107,8 @@ def test_default_logos_for_makers():
 def test_makers_footer_logo_differs_from_title():
     from pytex_hsrtreport.variants import default_logo_names, footer_logo_names
 
-    # Title uses the left-aligned logo, footer the right-aligned one.
+    # The title page uses the left-aligned logo. The footer uses the
+    # right-aligned logo.
     assert default_logo_names(Variant.MAKERS) == ("MAKERS",)
     assert footer_logo_names(Variant.MAKERS) == ("MAKERS-RAlign",)
 
@@ -113,7 +116,7 @@ def test_makers_footer_logo_differs_from_title():
 def test_footer_logos_default_to_title_logos():
     from pytex_hsrtreport.variants import default_logo_names, footer_logo_names
 
-    # Variants without a footer override reuse their title-page logos.
+    # A variant with no footer override uses its title-page logos again.
     for variant in (Variant.INF, Variant.STUPA, Variant.ASTA, Variant.ECHO):
         assert footer_logo_names(variant) == default_logo_names(variant)
 

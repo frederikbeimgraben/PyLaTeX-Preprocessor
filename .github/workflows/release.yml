@@ -1,14 +1,15 @@
 name: Release
 
-# Pushing a version tag (e.g. `v0.2.0`) runs the full CI gate, builds the
-# distributions stamped with the tag's version, publishes them to PyPI and
-# creates a GitHub Release.
+# A push of a version tag, for example `v0.2.0`, starts this workflow. The
+# workflow runs the full CI gate. It then builds the distributions with the
+# version of the tag, publishes them to PyPI, and creates a GitHub Release.
 on:
   push:
     tags: ["v*"]
 
 jobs:
-  # Reuse the CI workflow so a release can never ship code that fails checks.
+  # This job reuses the CI workflow, so a release can never ship code that
+  # fails the checks.
   gate:
     uses: ./.github/workflows/ci.yml
 
@@ -55,9 +56,10 @@ jobs:
           name: dist
           path: dist/
 
-  # Standalone single-file binaries (PyInstaller), one per OS. Built on 3.14 so
-  # documents can use t-strings; bundle.toml is baked in so .tex.py files can
-  # import numpy/pandas/openpyxl/… without the user installing anything.
+  # PyInstaller builds one standalone single-file binary per OS. The build uses
+  # Python 3.14, so documents can use t-strings. The build also bakes in
+  # `bundle.toml`, so a document file can import numpy, pandas or openpyxl
+  # without an install by the user.
   binaries:
     needs: gate
     strategy:
@@ -118,7 +120,8 @@ jobs:
           "./$BIN" --version
           "./$BIN" examples/document.tex.py -o smoke.out.tex -f
           grep -q 'maketitle' smoke.out.tex
-          # a document that imports a bundled package must run inside the binary
+          # This check proves that the binary runs a document that imports a
+          # bundled package.
           printf 'import numpy as np\nfrom pytex.model.raw import Raw\n__pytex__ = Raw(str(int(np.arange(4).sum())))\n' > numpy.tex.py
           "./$BIN" numpy.tex.py -o numpy.out.tex -f
           grep -qx '6' numpy.out.tex && echo "bundled import OK"
@@ -142,8 +145,9 @@ jobs:
           name: dist
           path: dist/
 
-      # Trusted publishing: configure this repo as a publisher on PyPI
-      # (https://docs.pypi.org/trusted-publishers/). No API token needed.
+      # This step uses trusted publishing, so it needs no API token. Configure
+      # this repository as a publisher on PyPI first. See
+      # https://docs.pypi.org/trusted-publishers/.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 

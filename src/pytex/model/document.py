@@ -19,6 +19,17 @@ __all__ = ["Document"]
 @Registry.add
 @dataclass
 class Document(TeX):
+    """A whole LaTeX document, from `\\documentclass` to `\\end{document}`.
+
+    `rendered` puts the parts in this order: the document class, the packages
+    in load order, one `filecontents*` block per inline image, then `preamble`.
+    The `body` goes inside the `document` environment.
+
+    Attributes:
+        extra_packages: Packages to load that no node in the node tree
+            requires.
+    """
+
     body: TeX | str
     document_class: str = "article"
     document_class_options: set[PackageOption] = field(default_factory=set)
@@ -36,6 +47,12 @@ class Document(TeX):
 
     @property
     def packages(self) -> frozenset[PackageProtocol]:
+        """Every package requirement in the node tree, plus `extra_packages`.
+
+        For each requirement the set also holds the packages that the
+        requirement names in its own `after` set.
+        """
+
         def get_packages(obj: TeX, found: set[PackageProtocol]) -> None:
             found |= {
                 after
@@ -54,11 +71,13 @@ class Document(TeX):
         return frozenset(found | self.extra_packages)
 
     def ordered_packages(self) -> tuple[PackageProtocol, ...]:
-        """Packages sorted so each is emitted after its `after` dependencies.
+        """Sort the packages into an order that LaTeX accepts.
 
-        A frozenset has no stable order, but some packages must be loaded in a
-        fixed sequence (e.g. `cleveref` after `hyperref`). Resolve that with a
-        depth-first topological sort, breaking ties by name for reproducibility.
+        A frozenset has no stable order, but LaTeX needs some packages in a
+        fixed order. For example, `cleveref` must load after `hyperref`. Each
+        package names that constraint in its `after` set. A depth-first
+        topological sort makes the order. Ties break by name, so two runs give
+        the same order.
         """
         packages = self.packages
         by_name = {p.name: p for p in packages}
@@ -67,7 +86,7 @@ class Document(TeX):
 
         def visit(pkg: PackageProtocol) -> None:
             if state.get(pkg.name) is not None:
-                return  # finished, or currently visiting (cycle guard)
+                return  # Finished, or in progress. The second case cuts a cycle.
             state[pkg.name] = False
             for dep in sorted(pkg.after or (), key=lambda d: d.name):
                 present = by_name.get(dep.name)
@@ -90,7 +109,14 @@ class Document(TeX):
         return tuple(images.values())
 
     def write_inline_images(self, target_dir: str = ".") -> tuple[str, ...]:
-        """Materialise inline images to disk relative to `target_dir`. Returns paths."""
+        """Write the inline images to disk under `target_dir`.
+
+        The method converts an SVG source to PDF first. An absolute image path
+        loses its root part and becomes relative to `target_dir`.
+
+        Returns:
+            The path of each file written, in the order of the node tree.
+        """
         from pathlib import Path
 
         written: list[str] = []
@@ -107,7 +133,7 @@ class Document(TeX):
 
     @property
     def inline_image_block(self) -> TeX:
-        """`\\begin{filecontents*}` for each inline image, in tree order."""
+        """One `filecontents*` block per inline image, in node tree order."""
         images = self.inline_images
         if not images:
             return Empty

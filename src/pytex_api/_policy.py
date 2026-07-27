@@ -1,9 +1,10 @@
-"""Trust-level -> concrete capability policy.
+"""Trust level -> concrete capability policy.
 
-A :class:`TrustPolicy` flattens a :class:`TrustLevel` into the individual
-gates the pipeline checks: code execution, eval comments, ``.tex`` replacements,
-shell-escape, network, the package allowlist, and resource limits. Centralising
-the mapping keeps the gating decisions in one auditable place.
+A `TrustPolicy` flattens a `TrustLevel` into the separate gates that the
+pipeline checks. The gates cover code execution, `eval` comments, inline
+`pytex(...)` markers, shell-escape, the network, the package allowlist, and
+the resource limits. The central mapping puts every gate decision where an
+auditor can read it.
 """
 
 from __future__ import annotations
@@ -20,12 +21,12 @@ __all__ = [
     "policy_for",
 ]
 
-# Packages PyTeX itself emits (collected from the first-party node trees) plus
-# common, render-only LaTeX packages with no code-execution or file-write
-# surface. Untrusted input may only pull packages from this set.
+# The packages that PyTeX itself requires, collected from the first-party node
+# trees, plus common render-only LaTeX packages with no code-execution surface
+# and no file-write surface. Untrusted input may use only this set.
 PACKAGE_ALLOWLIST: frozenset[str] = frozenset(
     {
-        # -- emitted by first-party PyTeX nodes/variants --
+        # -- required by first-party PyTeX nodes and variants --
         "amsmath",
         "array",
         "babel",
@@ -35,8 +36,9 @@ PACKAGE_ALLOWLIST: frozenset[str] = frozenset(
         "cleveref",
         "csquotes",
         "etoolbox",
-        # eurosym ships its own euro glyph so `\euro{}` renders under fonts
-        # (e.g. DIN) that lack one. The Markdown converter emits it for `€`.
+        # eurosym carries its own euro glyph, so `\euro{}` renders under a
+        # font that has none, for example DIN. The Markdown converter uses
+        # `\euro{}` for the `€` character.
         "eurosym",
         "fontawesome",
         "fontspec",
@@ -58,7 +60,7 @@ PACKAGE_ALLOWLIST: frozenset[str] = frozenset(
         "tabularx",
         "tikz",
         "xcolor",
-        # -- common, safe typographic/layout packages --
+        # -- common, safe packages for typography and layout --
         "amssymb",
         "amsfonts",
         "mathtools",
@@ -84,8 +86,8 @@ PACKAGE_ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
-# Packages a slightly-more-trusted (SANDBOXED) build may additionally use.
-# Still excludes anything that can execute code or escape the workdir.
+# The packages that a `sandboxed` build may also use. The set still holds
+# nothing that can run code or escape the temporary work directory.
 SANDBOXED_EXTRA_PACKAGES: frozenset[str] = frozenset(
     {
         "pgfplots",
@@ -101,10 +103,11 @@ SANDBOXED_EXTRA_PACKAGES: frozenset[str] = frozenset(
     }
 )
 
-# Packages that can execute shell commands, run code, or read/write arbitrary
-# files. Rejected for any non-TRUSTED build regardless of the allowlist - the
-# allowlist is exclusive, but these are named so the error is explicit and so
-# the rule survives someone widening the allowlist by accident.
+# The packages that can run shell commands, run code, or read and write any
+# file. PyTeX refuses them for every non-trusted build, whatever the package
+# allowlist holds. The allowlist alone already excludes them. This set names
+# them, so the error text is explicit. The rule also survives a careless
+# widening of the allowlist.
 DANGEROUS_PACKAGES: frozenset[str] = frozenset(
     {
         "shellesc",
@@ -126,25 +129,32 @@ DANGEROUS_PACKAGES: frozenset[str] = frozenset(
 
 @dataclass(frozen=True)
 class TrustPolicy:
-    """The concrete gates a single build is allowed to pass."""
+    """The concrete gates that one build may pass."""
 
     level: TrustLevel
-    allow_python_exec: bool  # .py / .tex.py exec_module
-    allow_markdown_eval: bool  # [//]: # "EXPR" comments
-    allow_tex_replacements: bool  # \iffalse{pytex(...)}\fi
-    allow_shell_escape: bool  # tectonic -Z shell-escape / \write18
-    allow_network: bool  # tectonic bundle / biber auto-download
+    allow_python_exec: bool  # `exec_module` on a `.py` or `.tex.py` file
+    allow_markdown_eval: bool  # `[//]: # "EXPR"` comments
+    allow_tex_replacements: bool  # `\iffalse{pytex(...)}\fi` markers
+    allow_shell_escape: bool  # tectonic `-Z shell-escape` and `\write18`
+    allow_network: bool  # the tectonic bundle and the biber download
     enforce_package_allowlist: bool
     apply_rlimits: bool
-    # Refuse to compile a PDF if the OS sandbox is unavailable, rather than
-    # downgrading to the in-process floor (which does NOT block \input/\openin
-    # of host files). Fail-closed for non-trusted input.
+    # Refuse to compile a PDF when the Podman sandbox is not available,
+    # instead of a downgrade to the in-process floor. That floor does not
+    # block `\input` or `\openin` of host files. Non-trusted input fails
+    # closed.
     require_sandbox: bool
     package_allowlist: frozenset[str]
 
 
 def policy_for(level: TrustLevel) -> TrustPolicy:
-    """Return the capability policy for ``level``."""
+    """Return the capability policy for `level`.
+
+    Returns:
+        The `TrustPolicy` with every gate set for the given trust level. The
+        `trusted` policy has an empty package allowlist, because it does not
+        apply the allowlist at all.
+    """
     if level is TrustLevel.TRUSTED:
         return TrustPolicy(
             level=level,
@@ -171,7 +181,7 @@ def policy_for(level: TrustLevel) -> TrustPolicy:
             require_sandbox=True,
             package_allowlist=PACKAGE_ALLOWLIST | SANDBOXED_EXTRA_PACKAGES,
         )
-    # UNTRUSTED - the strict default.
+    # `untrusted` is the strict default.
     return TrustPolicy(
         level=level,
         allow_python_exec=False,

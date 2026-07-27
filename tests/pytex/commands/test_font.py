@@ -68,7 +68,8 @@ def test_size_switches():
 
 
 def test_size_switch_names_match_latex_spelling():
-    # The factory name is the LaTeX command spelling verbatim, case-exact:
-    # this is what makes the case-distinct sizes unambiguous in the registry.
+    # Each factory uses the LaTeX command spelling as its name, with the same
+    # letter case. This rule gives `large`, `Large` and `LARGE` three different
+    # registry keys.
     for factory in (large, Large, LARGE, huge, Huge):
         assert factory().rendered == f"\\{factory.__name__}"

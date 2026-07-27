@@ -1,24 +1,25 @@
 # pyright: reportUnusedCallResult=false
 """Font-independent Unicode handling for Markdown prose.
 
-tectonic compiles with XeTeX, which does *no* automatic font substitution: a
-code point absent from the active text font silently renders as a blank "tofu"
-box. The bundled DIN text font in particular lacks a handful of otherwise
-common symbols (``€ → ↔ ≤ ≥ ·``). Rather than emit tofu we rewrite each such
-code point to a font-independent construct via the data-driven :data:`GLYPH_NODES`
-table -- either eurosym's ``\\euro{}`` (which ships its own glyph) or an
-inline-math macro (rendered in the always-present math font), so the result no
-longer depends on the text font at all.
+tectonic compiles with XeTeX, and XeTeX does no automatic font substitution. A
+code point that the active text font does not cover prints as a blank "tofu"
+box, and nothing warns you. The bundled DIN text font lacks a few otherwise
+common symbols (`€ → ↔ ≤ ≥ ·`). The `GLYPH_NODES` table rewrites each such code
+point into a font-independent construct. A target is either the `\\euro{}`
+macro of eurosym, which ships its own glyph, or an inline-math macro, which
+uses the always-present math font. The result no longer depends on the text
+font.
 
-A code point that is *neither* in the table *nor* present in every bundled DIN
-weight is genuinely unrenderable: it is replaced by ``\\texttt{[missing glyph]}``
-and a :class:`MissingGlyphWarning` is raised, so silent tofu never reaches the
-PDF.
+A code point that is neither in the table nor present in every bundled DIN
+weight has no glyph at all. This module replaces it with
+`\\texttt{[missing glyph]}` and issues a `MissingGlyphWarning`. Silent tofu
+never reaches the PDF.
 
-The DIN coverage check parses the fonts' ``cmap`` tables directly (no external
-dependency). The rule is deliberately conservative: a code point counts as
-renderable only if it is present in *every* bundled DIN weight, because a glyph
-missing from a single weight (e.g. bold) would tofu wherever that weight is used.
+The DIN coverage check parses the `cmap` tables of the fonts directly, so it
+needs no external dependency. The rule is conservative on purpose. A code point
+counts as covered only when every bundled DIN weight has it. A glyph that one
+weight (bold, for example) lacks would tofu in every place that uses that
+weight.
 """
 
 from __future__ import annotations
@@ -53,17 +54,18 @@ class MissingGlyphWarning(UserWarning):
 
 
 def _math(macro: str) -> Callable[[], TeX]:
-    """Factory for an inline-math node wrapping a single base-LaTeX macro."""
+    """Return a factory for an inline-math node with one base-LaTeX macro."""
     return lambda: InlineMath(Raw(macro))
 
 
-# Unicode char -> font-independent node factory. The DIN text font lacks these
-# glyphs, so the raw char would tofu; every target is font-independent -- eurosym
-# ships its own euro glyph, and the math macros render in the math font. The
-# arrow targets match the ASCII-arrow rewrites (``->`` -> ``\rightarrow`` etc.).
-# ``·`` maps to ``\cdot`` (the math multiplication dot) rather than
-# ``\textperiodcentered``: the latter is a *text*-font glyph and would itself
-# tofu under DIN, whereas ``\cdot`` lives in the always-present math font.
+# Unicode character -> font-independent node factory. The DIN text font lacks
+# these glyphs, so the bare character would tofu. eurosym ships its own euro
+# glyph, and a math macro uses the math font. The arrow targets match the
+# ASCII-arrow rewrites, so `->` and `→` both give `\rightarrow`.
+#
+# `·` maps to `\cdot`, the math multiplication dot, and not to
+# `\textperiodcentered`. `\textperiodcentered` is a text-font glyph and would
+# tofu under DIN. `\cdot` lives in the always-present math font.
 GLYPH_NODES: Final[dict[str, Callable[[], TeX]]] = {
     "€": Euro,
     "→": _math(r"\rightarrow"),
@@ -73,18 +75,18 @@ GLYPH_NODES: Final[dict[str, Callable[[], TeX]]] = {
     "·": _math(r"\cdot"),
 }
 
-# Literal placeholder text emitted for a genuinely unrenderable character.
+# The placeholder text that stands in for a character without a glyph.
 MISSING_GLYPH_TEXT: Final[str] = "[missing glyph]"
 
 
 def glyph_node(ch: str) -> TeX:
-    """Return the spliced node for a single special character.
+    """Return the node that stands for one special character.
 
-    A character in :data:`GLYPH_NODES` becomes its font-independent node. Any
-    other character reaching here is unrenderable: it becomes a
-    ``\\texttt{[missing glyph]}`` placeholder and raises
-    :class:`MissingGlyphWarning` (naming the char and its code point), so the
-    loss is visible instead of a silent blank box.
+    A character in `GLYPH_NODES` becomes its font-independent node. Any other
+    character that reaches this function has no glyph. It becomes a
+    `\\texttt{[missing glyph]}` placeholder. The function also issues a
+    `MissingGlyphWarning` that names the character and its code point. You then
+    see the loss instead of a silent blank box.
     """
     factory = GLYPH_NODES.get(ch)
     if factory is not None:
@@ -99,12 +101,13 @@ def glyph_node(ch: str) -> TeX:
 
 
 def is_special_char(ch: str) -> bool:
-    """True if ``ch`` must be spliced as its own node rather than kept in prose.
+    """Test whether a character needs its own node instead of staying in prose.
 
-    A mapped glyph always splices. ASCII and whitespace always stay in prose
-    (ASCII is fully covered by DIN, and LaTeX escaping handles the specials).
-    Any other character splices only when DIN cannot render it -- in which case
-    :func:`glyph_node` turns it into a ``[missing glyph]`` placeholder.
+    A mapped glyph always gets its own node. ASCII and whitespace always stay
+    in prose. DIN covers ASCII in full, and LaTeX escaping handles the special
+    characters. Any other character gets its own node only when DIN has no
+    glyph for it. `glyph_node` then turns it into a `[missing glyph]`
+    placeholder.
     """
     if ch in GLYPH_NODES:
         return True
@@ -114,7 +117,7 @@ def is_special_char(ch: str) -> bool:
 
 
 def renderable_in_din(ch: str) -> bool:
-    """True if ``ch`` has a glyph in *every* bundled DIN weight."""
+    """Test whether every bundled DIN weight has a glyph for `ch`."""
     return ord(ch) in _din_codepoints()
 
 
@@ -122,10 +125,11 @@ def renderable_in_din(ch: str) -> bool:
 
 
 def _ints(fmt: str, data: bytes, offset: int) -> tuple[int, ...]:
-    """``struct.unpack_from`` for an all-integer format, typed as ints.
+    """Unpack an all-integer struct format and type the result as ints.
 
-    ``struct`` is stubbed as returning ``tuple[Any, ...]``; the cast pins the
-    homogeneous integer results so the parsers stay statically typed.
+    The type stubs give `struct.unpack_from` a `tuple[Any, ...]` return type.
+    The cast pins the homogeneous integer result, so the cmap parsers stay
+    statically typed.
     """
     return cast("tuple[int, ...]", struct.unpack_from(fmt, data, offset))
 
@@ -140,20 +144,23 @@ def _or(a: frozenset[int], b: frozenset[int]) -> frozenset[int]:
 
 @lru_cache(maxsize=1)
 def _din_codepoints() -> frozenset[int]:
-    """Code points present in every bundled DIN weight (parsed once, cached)."""
+    """Return the code points that every bundled DIN weight covers."""
     from pytex_hsrtreport.fonts import FONT_DIR
 
     weights = sorted((FONT_DIR / "DIN").glob("*.ttf"))
     if not weights:  # pragma: no cover - the fonts are bundled with the package
         return frozenset()
-    # Conservative: a code point is renderable only if EVERY weight has it.
     return reduce(_and, (_font_codepoints(path) for path in weights))
 
 
 def _table_offset(data: bytes, want: bytes) -> int | None:
-    """Offset of the ``want`` table in the sfnt table directory, or ``None``.
+    """Return the offset of the `want` table in the sfnt table directory.
 
-    Each 16-byte record holds tag[0:4], checksum[4:8], offset[8:12], length.
+    Each 16-byte record holds tag[0:4], checksum[4:8], offset[8:12] and
+    length[12:16].
+
+    Returns:
+        The offset in bytes, or `None` when the font has no such table.
     """
     (_sfnt, num_tables) = _ints(">IH", data, 0)
     return next(
@@ -167,7 +174,7 @@ def _table_offset(data: bytes, want: bytes) -> int | None:
 
 
 def _font_codepoints(path: Path) -> frozenset[int]:
-    """All Unicode code points mapped to a non-zero glyph in a TrueType font."""
+    """Return the code points that map to a non-zero glyph in a TrueType font."""
     data = path.read_bytes()
     cmap_off = _table_offset(data, b"cmap")
     if cmap_off is None:  # pragma: no cover - every text font has a cmap
@@ -176,7 +183,9 @@ def _font_codepoints(path: Path) -> frozenset[int]:
     sub_offsets = {
         _ints(">HHI", data, cmap_off + 4 + 8 * i)[2] for i in range(sub_count)
     }
-    # Union every Unicode subtable -- that is the coverage XeTeX sees.
+    # The union over every cmap subtable is the coverage that XeTeX sees. The
+    # code does not filter on the platform ID, so a non-Unicode subtable also
+    # contributes its codes.
     return reduce(
         _or,
         (_subtable_codepoints(data, cmap_off + off) for off in sub_offsets),
@@ -185,7 +194,7 @@ def _font_codepoints(path: Path) -> frozenset[int]:
 
 
 def _subtable_codepoints(data: bytes, offset: int) -> frozenset[int]:
-    """Code points of a single cmap subtable (formats 0, 4, 6, 12)."""
+    """Return the code points of one cmap subtable of format 0, 4, 6 or 12."""
     (fmt,) = _ints(">H", data, offset)
     if fmt == 0:
         return _cmap_format0(data, offset)
@@ -195,7 +204,7 @@ def _subtable_codepoints(data: bytes, offset: int) -> frozenset[int]:
         return _cmap_format6(data, offset)
     if fmt == 12:
         return _cmap_format12(data, offset)
-    return frozenset()  # other formats are non-Unicode / legacy; ignore
+    return frozenset()  # ignore the other formats: non-Unicode or deprecated
 
 
 def _cmap_format0(data: bytes, offset: int) -> frozenset[int]:
@@ -230,10 +239,10 @@ def _format4_glyph(
     range_off: tuple[int, ...],
     range_off_pos: int,
 ) -> int:
-    """Glyph id for ``code`` in segment ``i`` of a format-4 subtable."""
+    """Return the glyph id for `code` in segment `i` of a format-4 subtable."""
     if range_off[i] == 0:
         return (code + delta[i]) & 0xFFFF
-    # idRangeOffset indexes forward from its own array slot into glyphIdArray.
+    # idRangeOffset counts forward from its own array slot into glyphIdArray.
     glyph_pos = range_off_pos + 2 * i + range_off[i] + 2 * (code - start[i])
     if glyph_pos + 2 > len(data):
         return 0

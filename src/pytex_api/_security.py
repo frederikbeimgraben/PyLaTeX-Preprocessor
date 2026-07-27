@@ -1,12 +1,14 @@
 """Concrete mitigations for untrusted input.
 
-Pure helpers - no rendering, no subprocesses - so each can be tested in
-isolation:
+Every function here is pure. None renders, and none starts a subprocess, so a
+test can call each one in isolation. The module holds:
 
-* asset-name validation (no absolute paths, no ``..``, no separators),
-* Markdown eval-comment stripping (defuses the ``[//]: # "EXPR"`` hatch),
-* package extraction + allowlist/blocklist enforcement on rendered LaTeX,
-* a POSIX ``setrlimit`` pre-exec hook for the compile subprocess.
+* the asset-name check, which refuses an absolute path, a `..` component, and
+  a path separator,
+* the removal of the Markdown `[//]: # "EXPR"` eval comments,
+* the package extraction and the allowlist and blocklist checks on rendered
+  LaTeX,
+* a POSIX `setrlimit` pre-exec hook for the compile subprocess.
 """
 
 from __future__ import annotations
@@ -37,22 +39,27 @@ __all__ = [
     "validate_asset_name",
 ]
 
-# `\usepackage[opts]{a,b}` / `\RequirePackage{c}` - capture the brace list.
+# Matches `\usepackage[opts]{a,b}` and `\RequirePackage{c}`, and captures the
+# brace list.
 _PACKAGE_RE = re.compile(
     r"\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}"
 )
 
-# A `[//]: # "EXPR"` Markdown comment (link-reference-definition escape hatch),
-# in its quoted, parenthesised, or bare forms. Matched per line.
+# Matches a `[//]: # "EXPR"` Markdown comment, one line at a time. The comment
+# is a link reference definition, which Markdown uses as a comment form. The
+# pattern covers the quoted form, the parenthesized form, and the bare form.
 _EVAL_COMMENT_RE = re.compile(r"^[ \t]*\[//\]:[ \t]*#.*$", re.MULTILINE)
 
 
 def validate_asset_name(name: str) -> str:
-    """Return ``name`` if it is a safe, workdir-relative filename, else raise.
+    """Return `name` when it is a safe file name inside the work directory.
 
-    Rejects absolute paths, parent traversal (``..``), path separators, NUL
-    bytes, and empty/dot names so a caller-supplied asset cannot be written
-    outside the per-request workdir.
+    The check refuses an absolute path, a `..` component, a path separator, a
+    NUL byte, an empty name, and a dot name. So PyTeX cannot write an asset
+    of the caller outside the temporary work directory of the request.
+
+    Raises:
+        TrustError: The name fails one of the checks above.
     """
     if not name or name in {".", ".."}:
         raise TrustError(f"invalid asset name: {name!r}")
@@ -68,18 +75,18 @@ def validate_asset_name(name: str) -> str:
 
 
 def strip_markdown_eval_comments(text: str) -> str:
-    """Remove every ``[//]: # "EXPR"`` eval comment from Markdown ``text``.
+    """Remove every `[//]: # "EXPR"` eval comment from the Markdown `text`.
 
-    Defuses the Markdown code-execution hatch *before* conversion, so an
-    untrusted document cannot ``eval`` arbitrary Python via the comment even if
-    a future converter change forgot to gate it. Defence in depth alongside the
-    trust-level check.
+    This closes the Markdown code-execution surface before the conversion
+    starts. So an untrusted document cannot run Python through the comment,
+    even after a later change to the Markdown converter drops its own gate.
+    This is defense in depth next to the trust-level check.
     """
     return _EVAL_COMMENT_RE.sub("", text)
 
 
 def extract_packages(latex: str) -> set[str]:
-    """All package names requested via ``\\usepackage``/``\\RequirePackage``."""
+    """Return every package name that `\\usepackage` or `\\RequirePackage` names."""
     return {
         name
         for match in _PACKAGE_RE.finditer(latex)
@@ -89,11 +96,16 @@ def extract_packages(latex: str) -> set[str]:
 
 
 def enforce_packages(latex: str, policy: TrustPolicy) -> None:
-    """Reject rendered LaTeX that pulls a forbidden package.
+    """Reject rendered LaTeX that requires a forbidden package.
 
-    A dangerous package (code/shell/file surface) is refused for any
-    non-trusted build; with allowlist enforcement on, anything outside the
-    policy's allowlist is refused too. ``TRUSTED`` skips both checks.
+    PyTeX refuses a dangerous package for every non-trusted build. A dangerous
+    package has a code surface, a shell surface, or a file surface. When the
+    policy applies the package allowlist, PyTeX also refuses every package
+    outside that allowlist. A `trusted` build skips both checks.
+
+    Raises:
+        TrustError: The LaTeX requires a dangerous package, or a package
+            outside the allowlist of the policy.
     """
     if not policy.enforce_package_allowlist:
         return
@@ -113,7 +125,11 @@ def enforce_packages(latex: str, policy: TrustPolicy) -> None:
 
 
 def enforce_input_size(source: bytes, limits: BuildLimits) -> None:
-    """Reject input larger than ``limits.max_input_bytes``."""
+    """Reject input larger than `limits.max_input_bytes`.
+
+    Raises:
+        LimitError: The source is larger than the cap.
+    """
     if len(source) > limits.max_input_bytes:
         raise LimitError(
             f"input is {len(source)} bytes; the limit is {limits.max_input_bytes}"
@@ -121,7 +137,11 @@ def enforce_input_size(source: bytes, limits: BuildLimits) -> None:
 
 
 def enforce_output_size(output: bytes, limits: BuildLimits) -> None:
-    """Reject output larger than ``limits.max_output_bytes``."""
+    """Reject output larger than `limits.max_output_bytes`.
+
+    Raises:
+        LimitError: The output is larger than the cap.
+    """
     if len(output) > limits.max_output_bytes:
         raise LimitError(
             f"output is {len(output)} bytes; the limit is {limits.max_output_bytes}"
@@ -129,11 +149,14 @@ def enforce_output_size(output: bytes, limits: BuildLimits) -> None:
 
 
 def enforce_output_file_size(path: Path, limits: BuildLimits) -> None:
-    """Reject an output file larger than the cap before it is read.
+    """Reject an output file larger than the cap before anything reads it.
 
-    Checks ``stat().st_size`` so a multi-gigabyte PDF is never loaded into the
-    process (which would OOM); the in-memory check is the second line for the
-    bytes once read.
+    The check reads `stat().st_size`, so a multi-gigabyte PDF never lands in
+    the process and cannot cause an out-of-memory kill. The in-memory check is
+    the second line of defense for the bytes once read.
+
+    Raises:
+        LimitError: The file is larger than `limits.max_output_bytes`.
     """
     size = path.stat().st_size
     if size > limits.max_output_bytes:
@@ -143,7 +166,12 @@ def enforce_output_file_size(path: Path, limits: BuildLimits) -> None:
 
 
 def truncate_log(log: str, limits: BuildLimits) -> str:
-    """Cap the returned log to ``limits.max_log_chars`` characters."""
+    """Cap the returned log at `limits.max_log_chars` characters.
+
+    Returns:
+        The log itself when it fits, or the first `max_log_chars` characters
+        with a truncation note added.
+    """
     if len(log) <= limits.max_log_chars:
         return log
     head = log[: limits.max_log_chars]
@@ -151,11 +179,15 @@ def truncate_log(log: str, limits: BuildLimits) -> str:
 
 
 def make_rlimit_preexec(limits: BuildLimits) -> Callable[[], None] | None:
-    """Build a ``preexec_fn`` that caps CPU, address space, and file size.
+    """Build a `preexec_fn` that caps the CPU, the address space, and the file size.
 
-    Returns ``None`` where ``setrlimit`` is unavailable (non-POSIX), so the
-    caller falls back to the wall-clock timeout alone. The hook also starts a
-    new process group so the whole tree can be killed on timeout.
+    The hook also starts a new process group, so PyTeX can kill the whole
+    process tree on a timeout.
+
+    Returns:
+        The pre-exec hook, or `None` where `setrlimit` is not available, which
+        means a non-POSIX platform. The caller then has the wall-clock timeout
+        alone.
     """
     try:
         import os
@@ -180,5 +212,9 @@ def make_rlimit_preexec(limits: BuildLimits) -> Callable[[], None] | None:
 def filter_assets(
     assets: Mapping[str, bytes],
 ) -> dict[str, bytes]:
-    """Validate every asset name, returning a name-checked copy."""
+    """Check every asset name and return a name-checked copy of the mapping.
+
+    Raises:
+        TrustError: One name is not a safe file name.
+    """
     return {validate_asset_name(name): data for name, data in assets.items()}

@@ -1,3 +1,5 @@
+"""The `HSRTReport` document class, its preamble and its inline assets."""
+
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,8 +99,10 @@ DEFAULT_GEOMETRY: Final[dict[str, str]] = {
     "right": "2cm",
 }
 
-# Back-matter print commands. \printglossary/\printbibliography emit their own
-# \chapter* heading (and page break), so no manual \clearpage precedes them.
+# The back-matter print commands. `\printglossary` writes its own `\chapter*`
+# heading and page break, so no manual `\clearpage` comes before it.
+# `\printbibliography` runs with `heading=none`, so the command string below
+# carries its own `\clearpage` and `\chapter*` heading.
 BACKMATTER_HEADER = r"\newpage\appendix\backmatter\HSRTBackMattertrue"
 GLOSSARY_PRINT = r"\renewcommand*{\entryname}{Wort}\printglossary"
 ACRONYM_PRINT = r"\renewcommand*{\entryname}{Abkürzung}\printglossary[type=\acronymtype,title=Abkürzungen]"  # noqa: E501
@@ -106,7 +110,10 @@ BIBLIOGRAPHY_PRINT = r"\clearpage\chapter*{Literaturverzeichnis}\label{chap:bibl
 
 
 def _emit(dest: Path, data: bytes) -> str:
-    """Write `data` to `dest` (creating parent dirs) and return its posix path."""
+    """Write `data` to `dest` and return the posix path of `dest`.
+
+    The function creates the parent directories when they do not exist.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(data)
     return dest.as_posix()
@@ -115,7 +122,11 @@ def _emit(dest: Path, data: bytes) -> str:
 @Registry.add
 @dataclass
 class HSRTReport(KomaDocument):
-    """HSRT report: scrbook + KomaDocument + auto preamble + colour-collector."""
+    """An HSRT report that uses the `scrbook` document class.
+
+    The class extends `KomaDocument`. It builds its own preamble and collects
+    the colors that the body and `user_preamble` use.
+    """
 
     document_class: str = "scrbook"
 
@@ -133,8 +144,8 @@ class HSRTReport(KomaDocument):
     keywords: TeX | str | None = None
     abstract_heading: str = "Abstract"
     keywords_heading: str = "Keywords"
-    # Title-page logos: vendored names or custom file paths. None -> the
-    # variant's default set.
+    # Title-page logos, given as vendored names or as custom file paths.
+    # `None` selects the default set of the variant.
     logos: tuple[str, ...] | None = None
     data_lines: tuple[TitlePageDataLine, ...] = ()
 
@@ -160,10 +171,11 @@ class HSRTReport(KomaDocument):
         self.preamble: TeX | str = self._build_preamble()
 
     def discovered_colors(self) -> tuple[Color, ...]:
-        """Walk body + preamble, return every `Color` instance needing `\\definecolor`.
+        r"""Return every `Color` that needs a `\definecolor` command.
 
-        Also includes HSRT hyperref colours (stored as Python data inside the
-        hypersetup options dict, so unreachable via the tree walk).
+        The walk covers the body and `user_preamble`. The result also holds
+        the three HSRT hyperref colors. Those live as Python data inside the
+        hypersetup options dictionary, so the walk cannot reach them.
         """
         seen: dict[str, Color] = {}
         for c in (HSRT_CITE_COLOR, HSRT_LINK_COLOR, HSRT_URL_COLOR):
@@ -196,10 +208,12 @@ class HSRTReport(KomaDocument):
             yield HSRTGlossarySetup()
         yield HSRTListingStyles()
         yield AcrShortcut()
-        # Page setup first — provides \providecommand{\blenderfont} fallback
-        # that HSRTFontSetup's \renewcommand{\blenderfont} requires.
+        # The page setup comes first. It provides the
+        # `\providecommand{\blenderfont}` fallback that the
+        # `\renewcommand{\blenderfont}` in `HSRTFontSetup` needs.
         yield HSRTPageSetup()
-        # The skyline is drawn on every page; footer logos only when requested.
+        # LaTeX draws the skyline on every page. The footer logos appear only
+        # when `show_footer_logos` is true.
         logo_names = footer_logo_names(self.variant) if self.show_footer_logos else ()
         yield Raw(footer_logo_hook(logo_names), allow_replacements=False)
         if self.inline_fonts:
@@ -208,7 +222,7 @@ class HSRTReport(KomaDocument):
             yield Setmainfont(self.main_font)
         if self.sans_font is not None:
             yield Setsansfont(self.sans_font)
-        # \title / \author for running headers
+        # `\title` and `\author` feed the running headers.
         if self.title is not None:
             yield Raw(f"\\title{{{coerce_tex(self.title).rendered}}}")
         if self.author is not None:
@@ -217,13 +231,17 @@ class HSRTReport(KomaDocument):
             yield self.user_preamble
 
     def _build_full_body(self) -> TeX:
-        """Wrap user body with front/main/back matter, ToC, glossary, bibliography."""
+        """Wrap the body with the front matter, main matter and back matter.
+
+        The wrapper adds the title page, the table of contents, the glossary,
+        the acronym list and the bibliography when the matching flag is set.
+        """
         return Concat(*self._body_parts())
 
     def _body_parts(self) -> Iterator[TeX | str]:
-        # Trailing newlines keep these matter macros from running into whatever
-        # follows: a body that starts with plain text would otherwise produce
-        # e.g. `\mainmatterThis ...` (an undefined control sequence).
+        # The trailing newline keeps a matter macro apart from the text that
+        # follows it. Without the newline, a body that starts with plain text
+        # gives `\mainmatterThis ...`, an undefined control sequence.
         yield Raw("\\frontmatter\n")
         if self.show_titlepage and self.title is not None:
             yield TitlePage(
@@ -241,9 +259,10 @@ class HSRTReport(KomaDocument):
         yield Raw("\\mainmatter\n")
         yield coerce_tex(self.body)
 
-        # The header is only emitted when there is actual back-matter content:
-        # \backmatter calls hyperref's \bookmarksetup which fires \@ in vertical
-        # mode and crashes, so skip it entirely when there is nothing to show.
+        # Write the header only when the back matter has content.
+        # `\backmatter` calls the hyperref macro `\bookmarksetup`, which runs
+        # `\@` in vertical mode and crashes. Skip the header when there is
+        # nothing to show.
         if self.show_glossary or self.show_acronyms or self.show_bibliography:
             yield Raw(BACKMATTER_HEADER)
         if self.show_glossary:
@@ -254,10 +273,17 @@ class HSRTReport(KomaDocument):
             yield Raw(BIBLIOGRAPHY_PRINT)
 
     def write_inline_fonts(self, target_dir: str = ".") -> tuple[str, ...]:
-        """Write bundled font TTF files to ``<target_dir>/fonts/`` for compilation.
+        """Write the bundled TTF font files to `<target_dir>/fonts/`.
 
-        Call this before the TeX run so fontspec can resolve the font paths
-        embedded in the preamble by `HSRTFontSetup`.
+        Call this method before you compile the document. fontspec then finds
+        the font paths that `HSRTFontSetup` put in the preamble.
+
+        Args:
+            target_dir: The directory that holds the rendered `.tex` file.
+
+        Returns:
+            The posix path of each font file written. An empty tuple when
+            `inline_fonts` is false.
         """
         if not self.inline_fonts:
             return ()
@@ -270,26 +296,33 @@ class HSRTReport(KomaDocument):
         )
 
     def _title_logos(self) -> tuple[str, ...]:
-        """Title-page logos: the explicit ``logos`` override or variant default."""
+        """Return the explicit `logos` value, or the default set of the variant."""
         if self.logos is not None:
             return self.logos
         return default_logo_names(self.variant)
 
     def write_inline_logos(self, target_dir: str = ".") -> tuple[str, ...]:
-        """Write the logos used by the tikz overlays to ``<target_dir>/logos/``.
+        """Write the logos of the tikz overlays to `<target_dir>/logos/`.
 
-        The titlepage overlay and footer hook reference logos by relative path
-        (``logos/<file>``); this materialises those files next to the .tex so
-        tectonic can read them without tripping its absolute-path restrictions.
-        SVG sources are converted to PDF via `IncludeImage`.
+        The title page overlay and the footer hook name each logo by a path
+        relative to the rendered `.tex` file (`logos/<file>`). This method
+        writes the files to disk next to that `.tex` file. The tectonic binary
+        then reads them. Its restrictions on absolute paths do not apply.
+        `IncludeImage` converts an SVG source to PDF.
+
+        Args:
+            target_dir: The directory that holds the rendered `.tex` file.
+
+        Returns:
+            The posix path of each logo file written.
         """
         from pytex.model.image import IncludeImage
 
         from .logos import LOGO_OUTPUT_DIR, logo_output_name, logo_path
 
-        # Titlepage overlay uses the title logos (override or variant default),
-        # the footer hook its own set (which may differ, e.g. MAKERS); the
-        # skyline is emitted on every page regardless of show_footer_logos.
+        # The title page overlay uses the title logos. The footer hook uses
+        # its own set, which can differ. MAKERS is one such variant. LaTeX
+        # draws the skyline on every page, whatever `show_footer_logos` is.
         names = sorted(
             set(self._title_logos())
             | set(footer_logo_names(self.variant))
@@ -297,7 +330,6 @@ class HSRTReport(KomaDocument):
         )
         base = Path(target_dir)
         return tuple(
-            # IncludeImage.read_bytes converts svg -> pdf on the fly.
             _emit(
                 base / LOGO_OUTPUT_DIR / logo_output_name(name),
                 IncludeImage(path=logo_path(name), inline_base64=False).read_bytes(),
@@ -306,6 +338,7 @@ class HSRTReport(KomaDocument):
         )
 
     def default_logos(self) -> TeX:
+        """Return the default logos of the variant as a horizontal row."""
         return DefaultLogos(self.variant, inline_base64=self.inline_logos)
 
     @property
@@ -313,10 +346,10 @@ class HSRTReport(KomaDocument):
     def rendered(self) -> str:
         return Concat(
             DocumentClass(self.document_class, self.document_class_options),
-            # hyperfootnotes is only honoured as a hyperref load option, so it
-            # must be queued before \usepackage{hyperref}. The HSRT footnote
-            # setup never places hyperref's Hfootnote destination, so leaving
-            # footnote-mark links enabled produces dangling links.
+            # hyperref accepts `hyperfootnotes` only as a load option, so this
+            # line must come before `\usepackage{hyperref}`. The HSRT footnote
+            # setup never places the hyperref `Hfootnote` destination, so
+            # links on the footnote marks would dangle.
             Raw(r"\PassOptionsToPackage{hyperfootnotes=false}{hyperref}"),
             *self.ordered_packages(),
             self.inline_image_block,

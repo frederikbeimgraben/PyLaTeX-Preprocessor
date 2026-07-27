@@ -1,7 +1,7 @@
-"""PyInstaller entry point for the standalone `pytex` binary.
+"""PyInstaller entry script for the standalone `pytex` binary.
 
-Thin wrapper around the CLI's ``main`` so the frozen executable behaves exactly
-like the ``pytex`` console script.
+This module only calls `main` from the CLI, so the frozen binary behaves in
+the same way as the `pytex` console script.
 """
 
 import sys

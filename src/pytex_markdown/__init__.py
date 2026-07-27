@@ -1,12 +1,12 @@
-"""Markdown -> native PyTeX conversion.
+"""Markdown conversion into TeX nodes.
 
-Exposes two registered factories:
+The Markdown converter registers two factories:
 
-* ``Markdown(content, ...)``        - convert a Markdown string to a ``TeX`` tree.
-* ``IncludeMarkdown(path, ...)``    - read a file and convert it.
+* `Markdown(content, ...)` converts a Markdown string to a node tree.
+* `IncludeMarkdown(path, ...)` reads a file and converts it.
 
-GitHub-style callouts (``> [!NOTE]`` ...) become HSRT ``ColoredBox`` presets,
-so this package depends on ``pytex_hsrtreport``.
+A GitHub-style callout (`> [!NOTE]` and the other markers) becomes a
+`pytex_components` colored box, so this package needs `pytex_components`.
 """
 
 from __future__ import annotations
@@ -36,7 +36,8 @@ __all__ = [
     "split_frontmatter",
 ]
 
-# GFM enables pipe tables (and strikethrough/autolinks); images are core.
+# The `gfm` extension adds pipe tables, strikethrough and autolinks. Images
+# need no extension, because core Markdown already has them.
 PARSER = marko.Markdown(extensions=["gfm"])
 
 
@@ -47,11 +48,14 @@ def Markdown(
     base_level: int = 0,
     callouts: bool = True,
 ) -> TeX:
-    """Convert a Markdown string to a ``TeX`` tree.
+    """Convert a Markdown string to a node tree.
 
-    ``base_level`` shifts heading depth: ``0`` maps ``#`` to ``\\section`` (the
-    default), ``-1`` maps it to ``\\chapter``. ``callouts`` toggles converting
-    ``> [!NOTE]`` blocks into HSRT colored boxes.
+    Args:
+        base_level: The shift applied to the heading depth. The default `0`
+            maps a Markdown `#` to `\\section`. A value of `-1` maps it to
+            `\\chapter`.
+        callouts: When true, a `> [!NOTE]` block becomes a colored box. When
+            false, the block stays an ordinary quote.
     """
     ast = PARSER.parse(content)
     converter = MarkdownConverter(base_level=base_level, callouts=callouts)
@@ -66,6 +70,13 @@ def IncludeMarkdown(
     callouts: bool = True,
     encoding: str = "utf-8",
 ) -> TeX:
-    """Read a Markdown file and convert it (see :func:`Markdown`)."""
+    """Read a Markdown file and convert it.
+
+    The `base_level` and `callouts` arguments have the same meaning as in
+    `Markdown`.
+
+    Args:
+        encoding: The text encoding of the file. The default is `utf-8`.
+    """
     content = Path(path).read_text(encoding=encoding)
     return Markdown(content, base_level=base_level, callouts=callouts)

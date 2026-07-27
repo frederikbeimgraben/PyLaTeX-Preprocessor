@@ -1,80 +1,88 @@
 # Changelog
 
-All notable changes to this project are documented here. The format is based on
+This file lists each notable change to PyTeX. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
-adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ## [1.0.6] - 2026-06-10
 
 ### Fixed
-- **biber download now verifies the binary actually runs and falls back.** The
-  Linux x86_64 candidate list offers the *musl* build first, but it is
-  dynamically linked against the musl loader, so on a glibc-only host (e.g.
-  Debian-slim) it cannot exec at all (`No such file or directory`) — tectonic
-  then failed with "Running external tool biber … No such file or directory"
-  even though biber was on PATH. `_ensure_biber` now test-runs each downloaded
-  candidate and falls back to the next (glibc) one when it doesn't execute.
+- **The biber download now checks that the binary runs, and falls back.** The
+  candidate list for Linux x86_64 offers the *musl* build first. That build
+  links dynamically against the musl loader. A glibc-only host, for example
+  Debian slim, cannot exec it at all (`No such file or directory`). The
+  tectonic binary then stopped with "Running external tool biber … No such
+  file or directory", although biber was on PATH. `_ensure_biber` now runs
+  each downloaded candidate. When a candidate does not run, PyTeX falls back
+  to the next one, the glibc build.
 
 ## [1.0.5] - 2026-06-10
 
 ### Fixed
-- **biblatex documents render via the API without a pre-installed biber.** The
-  report/protocol preamble always loads `biblatex`, so tectonic shells out to
-  `biber`; the API compile path (unlike the builder's `run_tectonic`) never set
-  it up, so a container with only tectonic failed with `Running external tool
-  biber … No such file or directory`. The API compile now probes the BCF and
-  puts a version-matched biber on the child's PATH (download+cached), but only
-  when the document actually uses biblatex — plain docs skip the extra pass.
+- **A biblatex document now compiles through the API without a pre-installed
+  biber.** The preamble of a report and of a meeting protocol always loads
+  `biblatex`, so the tectonic binary calls `biber`. The compile path of the
+  API never provided biber, unlike `run_tectonic` in the builder. A container
+  with only the tectonic binary then failed with `Running external tool biber
+  … No such file or directory`. The API compile now reads the BCF file and
+  puts a version-matched biber on the PATH of the child process. PyTeX
+  downloads that biber and caches it. This runs only when the document uses
+  biblatex. A plain document skips the extra compile pass.
 
 ## [1.0.3] - 2026-06-10
 
 ### Fixed
-- **Logo materialisation is best-effort and no longer crashes converter-less
-  renders.** 1.0.2 made the Markdown render path materialise logos, but SVG
-  logos are converted via `inkscape`; a render without it on PATH (e.g. the
-  sandbox warm-up that renders every variant) then failed hard. Logo/image
-  materialisation now logs and continues on a missing converter / conversion
-  error, so PDF-logo report/protocol builds work and SVG variants degrade
-  gracefully instead of aborting the render.
+- **PyTeX writes the logos to disk as a best-effort step, and a render without
+  a converter no longer fails.** Version 1.0.2 made the Markdown render path
+  write the logos to disk. `inkscape` converts an SVG logo. A render on a host
+  without `inkscape` on PATH then failed. The sandbox warm-up, which
+  renders every variant, is one such render. The step now logs a missing
+  converter or a conversion error and continues. So a report or meeting
+  protocol with a PDF logo builds. A variant with an SVG logo renders without
+  that logo instead of a stopped render.
 
 ## [1.0.2] - 2026-06-10
 
 ### Fixed
-- **Markdown report/protocol builds now materialise their logos (and inline
-  images).** The tikz title/footer overlays reference logos by the relative
-  `logos/<file>` path, but the Markdown render path only wrote the inline fonts
-  into the compile workdir — tectonic then failed with `Unable to load picture
-  or PDF file 'logos/...'`. `_render_markdown_source` now also calls the
-  document's `write_inline_logos`/`write_inline_images` when present (mirroring
-  the builder/Python render path); plain documents are unaffected.
+- **A Markdown report build and a Markdown meeting protocol build now write
+  their logos and inline images to disk.** The tikz title overlay and footer
+  overlay name each logo by the relative path `logos/<file>`. The Markdown
+  render path wrote only the inline fonts into the temporary work directory.
+  The tectonic binary then failed with `Unable to load picture or PDF file
+  'logos/...'`. `_render_markdown_source` now also calls `write_inline_logos`
+  and `write_inline_images` on the document when the document has them. This
+  mirrors the render path of the builder and of Python input. A plain document
+  is unaffected.
 
 ## [1.0.1] - 2026-06-09
 
 ### Fixed
-- **Markdown report/protocol builds now materialise their bundled fonts.** The
-  report/protocol variants (`report`, `report-makers`, `protocol-asta`,
-  `protocol-stupa`) embed the bundled DIN/Blender fonts via fontspec's
-  `Path=fonts/...`, but the Markdown render path never wrote those TTFs into the
-  compile workdir — XeTeX then failed with `Package fontspec Error: The font
-  "Blender-Medium" cannot be found`. `_render_markdown_source` now receives the
-  workdir and writes the document's inline fonts into it (mirroring the Python
-  render path); plain documents are unaffected.
+- **A Markdown report build and a Markdown meeting protocol build now write
+  their bundled fonts to disk.** The report variants and meeting protocol
+  variants (`report`, `report-makers`, `protocol-asta`, `protocol-stupa`) load
+  the bundled DIN and Blender fonts with the fontspec option `Path=fonts/...`.
+  The Markdown render path never wrote those TTF files into the temporary work
+  directory. XeTeX then failed with `Package fontspec Error: The font
+  "Blender-Medium" cannot be found`. `_render_markdown_source` now gets the
+  temporary work directory and writes the inline fonts of the document into it.
+  This mirrors the render path of Python input. A plain document is unaffected.
 
 ## [1.0.0] - 2026-06-04
 
-First stable release. The public API is now frozen under Semantic Versioning —
-see the **Stability** section in the README for exactly what that covers. The
-headline addition is a sandboxed render API for untrusted input; the breaking
-changes are two factory renames.
+The first stable release. PyTeX now freezes the public API under Semantic
+Versioning. The **Stability** section in the README states what the freeze
+covers. The main addition is a render API for input you do not trust. The two
+breaking changes are factory renames.
 
 ### BREAKING
-- **Font size switch factories renamed to the verbatim LaTeX spelling.** The old
-  PascalCase names could not all coexist (`\large`/`\Large`/`\LARGE` collide in
-  case-insensitive PascalCase), which forced the awkward `LargeMid` / `LargeBig`
-  / `HugeBig`. The factories — and their registry keys, used in inline
-  `pytex(...)` markers — now mirror the LaTeX command exactly:
+- **PyTeX renamed the font-size switch factories to the exact LaTeX spelling.**
+  The old PascalCase names could not all exist together, because `\large`,
+  `\Large` and `\LARGE` collide in case-insensitive PascalCase. That collision
+  forced the names `LargeMid`, `LargeBig` and `HugeBig`. Each factory now
+  matches its LaTeX command exactly. The registry keys, which you use in an
+  inline `pytex(...)` marker, match it too:
 
   | old             | new            | LaTeX command   |
   | --------------- | -------------- | --------------- |
@@ -89,172 +97,197 @@ changes are two factory renames.
   | `Huge`          | `huge`         | `\huge`         |
   | `HugeBig`       | `Huge`         | `\Huge`         |
 
-  Note the semantic flip: the old `Large`/`Huge` emitted `\large`/`\huge`; they
-  now emit `\Large`/`\Huge`. No aliases are provided — an alias on the reused
-  `Large`/`Huge` names would silently change behaviour, so the break is clean.
-  Font family/series/shape switches are unchanged.
-- **`\fill` length factory renamed `Fill` → `Fill_len`.** The length
-  (`pytex.commands.lengths.Fill`) and the TikZ `\fill` path command
-  (`pytex_tikz.Fill`) both registered under the key `"Fill"`, so reverse lookup
-  and the `pytex(...)` namespace resolved to whichever imported last. The length
-  now takes the `_len` suffix (as `Arraystretch_len` already does), leaving the
-  bare `Fill` key to TikZ. A deprecated `pytex.commands.lengths.Fill` alias still
-  imports and emits a `DeprecationWarning`; it may be removed in a future major.
+  The meaning of two names changed. The old `Large` and `Huge` rendered
+  `\large` and `\huge`. The new `Large` and `Huge` render `\Large` and `\Huge`.
+  PyTeX gives no alias for the old names. An alias on the reused `Large` and
+  `Huge` names would change the output without a warning, so the break is
+  clean. The font family, series and shape switches are unchanged.
+- **PyTeX renamed the `\fill` length factory from `Fill` to `Fill_len`.** The
+  length (`pytex.commands.lengths.Fill`) and the TikZ `\fill` path command
+  (`pytex_tikz.Fill`) both used the registry key `"Fill"`. So a reverse lookup
+  and the `pytex(...)` namespace resolved to the one that imported last. The
+  length now carries the `_len` suffix, as `Arraystretch_len` already does.
+  That leaves the bare `Fill` key to TikZ. The deprecated
+  `pytex.commands.lengths.Fill` alias still imports and raises a
+  `DeprecationWarning`. A future major release can remove it.
 
 ### Added
-- **`pytex_api` — blob-in, blob-out render library.** Takes source bytes
-  (Markdown, `.tex`, or `.tex.py`) and returns rendered `.tex` or compiled PDF
-  bytes; the caller never touches the filesystem (all I/O runs in a per-request
-  temp dir that is removed on return). Trust levels gate code execution:
-  `UNTRUSTED` (default) and `SANDBOXED` refuse Python exec, render
-  `.tex`/Markdown code surfaces inert, force shell-escape off, block in-request
-  network, apply CPU/memory/file-size limits and a package allowlist; `TRUSTED`
-  unlocks the full pipeline. Malformed or hostile input maps to a typed
-  `CompileError` with no path or stacktrace leaked to the caller. Async renders
-  are isolated from each other.
-- **Rootless Podman sandbox** for untrusted/sandboxed compiles: `--network
-  none`, read-only rootfs, `--cap-drop ALL`, no-new-privileges, the default
-  seccomp profile, and cgroup memory/pids/cpu caps. Falls back to the in-process
-  `setrlimit` + timeout floor (with a warning, never silently) when Podman is
-  unavailable.
-- **`pytex-sandbox-init` console script** — preflight (podman present? rootless
-  subuid/subgid?), build the sandbox image, warm the bundle cache, and turn raw
-  podman errors into actionable hints.
-- **CLI trust gating (`--untrusted` / `--trust-level`).** The `pytex` CLI stays
-  a **trusted** context by default: it executes `.py` inputs, evaluates `.tex`
-  `pytex(...)` replacements and Markdown `eval` comments, and enables
-  shell-escape — safe only for your own documents. `--untrusted` (shorthand for
-  `--trust-level untrusted`) or `--trust-level sandboxed` route the build through
-  the `pytex_api` trust policy instead. The default is unchanged, so existing
-  invocations behave as before.
-- **Font-independent Unicode in Markdown prose.** tectonic (XeTeX) does no font
-  fallback, so a code point the DIN text font lacks renders as a blank "tofu"
-  box. A data-driven table rewrites such characters: `€` → `\euro{}`, and
-  `→ ↔ ≤ ≥ ·` → inline math (`\rightarrow \leftrightarrow \leq \geq \cdot`). A
-  character that is neither mapped nor present in every bundled DIN weight
-  becomes a `\texttt{[missing glyph]}` placeholder and raises a
-  `MissingGlyphWarning` naming the character and its `U+XXXX` code point, so
-  silent tofu never reaches the PDF. DIN coverage is read from the bundled fonts'
-  `cmap` tables (no new dependency); code spans and blocks are left verbatim.
-- **Custom report logos.** A report can set its own logo via the `logo`/`logos`
-  frontmatter key, mixing vendored names and file paths
-  (`logos: [INF, /path/to/brand.svg]`).
-- **Golden-file regression tests** (`tests/golden/`) freeze the `.tex` render
-  output — one sample per Markdown variant (`plain`, `report`, `protocol-asta`,
-  `protocol-stupa`) plus a `.tex.py` node tree — rendered to a string (no
-  tectonic/PDF) and compared byte-for-byte against checked-in goldens, so a
-  refactor cannot silently change the output. Regenerate with
-  `PYTEX_UPDATE_GOLDEN=1 pytest tests/golden`.
-- **1.0 public API frozen.** Every package declares an explicit `__all__`; the
-  README gained a **Stability** section stating what SemVer covers (exported
-  names plus the registry keys reachable from `pytex(...)`) and what is internal
-  (leading-underscore names, underscore-prefixed modules, anything outside
-  `__all__`).
-- **Linux arm64 standalone binary** in releases, alongside x86_64, macOS and
-  Windows.
+- **`pytex_api`, a library that takes bytes and returns bytes.** It takes the
+  source bytes of a Markdown, `.tex` or `.tex.py` input file. It returns the
+  rendered `.tex` file or the compiled PDF as bytes. The caller never touches
+  the file system, because all input and output stays in a temporary work
+  directory per request. PyTeX removes that directory on return. The trust
+  level gates code execution. `untrusted` is the default. A build at
+  `untrusted` or `sandboxed` refuses Python execution and makes the
+  code-execution surfaces of a `.tex` or Markdown input inert. It also forces
+  shell-escape off, blocks the network during the request, and applies limits
+  on CPU time, memory and file size plus a package allowlist. A build at
+  `trusted` unlocks the full pipeline. Malformed or hostile input becomes a
+  typed error, for example a `CompileError`. The caller sees no file path and
+  no stack trace. Two async renders stay isolated from each other.
+- **The rootless Podman sandbox** for a compile at `untrusted` or `sandboxed`.
+  The sandbox uses `--network none`, a read-only root file system,
+  `--cap-drop ALL`, no-new-privileges, the default seccomp profile, and cgroup
+  caps on memory, pids and CPU. If Podman is not available, such a compile
+  fails closed and reports why. PyTeX never falls back to the weaker
+  in-process `setrlimit` and timeout floor for input it does not trust.
+- **The `pytex-sandbox-init` console script.** It checks that Podman is
+  present and that the rootless subuid and subgid ranges exist. It then builds
+  the sandbox image and warms the bundle cache. It also turns a raw Podman
+  error into a hint that tells you what to do.
+- **Trust gating in the command (`--untrusted` and `--trust-level`).** The
+  `pytex` command keeps the trust level `trusted` by default. It runs a `.py`
+  input file. It evaluates an inline `pytex(...)` marker in a `.tex` file and
+  a Markdown `eval` comment. It also turns shell-escape on. Use the default
+  only for your own documents. `--untrusted` is the short form of
+  `--trust-level untrusted`. `--untrusted` and `--trust-level sandboxed` route
+  the build through the trust policy of `pytex_api` instead. The default is
+  unchanged, so an existing command line behaves as before.
+- **Font-independent Unicode in Markdown prose.** The tectonic binary compiles
+  with XeTeX, and XeTeX does no font fallback. A code point that the DIN text
+  font lacks then prints as a blank "tofu" box. A table now rewrites such a
+  character. It maps `€` to `\euro{}`, and it maps `→ ↔ ≤ ≥ ·` to inline math
+  (`\rightarrow \leftrightarrow \leq \geq \cdot`). A character that the table
+  does not map, and that is not in every bundled DIN weight, becomes a
+  `\texttt{[missing glyph]}` placeholder. PyTeX also raises a
+  `MissingGlyphWarning` that names the character and its `U+XXXX` code point.
+  So silent tofu never reaches the PDF. PyTeX reads the DIN coverage from the
+  `cmap` tables of the bundled fonts, which needs no new dependency. A code
+  span and a code block stay verbatim.
+- **Custom report logos.** A report can set its own logo with the `logo` or
+  `logos` frontmatter key. The value can mix a vendored logo name and a file
+  path (`logos: [INF, /path/to/brand.svg]`).
+- **Golden-file regression tests** (`tests/golden/`) freeze the rendered
+  LaTeX. There is one sample per Markdown variant (`plain`, `report`,
+  `protocol-asta`, `protocol-stupa`), plus one `.tex.py` node tree. The test
+  renders each sample to a string and runs no compile pass. It then compares
+  the string byte for byte against the golden file in the repository. So a
+  refactor cannot change the output without a test failure. To write the
+  golden files again, run `PYTEX_UPDATE_GOLDEN=1 pytest tests/golden`.
+- **PyTeX freezes the 1.0 public API.** Every package declares an explicit
+  `__all__`. The README has a new **Stability** section. It states what
+  Semantic Versioning covers: the exported names plus the registry keys that
+  an inline `pytex(...)` marker can reach. It also states what is internal: a
+  name with a leading underscore, a module with a leading underscore, and
+  anything outside `__all__`.
+- **A standalone binary for Linux arm64** in each release, next to the
+  binaries for x86_64, macOS and Windows.
 
 ### Changed
-- **`eurosym` added to the untrusted/sandboxed package allowlist**, so a `€` in
-  untrusted Markdown renders instead of failing with a `TrustError`.
-- **Generic widgets extracted into a new `pytex_components` package** — callout
-  boxes, voting tally, draft watermark, word-count macros, conditional/smart page
-  breaks, the author-year `Fcite`, and cleveref labels. They carry no HSRT
-  branding and depend only on core pytex; `pytex_hsrtreport` re-exports them, so
-  existing imports keep working. No behaviour change.
-- **Setup hardening.** The tectonic/biber binary cache moved out of `/tmp` to
-  `$XDG_CACHE_HOME/pytex` (or `~/.cache/pytex`) so it survives a reboot, with a
-  HOME-unset fallback. The sandbox image is arch-aware (x86_64 / aarch64), the
-  cache warm-up runs a real compile per variant, and failed-download /
-  Python-3.14 t-string errors now give actionable messages.
+- **PyTeX added `eurosym` to the package allowlist** for `untrusted` and
+  `sandboxed`. A `€` in Markdown from a source you do not trust now renders
+  instead of a `TrustError`.
+- **PyTeX moved the general components into a new `pytex_components`
+  package.** The package holds the colored boxes, the voting tally, the draft
+  watermark, and the word-count macros. It also holds the conditional and
+  smart page breaks, the author-year `Fcite`, and the cleveref labels. They
+  carry no HSRT branding and need only the `pytex` core package.
+  `pytex_hsrtreport` re-exports them, so an existing import keeps working. The
+  behavior is unchanged.
+- **Hardened setup.** The cache for the tectonic binary and for biber moved out
+  of `/tmp` to `$XDG_CACHE_HOME/pytex`, or to `~/.cache/pytex`, so the cache
+  survives a reboot. There is a fallback for an unset `HOME`. The sandbox image
+  matches the host architecture, x86_64 or aarch64. The cache warm-up runs a
+  real compile per variant. A failed download, and a t-string error on a Python
+  older than 3.14, now give a message that tells you what to do.
 
 ### Fixed
-- **Concurrency-safe box nesting.** `_render_depth` moved to a `ContextVar`, so
-  concurrent async renders no longer corrupt each other's box-nesting depth and
-  opacities.
-- **Report footer on back-matter pages.** "Seite N von N" was missing on every
-  back-matter page — most visibly the bibliography, the document's last page — and
-  now renders correctly. Front- and main-matter footers are unchanged.
+- **Box nesting is now safe under concurrency.** `_render_depth` moved to a
+  `ContextVar`. Two concurrent async renders no longer corrupt the box-nesting
+  depth and the opacities of each other.
+- **The report footer on a back-matter page.** The line "Seite N von M" was
+  missing on every back-matter page. The bibliography, which is the last page
+  of the document, shows this best. The line now renders. The footer of the
+  front matter and of the main matter is unchanged.
 
 ## [0.4.7] - 2026-06-04
 
 ### Added
-- Configurable title-page headings: `abstract_heading` / `keywords_heading`
-  frontmatter keys (with aliases) override the default "Abstract" / "Keywords"
-  labels.
+- Title-page headings that you can configure. The frontmatter keys
+  `abstract_heading` and `keywords_heading`, and their aliases, replace the
+  default labels "Abstract" and "Keywords".
 
 ### Fixed
-- Content-address the SVG→PDF cache so an edited vendored logo (e.g. the
-  left-aligned MAKERS title-page logo) reconverts instead of reusing a stale PDF.
-- Align wrapped title-page titles: the per-first-line optical kern that left a
-  two-line title's later lines offset from the first is gone.
+- The cache for the SVG to PDF conversion now uses the file content as its
+  key. An edited vendored logo, for example the left-aligned MAKERS title-page
+  logo, converts again instead of a stale PDF.
+- PyTeX now aligns the lines of a title that wraps. The optical kern for the
+  first line left the later lines of a two-line title offset from the first
+  line. That kern is gone.
 
 ## [0.4.6] - 2026-06-04
 
 ### Added
-- **Markdown citations (Pandoc syntax).** `[@key]` and `[@key, p. 5]` render as
-  `\autocite`, `[@a; @b]` as `\autocite{a,b}`, and a narrative `@key` as
-  `\textcite`. Keys may contain internal punctuation but not trailing, so a
-  sentence period is never swallowed; code spans and e-mail addresses are left
-  alone. Each citation registers the `biblatex` requirement automatically.
-- **Bibliographies from frontmatter.** A `bibliography:` key (also `literatur` /
-  `bibliografie`) accepts either inline BibTeX as a `|` block scalar or a path to
-  a `.bib` file. Reports embed it via `filecontents` + `\addbibresource` (so the
-  document stays self-contained) and emit `\printbibliography` with the numeric
-  biblatex style.
-- **YAML block scalars** (`|` literal and `>` folded, with chomping indicators)
-  in frontmatter, enabling multi-line values such as an inline bibliography.
-- **`report-makers` variant** branded with the MAKERS logo — left-aligned on the
-  title page, right-aligned in the footer.
-- **`Autocite` postnote** argument for the `\autocite[note]{key}` form.
+- **Markdown citations in the Pandoc syntax.** `[@key]` and `[@key, p. 5]`
+  render as `\autocite`, `[@a; @b]` renders as `\autocite{a,b}`, and a
+  narrative `@key` renders as `\textcite`. A key can hold punctuation inside,
+  but not at the end, so a sentence period never becomes part of the key. The
+  Markdown converter leaves a code span and an e-mail address alone. Each
+  citation adds the `biblatex` package requirement.
+- **A bibliography from the frontmatter.** The `bibliography:` key (also
+  `literatur` and `bibliografie`) takes inline BibTeX as a `|` block scalar or
+  the path of a `.bib` file. A report writes it with `filecontents` and
+  `\addbibresource`, so the document stays self-contained. The report then
+  renders `\printbibliography` with the numeric biblatex style.
+- **YAML block scalars** in the frontmatter: `|` for literal and `>` for
+  folded, both with chomping indicators. A value can now span several lines,
+  for example an inline bibliography.
+- **The `report-makers` variant** with the MAKERS logo. The logo sits on the
+  left on the title page and on the right in the footer.
+- **The `postnote` argument of `Autocite`** for the `\autocite[note]{key}`
+  form.
 
 ### Changed
-- **Merged `pytex_protocol` into `pytex_markdown`.** The generic frontmatter
-  parser moved to `pytex_markdown.frontmatter` and the meeting-protocol rendering
-  to `pytex_markdown.protocol`. `pytex_protocol` remains as a deprecation shim
-  re-exporting the public API.
-- Markdown tables now get vertical breathing room (`\addvspace`) above and below.
-- The biber auto-downloader mirrors every upstream platform (glibc/musl Linux
-  x86_64, Linux aarch64, macOS x86_64/universal, Windows) and prefers the static
-  musl build on Linux x86_64, fixing the `libnsl.so.1` load failure.
+- **PyTeX merged `pytex_protocol` into `pytex_markdown`.** The general
+  frontmatter parser moved to `pytex_markdown.frontmatter`. The meeting
+  protocol rendering moved to `pytex_markdown.protocol`. `pytex_protocol` stays
+  as a deprecated shim that re-exports the public API.
+- A Markdown table now gets vertical space (`\addvspace`) above and below.
+- The biber downloader now covers every upstream platform: Linux x86_64 with
+  glibc and with musl, Linux aarch64, macOS x86_64 and universal, and Windows.
+  On Linux x86_64 it prefers the static musl build. That fixes the
+  `libnsl.so.1` load failure.
 
 ## [0.4.5] - 2026-06-03
 
 ### Added
-- MAKERS logos and an initial `report-makers` variant.
+- The MAKERS logos and a first `report-makers` variant.
 
 ## [0.4.4] - 2026-06-03
 
 ### Fixed
-- Render the Euro sign `€` via `eurosym`'s `\euro{}` (DIN-font safe) and escape a
-  literal `"` for babel.
+- The Markdown converter renders the euro sign `€` with `\euro{}` from
+  `eurosym`, which is safe under the DIN font. It also escapes a literal `"`
+  for babel.
 
 ## [0.4.3] - 2026-06-02
 
 ### Fixed
-- Resolve Markdown image paths absolutely; report title-page data lines.
+- PyTeX resolves a Markdown image path to an absolute path. PyTeX also fixes
+  the data lines on the report title page.
 
 ## [0.4.2] - 2026-06-02
 
 ### Added
-- Markdown tables, code/table wrapping, smart links and math arrows.
+- Markdown tables, wrapping for code and tables, smart links, and math arrows.
 
 ### Changed
-- Licensed under GPL-3.0-or-later.
+- The project uses the GPL-3.0-or-later license.
 
 ## [0.4.1] - 2026-06-02
 
 ### Added
-- `tex(t"...")` PEP 750 template-string examples; an HSRTReport rebuilt with
-  t-strings.
+- Examples for the PEP 750 template strings `tex(t"...")`. An `HSRTReport`
+  built again with t-strings.
 
 ### Fixed
-- Strip outer whitespace inside math delimiters.
+- PyTeX strips the outer whitespace inside a math delimiter.
 
 ## [0.4.0] - 2026-06-02
 
 ### Added
-- Standalone PyInstaller binary with a bundle config.
-- `tex(t"...")` template strings (PEP 750, Python 3.14+).
+- A standalone PyInstaller binary with a bundle config.
+- The template strings `tex(t"...")` (PEP 750, Python 3.14 or later).
 
 [Unreleased]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/frederikbeimgraben/PyTeX-Preprocessor/releases/tag/v1.0.0

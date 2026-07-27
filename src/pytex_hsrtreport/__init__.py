@@ -1,5 +1,8 @@
-# The generic widgets moved to ``pytex_components``; re-export the modules and
-# symbols so ``pytex_hsrtreport.ColoredBox`` (and ``.boxes`` etc.) keep working.
+"""The HSRT report document class and the nodes that build it."""
+
+# The generic components moved to `pytex_components`. This package re-exports
+# their modules and names, so `pytex_hsrtreport.ColoredBox` and
+# `pytex_hsrtreport.boxes` still work.
 from pytex_components import (
     ColoredBox,
     Conditionalpagebreak,

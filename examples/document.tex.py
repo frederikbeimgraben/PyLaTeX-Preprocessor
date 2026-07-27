@@ -1,10 +1,11 @@
-"""`.tex.py` example: build a full document with the Python API.
+"""Example `.tex.py` file that builds a full document with the Python API.
 
-    pytex examples/document.tex.py            # -> document.out.tex
+    pytex examples/document.tex.py             # -> build/document.out.tex
     pytex examples/document.tex.py --build     # -> build/document.out.pdf
 
-A `.tex.py` file is plain Python that exposes a module-level ``__pytex__``
-holding a ``TeX`` node (here a ``Document``). The builder renders it.
+A `.tex.py` file is plain Python. It must define the `__pytex__` node at
+module level. Here that node is a `Document`. PyTeX renders that node into
+the rendered `.tex` file.
 """
 
 from pytex.commands.builtin import (
