@@ -6,6 +6,8 @@ A variant maps a Markdown source to a concrete document:
 * `report` - an HSRT report with a title page and a table of contents.
 * `report-makers` - an HSRT report with the MAKERS logo on the title page and
   in the footer of every page.
+* `protocol` - a meeting protocol with no corporate design of its own. The
+  caller names the logos with the `logos` and `footer_logos` keys.
 * `protocol-asta` - an AStA meeting protocol. It is an HSRT report with the
   AStA logos.
 * `protocol-stupa` - a StuPa meeting protocol. It is an HSRT report with the
@@ -52,6 +54,7 @@ VARIANT_NAMES: tuple[str, ...] = (
     "plain",
     "report",
     "report-makers",
+    "protocol",
     "protocol-asta",
     "protocol-stupa",
 )
@@ -88,7 +91,11 @@ def build_document(
     if variant == "report":
         return _report(body, options)
     if variant == "report-makers":
-        return _report(body, options, logo_variant=Variant.MAKERS, footer_logos=True)
+        return _report(
+            body, options, logo_variant=Variant.MAKERS, show_footer_logos=True
+        )
+    if variant == "protocol":
+        return _protocol(meta, body, options, force=None)
     if variant == "protocol-asta":
         return _protocol(meta, body, options, force=Variant.ASTA)
     if variant == "protocol-stupa":
@@ -121,9 +128,10 @@ def _report(
     options: dict[str, object],
     *,
     logo_variant: Variant = Variant.INF,
-    footer_logos: bool = False,
+    show_footer_logos: bool = False,
 ) -> TeX:
     title = _str(options, "title", "titel")
+    footer_logos = _footer_logos(options)
     derived = False
     if title is None:
         title, body = _derive_title(body)
@@ -138,7 +146,9 @@ def _report(
     return HSRTReport(
         variant=logo_variant,
         show_titlepage=title is not None,
-        show_footer_logos=footer_logos,
+        # An explicit footer set also turns the footer on. Without that, the
+        # key would name logos that no page ever shows.
+        show_footer_logos=show_footer_logos or footer_logos is not None,
         show_toc=True,
         show_bibliography=bibliography is not None,
         user_preamble=_bib_preamble(bibliography) if bibliography else Empty,
@@ -156,6 +166,7 @@ def _report(
         or "Keywords",
         data_lines=_data_lines(options),
         logos=_logos(options),
+        footer_logos=footer_logos,
         # `body_tex` maps the shallowest heading level in the body to
         # `\chapter`, so the deeper headings nest under it. A document whose top
         # level is `##`, because `#` became the title, needs this mapping.
@@ -189,6 +200,8 @@ def _protocol(
         body,
         variant=force,
         title=escape_latex(title) if title is not None else None,
+        logos=_logos(options),
+        footer_logos=_footer_logos(options),
     )
 
 
@@ -231,16 +244,16 @@ def _resolve_logo(item: str) -> str:
     return str(candidate.resolve()) if candidate.is_file() else item
 
 
-def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
-    """Return the title-page logos from the `logos` or `logo` frontmatter key.
+def _logo_set(options: Mapping[str, object], *keys: str) -> tuple[str, ...] | None:
+    """Return the resolved logo entries of the first key that holds a value.
 
     Each entry is a vendored logo name, for example `INF` or `MAKERS`, or a
-    path to a custom image. The value is a list or a single scalar.
+    path to a custom image. The value of a key is a list or a single scalar.
 
     Returns:
-        The logo entries, or `None` when neither key holds a usable value.
+        The logo entries, or `None` when no key holds a usable value.
     """
-    raw = options.get("logos", options.get("logo"))
+    raw = next((value for key in keys if (value := options.get(key)) is not None), None)
     if isinstance(raw, list):
         items = [str(item) for item in raw]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
     elif isinstance(raw, str) and raw:
@@ -248,6 +261,24 @@ def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
     else:
         return None
     return tuple(_resolve_logo(item) for item in items)
+
+
+def _logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
+    """Return the title-page logos from the `logos` or `logo` frontmatter key.
+
+    Returns:
+        The logo entries, or `None` when neither key holds a usable value.
+    """
+    return _logo_set(options, "logos", "logo")
+
+
+def _footer_logos(options: Mapping[str, object]) -> tuple[str, ...] | None:
+    """Return the footer logos from the `footer_logos` or `footer_logo` key.
+
+    Returns:
+        The logo entries, or `None` when neither key holds a usable value.
+    """
+    return _logo_set(options, "footer_logos", "footer_logo")
 
 
 def _bib_preamble(content: str) -> TeX:

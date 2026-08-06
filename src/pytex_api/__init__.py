@@ -46,7 +46,7 @@ from time import perf_counter
 
 from pytex_builder.console import Console
 
-from ._compile import compile_to_pdf
+from ._compile import compile_to_pdf, write_assets
 from ._models import (
     ApiError,
     BuildLimits,
@@ -160,14 +160,17 @@ def render_blob(req: BuildRequest) -> BuildResult:
     enforce_input_size(req.source, req.limits)
     policy = policy_for(req.trust)
     # Validate the asset names once, up front, and carry the checked dict
-    # forward. The compile step writes this dict and never the raw
-    # `req.assets`, so safety does not depend on the call order.
+    # forward. Every step writes this dict and never the raw `req.assets`, so
+    # safety does not depend on the call order.
     assets = filter_assets(req.assets)
 
     stream = io.StringIO()
     console = Console(stream=stream)
     workdir = Path(tempfile.mkdtemp(prefix="pytex-api-"))
     try:
+        # The assets go to disk before the render step. A document build reads
+        # an uploaded logo from there, so the file must already be present.
+        write_assets(workdir, assets)
         latex = _render_or_compile_error(req, policy, workdir)
         if req.output_kind is OutputKind.TEX:
             output = latex.encode("utf-8")

@@ -115,6 +115,7 @@ def test_variant_names_are_the_public_styles():
         "plain",
         "report",
         "report-makers",
+        "protocol",
         "protocol-asta",
         "protocol-stupa",
     )
@@ -266,3 +267,95 @@ def test_report_without_bibliography_has_none():
     assert isinstance(report, HSRTReport)
     assert report.show_bibliography is False
     assert "addbibresource" not in report.rendered
+
+
+# -- the `protocol` base variant and the explicit logo lists ----------------
+#
+# The `protocol` variant carries no corporate design of its own. The caller
+# names the logos, so a platform can define as many designs as it wants
+# without a variant name for each one.
+
+_PROTOCOL_MD = "---\ngremium: StuPa\n---\n# TOP 1\n\nx"
+
+
+def test_protocol_variant_builds_a_protocol_document():
+    report = build_document(_PROTOCOL_MD, variant="protocol")
+    assert isinstance(report, HSRTReport)
+    assert report.show_footer_logos is True
+    # An agenda item numbers as `TOP 1`, which only the protocol shape does.
+    assert r"\renewcommand*{\thesection}{TOP~\arabic{section}}" in report.rendered
+
+
+def test_protocol_variant_takes_both_logo_sets_from_config():
+    report = build_document(
+        _PROTOCOL_MD,
+        variant="protocol",
+        config={"logos": ["HSRT"], "footer_logos": ["INF"]},
+    )
+    assert isinstance(report, HSRTReport)
+    assert report.logos == ("HSRT",)
+    assert report.footer_logos == ("INF",)
+    out = report.rendered
+    assert "logos/HSRT.pdf" in out and "logos/INF.pdf" in out
+    # The `gremium` key still selects the StuPa variant, but no logo of that
+    # variant survives the override.
+    assert "logos/STUPA.pdf" not in out
+
+
+def test_protocol_variant_takes_logos_from_frontmatter():
+    src = "---\ngremium: StuPa\nlogo: HSRT\nfooter_logo: INF\n---\n# TOP 1\n\nx"
+    report = build_document(src, variant="protocol")
+    assert isinstance(report, HSRTReport)
+    assert report.logos == ("HSRT",)
+    assert report.footer_logos == ("INF",)
+
+
+def test_protocol_variant_without_logos_keeps_the_variant_default():
+    report = build_document(_PROTOCOL_MD, variant="protocol")
+    assert isinstance(report, HSRTReport)
+    assert report.logos is None
+    assert report.footer_logos is None
+    assert report.variant is Variant.STUPA
+    assert "logos/STUPA.pdf" in report.rendered
+
+
+def test_protocol_variant_custom_logo_path_made_absolute(tmp_path):
+    logo = tmp_path / "brand.png"
+    logo.write_bytes(b"\x89PNG")
+    report = build_document(
+        _PROTOCOL_MD, variant="protocol", config={"footer_logos": [str(logo)]}
+    )
+    assert isinstance(report, HSRTReport)
+    assert report.footer_logos == (str(logo.resolve()),)
+
+
+def test_report_footer_logos_from_config():
+    report = build_document(
+        "# T\n\nbody", variant="report", config={"footer_logos": ["STUPA"]}
+    )
+    assert isinstance(report, HSRTReport)
+    assert report.footer_logos == ("STUPA",)
+    # An explicit footer set also turns the footer on, or the key would name
+    # logos that no page ever shows.
+    assert report.show_footer_logos is True
+    assert "logos/STUPA.pdf" in report.rendered
+
+
+def test_named_variants_keep_their_logo_sets():
+    # Regression guard: the explicit logo lists must not change a named
+    # variant that gives none.
+    for variant, expected in (
+        ("protocol-asta", Variant.ASTA),
+        ("protocol-stupa", Variant.STUPA),
+        ("report", Variant.INF),
+        ("report-makers", Variant.MAKERS),
+    ):
+        report = build_document("# T\n\nbody", variant=variant)
+        assert isinstance(report, HSRTReport)
+        assert report.variant is expected
+        assert report.logos is None
+        assert report.footer_logos is None
+    for variant, shows_footer in (("report", False), ("report-makers", True)):
+        report = build_document("# T\n\nbody", variant=variant)
+        assert isinstance(report, HSRTReport)
+        assert report.show_footer_logos is shows_footer
