@@ -135,7 +135,7 @@ Plain Python works too: $3^2 = \iffalse{pytex(3 ** 2)}\fi$.
 | `--no-shell-escape` | shell-escape on | turn shell-escape off |
 | `-t`, `--tree` | off | also print the node tree of the input file in `tree` style before the render |
 | `-f`, `--force` | off | skip the optimize pass and the analysis pass, and build even when PyTeX finds a problem |
-| `--variant STYLE` | auto-detect | variant for a Markdown input file (`plain`, `report`, `report-makers`, `protocol-asta`, `protocol-stupa`) |
+| `--variant STYLE` | auto-detect | variant for a Markdown input file (`plain`, `report`, `report-makers`, `protocol`, `protocol-asta`, `protocol-stupa`) |
 | `--config JSON` | none | JSON object of document-class parameters. `--config` overrides the frontmatter. |
 | `--untrusted` | off (trusted) | render input from a source you do not trust through the trust policy (see [Security](#security-and-trust)) |
 | `--trust-level LEVEL` | `trusted` | the trust level: `trusted`, `sandboxed`, or `untrusted` (see [Security](#security-and-trust)) |
@@ -272,6 +272,7 @@ a document that `--variant` picks:
 | `plain` | a bare `Document`. The default document class is `article`, and `#` -> `\section`. |
 | `report` | an HSRT report with a title page and a table of contents. `#` -> `\chapter`. |
 | `report-makers` | a `report` with the MAKERS logo on the title page and in the footer. |
+| `protocol` | a meeting protocol with no corporate design of its own. The caller names the logos with `logos` and `footer_logos`. |
 | `protocol-asta` | an AStA meeting protocol. It is an HSRT report with the AStA logos. |
 | `protocol-stupa` | a StuPa meeting protocol. It is an HSRT report with the StuPa logos. |
 
@@ -294,8 +295,9 @@ the first `#` heading, and then does not also render it as a chapter.
 The report variants read more frontmatter keys. These are `author`, `abstract`,
 `keywords`, the title-page `datalines` (a list of `"Label: value"` entries), and
 `bibliography` (see [Markdown](#markdown)). The key `logos` names the title-page
-logos. It takes a vendored name such as `INF` or `MAKERS`, a path to a custom
-image file, or both. The keys `abstract_heading` and `keywords_heading` rename
+logos, and the key `footer_logos` the logos of the page footer. Each one takes
+a vendored name such as `INF` or `MAKERS`, a path to a custom image file, or
+both. Without these keys, the variant supplies its own logos. The keys `abstract_heading` and `keywords_heading` rename
 the default "Abstract" and "Keywords" sections.
 
 ## Converting LaTeX to PyTeX

@@ -16,7 +16,7 @@ rendered `.tex` file or the input to a PDF compile.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from pytex.model.raw import Raw
 
@@ -24,12 +24,65 @@ from ._models import ApiError, InputKind, TrustError
 from ._security import enforce_packages, strip_markdown_eval_comments
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from ._models import BuildRequest
     from ._policy import TrustPolicy
 
 __all__ = ["render_to_latex"]
+
+# The config keys that name logo files. A caller uploads a logo as a request
+# asset and names it here by its plain file name.
+_LOGO_KEYS: Final[tuple[str, ...]] = ("logos", "footer_logos")
+
+
+def _workdir_logo(item: object, workdir: Path) -> object:
+    """Point one logo entry at the request asset of that name.
+
+    Returns:
+        The absolute path of the asset in `workdir`, when the entry names a
+        file that is there. Every other entry comes back unchanged, so a
+        vendored logo name such as `INF` still selects the bundled logo.
+    """
+    if not isinstance(item, str):
+        return item
+    # `validate_asset_name` refuses a path separator, so a name that holds one
+    # can never be an asset of this request. The check also keeps the joined
+    # path inside the work directory.
+    if "/" in item or "\\" in item:
+        return item
+    candidate = workdir / item
+    return str(candidate) if candidate.is_file() else item
+
+
+def _resolve_workdir_logos(
+    config: Mapping[str, object], workdir: Path
+) -> Mapping[str, object]:
+    """Rewrite the logo config keys to the request assets in the work directory.
+
+    A document build resolves a relative logo path against the current working
+    directory of the process, which is not the work directory. So an uploaded
+    logo needs an absolute path. This function replaces each entry of the
+    `logos` and `footer_logos` keys that names a file in `workdir`. It touches
+    no other key.
+
+    Returns:
+        The config itself when no entry needs a change, or a copy with the two
+        logo keys rewritten.
+    """
+    patched: dict[str, object] = {}
+    for key in _LOGO_KEYS:
+        raw = config.get(key)
+        if isinstance(raw, str):
+            resolved: object = _workdir_logo(raw, workdir)
+        elif isinstance(raw, list):
+            resolved = [_workdir_logo(item, workdir) for item in raw]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+        else:
+            continue
+        if resolved != raw:
+            patched[key] = resolved
+    return {**config, **patched} if patched else config
 
 
 def _decode(source: bytes) -> str:
@@ -59,7 +112,8 @@ def _render_markdown_source(
     text = _decode(req.source)
     if not policy.allow_markdown_eval:
         text = strip_markdown_eval_comments(text)
-    document = build_document(text, variant=req.variant, config=req.config)
+    config = _resolve_workdir_logos(req.config, workdir)
+    document = build_document(text, variant=req.variant, config=config)
     # The report variant and the protocol variants load bundled fonts through
     # the fontspec option `Path=fonts/...` (see `HSRTFontSetup`). PyTeX must
     # write those TTF files to disk in the temporary work directory, or XeTeX

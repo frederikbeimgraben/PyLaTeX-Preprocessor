@@ -14,7 +14,7 @@ import shutil
 import signal
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from ._models import CompileError, LimitError, TrustError
 from ._sandbox import (
@@ -40,10 +40,40 @@ if TYPE_CHECKING:
     from ._models import BuildLimits, BuildRequest
     from ._policy import TrustPolicy
 
-__all__ = ["compile_to_pdf"]
+__all__ = ["TEX_FILENAME", "compile_to_pdf", "write_assets"]
 
 _JOB = "document"
 _CONTAINER_BIN_NAME = "tectonic-bin"
+
+# The name of the file that holds the rendered, allowlist-screened LaTeX.
+TEX_FILENAME: Final[str] = f"{_JOB}.tex"
+
+
+def write_assets(workdir: Path, assets: Mapping[str, bytes]) -> None:
+    """Write the name-checked request assets into `workdir`.
+
+    The caller passes the mapping that `filter_assets` returned, so every name
+    is a plain file name and the file lands inside the work directory. PyTeX
+    calls this function before the render step, because a document build must
+    be able to read an uploaded logo. The compile step calls it again, so the
+    guarantee holds whatever the call order is. The second call finds the same
+    bytes on disk and writes nothing.
+
+    Raises:
+        TrustError: An asset carries the name of the rendered `.tex` file.
+    """
+    for name, data in assets.items():
+        # An asset of that name must not land here, or it silently replaces
+        # the screened LaTeX file with unscanned content.
+        if name == TEX_FILENAME:
+            raise TrustError(
+                f"asset name {name!r} would overwrite the rendered, "
+                + "package-screened LaTeX file; rename the asset"
+            )
+        dest = workdir / name
+        if dest.is_file() and dest.read_bytes() == data:
+            continue
+        _ = dest.write_bytes(data)
 
 
 def _locate_tectonic(policy: TrustPolicy, console: Console) -> Path:
@@ -301,9 +331,11 @@ def compile_to_pdf(
     Args:
         assets: The name-validated mapping from `filter_assets`. PyTeX writes
             these files next to the rendered `.tex` file, so
-            `\\includegraphics` can find them. PyTeX writes this checked dict
-            and never reads `req.assets` again, so the workdir-escape
-            guarantee does not depend on the call order.
+            `\\includegraphics` can find them. `render_blob` already wrote
+            them before the render step, and `write_assets` then finds the
+            same bytes on disk. PyTeX writes this checked dict and never reads
+            `req.assets` again, so the workdir-escape guarantee does not
+            depend on the call order.
 
     Returns:
         The PDF bytes, and the compile log truncated to the log limit.
@@ -315,20 +347,11 @@ def compile_to_pdf(
         LimitError: The compile passed the wall-clock limit, or the PDF is
             larger than `req.limits.max_output_bytes`.
     """
-    tex_file = workdir / f"{_JOB}.tex"
+    tex_file = workdir / TEX_FILENAME
     _ = tex_file.write_text(latex, encoding="utf-8")
     build_dir = workdir / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
-    for name, data in assets.items():
-        # `document.tex` is the file PyTeX just wrote from the rendered,
-        # allowlist-screened LaTeX. An asset of that name must not land here,
-        # or it silently replaces the screened file with unscanned content.
-        if name == tex_file.name:
-            raise TrustError(
-                f"asset name {name!r} would overwrite the rendered, "
-                + "package-screened LaTeX file; rename the asset"
-            )
-        _ = (workdir / name).write_bytes(data)
+    write_assets(workdir, assets)
 
     config = SandboxConfig()
     if _should_sandbox(policy, config):

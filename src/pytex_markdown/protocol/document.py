@@ -129,6 +129,8 @@ def build_protocol(
     base_level: int = 0,
     variant: Variant | None = None,
     title: str | None = None,
+    logos: tuple[str, ...] | None = None,
+    footer_logos: tuple[str, ...] | None = None,
 ) -> HSRTReport:
     """Build an `HSRTReport` from split protocol frontmatter and body.
 
@@ -137,6 +139,10 @@ def build_protocol(
             the variant comes from the `gremium` (committee) frontmatter key.
         title: The protocol title. When it is `None`, PyTeX composes the title
             from the committee and the date.
+        logos: The title-page logos, as vendored logo names or as file paths.
+            `None` keeps the default set of the variant.
+        footer_logos: The footer logos, with the same value form as `logos`.
+            `None` keeps the footer set of the variant.
     """
     converter = ProtocolConverter(meta=meta, base_level=base_level)
     converted = converter.block(_PARSER.parse(body_md))
@@ -151,6 +157,8 @@ def build_protocol(
         show_toc=False,
         show_footer_logos=True,
         title=title or _title(meta),
+        logos=logos,
+        footer_logos=footer_logos,
         data_lines=_data_lines(meta),
         # Agenda items are top-level `#` headings, so they become `\section`.
         # In scrbook a section without a chapter would number as "0.1". Number

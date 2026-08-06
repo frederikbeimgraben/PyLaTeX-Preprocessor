@@ -4,7 +4,32 @@ This file lists each notable change to PyTeX. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-08-06
+
+### Added
+- **A caller can now name the logos of a document instead of picking a
+  corporate-design variant.** `HSRTReport` takes a `footer_logos` tuple next
+  to the `logos` tuple it already had. `None` keeps the logo set of the
+  variant, so nothing changes for a document that gives no list.
+  `build_protocol` passes both lists through, and the Markdown frontmatter and
+  the `--config` JSON read them from the keys `logos`/`logo` and
+  `footer_logos`/`footer_logo`. An explicit footer set also turns the footer
+  on, so the key never names a logo that no page shows.
+- **The `protocol` variant**, a meeting protocol with no corporate design of
+  its own. A platform that defines its own designs at run time uses this
+  variant and names the logos, instead of one variant name for each design.
+
+### Fixed
+- **An uploaded logo now reaches the document build through the API.**
+  `render_blob` writes the request assets into the work directory *before* the
+  render step, and no longer only before the compile step. The render step
+  then maps each entry of the `logos` and `footer_logos` config keys that
+  names an asset to the absolute path of that asset. Before, the document
+  build resolved such a name against the working directory of the process,
+  which is not the work directory, and the build failed with "unknown logo".
+  The asset-name check is unchanged: an asset must still be a plain file name
+  with no path separator, and it must not carry the name of the rendered
+  `.tex` file.
 
 ## [1.0.6] - 2026-06-10
 

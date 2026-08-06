@@ -347,6 +347,69 @@ def test_markdown_report_variant_materialises_inline_logos(tmp_path):
     assert "logos/" in latex
 
 
+# -- uploaded logos reach the document build -------------------------------
+#
+# A caller uploads a logo as a request asset and names it in the `logos` or
+# `footer_logos` config key. PyTeX must write the asset to the work directory
+# before the render step, and it must resolve the name against that directory
+# and never against the working directory of the process.
+
+_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+_PROTOCOL_SOURCE = b"---\ngremium: StuPa\n---\n\n# TOP 1\n\nx\n"
+
+
+def _protocol_tex(assets: dict[str, bytes], config: dict[str, object]) -> bytes:
+    # `untrusted` is the default trust level, and it is the level a platform
+    # uses for a document that a user wrote.
+    return render_blob(
+        BuildRequest(
+            source=_PROTOCOL_SOURCE,
+            input_kind=InputKind.MARKDOWN,
+            output_kind=OutputKind.TEX,
+            trust=TrustLevel.UNTRUSTED,
+            variant="protocol",
+            config=config,
+            assets=assets,
+        )
+    ).output
+
+
+def test_uploaded_logo_asset_resolves_against_the_workdir(tmp_path, monkeypatch):
+    # An empty working directory proves that the name resolves against the
+    # work directory of the request. `brand.png` is nowhere near this path.
+    monkeypatch.chdir(tmp_path)
+    out = _protocol_tex(
+        {"brand.png": _PNG},
+        {"logos": ["brand.png"], "footer_logos": ["brand.png"]},
+    )
+    # A custom logo gets a short hash of its absolute location, so the output
+    # name is `brand-<hash>.png`.
+    assert b"logos/brand-" in out
+    assert b"{logos/brand.png}" not in out
+
+
+def test_uploaded_footer_logo_only_leaves_the_title_logos_alone(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    out = _protocol_tex({"brand.png": _PNG}, {"footer_logos": "brand.png"})
+    assert b"logos/brand-" in out
+    # The title page keeps the default set of the variant.
+    assert b"logos/STUPA.pdf" in out
+
+
+def test_vendored_logo_name_survives_the_workdir_mapping(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    out = _protocol_tex({"brand.png": _PNG}, {"logos": ["INF", "brand.png"]})
+    assert b"logos/INF.pdf" in out
+    assert b"logos/brand-" in out
+
+
+def test_logo_name_that_is_not_an_asset_stays_a_vendored_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    out = _protocol_tex({}, {"logos": ["HSRT"]})
+    assert b"logos/HSRT.pdf" in out
+
+
 def test_markdown_plain_variant_writes_no_fonts(tmp_path):
     """The `plain` variant has no fonts, so PyTeX writes no font file to disk."""
     from pytex_api._policy import policy_for

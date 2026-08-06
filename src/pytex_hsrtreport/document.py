@@ -147,6 +147,9 @@ class HSRTReport(KomaDocument):
     # Title-page logos, given as vendored names or as custom file paths.
     # `None` selects the default set of the variant.
     logos: tuple[str, ...] | None = None
+    # Footer logos, with the same value form as `logos`. `None` selects the
+    # footer set of the variant.
+    footer_logos: tuple[str, ...] | None = None
     data_lines: tuple[TitlePageDataLine, ...] = ()
 
     inline_logos: bool = True
@@ -224,7 +227,7 @@ class HSRTReport(KomaDocument):
         yield HSRTPageSetup()
         # LaTeX draws the skyline on every page. The footer logos appear only
         # when `show_footer_logos` is true.
-        logo_names = footer_logo_names(self.variant) if self.show_footer_logos else ()
+        logo_names = self._footer_logos() if self.show_footer_logos else ()
         yield Raw(footer_logo_hook(logo_names), allow_replacements=False)
         if self.inline_fonts:
             yield HSRTFontSetup()
@@ -311,6 +314,17 @@ class HSRTReport(KomaDocument):
             return self.logos
         return default_logo_names(self.variant)
 
+    def _footer_logos(self) -> tuple[str, ...]:
+        """Return the explicit `footer_logos` value, or the footer set of the variant.
+
+        Returns:
+            The footer logo names. The variant supplies them when
+            `footer_logos` is `None`.
+        """
+        if self.footer_logos is not None:
+            return self.footer_logos
+        return footer_logo_names(self.variant)
+
     def write_inline_logos(self, target_dir: str = ".") -> tuple[str, ...]:
         """Write the logos of the tikz overlays to `<target_dir>/logos/`.
 
@@ -334,9 +348,7 @@ class HSRTReport(KomaDocument):
         # its own set, which can differ. MAKERS is one such variant. LaTeX
         # draws the skyline on every page, whatever `show_footer_logos` is.
         names = sorted(
-            set(self._title_logos())
-            | set(footer_logo_names(self.variant))
-            | {"Skyline"}
+            set(self._title_logos()) | set(self._footer_logos()) | {"Skyline"}
         )
         base = Path(target_dir)
         return tuple(

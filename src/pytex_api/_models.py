@@ -125,8 +125,10 @@ class BuildRequest:
         config: The document-class parameters. They override the frontmatter
             of a Markdown source.
         assets: The inline assets, keyed by file name. PyTeX writes each one
-            next to the rendered `.tex` file. A name must be a plain file
-            name, with no directory part.
+            next to the rendered `.tex` file, before the render step. A name
+            must be a plain file name, with no directory part. The `logos` and
+            `footer_logos` config keys can name such an asset, so a caller can
+            upload the logos of a document with the document itself.
     """
 
     source: bytes
