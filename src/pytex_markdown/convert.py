@@ -36,11 +36,14 @@ from pytex.commands.builtin import (
 from pytex.commands.hyperref import Href
 from pytex.commands.listings import Lstlisting
 from pytex.commands.tables import Bottomrule, Midrule, Tabularx, Toprule
+from pytex.helpers.with_package import WithPackage
 from pytex.interface.tex import TeX
 from pytex.model.concat import Concat
 from pytex.model.empty import Empty
 from pytex.model.image import IncludeImage
+from pytex.model.math import DisplayMath, InlineMath
 from pytex.model.raw import Raw, pytex_namespace
+from pytex.packages import AMSFONTS, AMSMATH
 from pytex_components.boxes import ImportantBox, InfoBox, SuccessBox, WarningBox
 
 from .escape import escape_latex
@@ -138,6 +141,17 @@ _LSTLISTING_END_RE: Final[re.Pattern[str]] = re.compile(
     r"^(?P<lead>[ \t]*)\\end\{lstlisting\}", re.MULTILINE
 )
 
+# TeX math in Markdown, the syntax that KaTeX and pandoc use. `$…$` sets a
+# formula in the line, a paragraph `$$…$$` sets it on its own line. The opening
+# `$` carries no space behind it, the closing `$` no space in front of it and no
+# digit behind it, so a price such as "$5 und $6" stays prose. A `\$` is a
+# dollar sign and opens no formula. The body of a formula is LaTeX, so it
+# reaches the document unescaped.
+MATH_RE: Final[re.Pattern[str]] = re.compile(
+    r"(?<!\\)\$(?![\s$])((?:\\.|[^\\$\n])*?)(?<!\s)\$(?!\d)"
+)
+DISPLAY_MATH_RE: Final[re.Pattern[str]] = re.compile(r"\$\$(.+?)\$\$", re.DOTALL)
+
 PARBREAK: Final[TeX] = Raw("\n\n")
 
 # Vertical space above and below a rendered table. `\addvspace` (and not
@@ -174,6 +188,51 @@ def _text(node: object) -> str | None:
     """
     ch = getattr(node, "children", None)
     return ch if isinstance(ch, str) else None
+
+
+def _source_text(node: object) -> str | None:
+    """Return the Markdown source of one plain inline node.
+
+    marko drops the backslash of an escape, so a `Literal` node holds the bare
+    character. A formula body is LaTeX and needs its backslashes, so the
+    function puts the backslash back. It returns `None` for every node that
+    carries structure, for example an emphasis or a code span. A formula never
+    crosses such a node.
+    """
+    kind = _kind(node)
+    if kind == "RawText":
+        return _text(node)
+    if kind == "Literal":
+        return "\\" + (_text(node) or "")
+    if kind == "LineBreak":
+        return "\n"
+    return None
+
+
+def _math(node: TeX) -> TeX:
+    """Load the math packages for a formula that a person wrote.
+
+    The body is LaTeX from a Markdown document. It commonly uses a macro of
+    amsmath (`\\text`, `\\dfrac`) or a symbol of amsfonts, so the formula
+    carries both packages into the preamble.
+    """
+    return WithPackage(WithPackage(node, AMSMATH), AMSFONTS)
+
+
+def _display_math(node: object) -> TeX | None:
+    """Return the display formula of a `$$…$$` paragraph, or `None`.
+
+    A paragraph that holds nothing but one `$$…$$` block becomes a formula on
+    its own line. Every other paragraph stays prose.
+    """
+    parts = [_source_text(c) for c in _children(node)]
+    if not parts or any(part is None for part in parts):
+        return None
+    match = DISPLAY_MATH_RE.fullmatch("".join(cast("list[str]", parts)).strip())
+    if match is None:
+        return None
+    body = match.group(1).strip()
+    return _math(DisplayMath(Raw(body))) if body else None
 
 
 def _escape_text(text: str) -> str:
@@ -332,7 +391,49 @@ class MarkdownConverter:
         return self.inlines(node) if kids else Empty
 
     def inlines(self, node: object) -> TeX:
-        return Concat(*(self.inline(c) for c in _children(node)))
+        return Concat(*self._inline_nodes(_children(node)))
+
+    def _inline_nodes(self, kids: list[object]) -> Iterator[TeX]:
+        """Convert the inline children and set each `$…$` span as a formula.
+
+        A formula spans several marko nodes as soon as its body holds an
+        escape, so the function first rebuilds the Markdown source of the
+        children. It then reads the formulas off that source and converts every
+        node that no formula covers the ordinary way.
+        """
+        spans: list[tuple[object, int, int]] = []
+        source = ""
+        for child in kids:
+            text = _source_text(child)
+            # A node with structure stands in the source as a newline. A
+            # formula holds no newline, so it never spans such a node.
+            plain = text if text is not None else "\n"
+            end = len(source) + len(plain) if text is not None else -1
+            spans.append((child, len(source), end))
+            source += plain
+        formulas = [(m.start(), m.end(), m.group(1)) for m in MATH_RE.finditer(source)]
+        if not formulas:
+            yield from (self.inline(c) for c in kids)
+            return
+        for child, start, end in spans:
+            if end < 0:
+                yield self.inline(child)
+                continue
+            cursor = start
+            for first, last, latex in formulas:
+                if last <= cursor or first >= end:
+                    continue
+                if first > cursor:
+                    yield _inline_text(source[cursor:first])
+                if first >= start:
+                    yield _math(InlineMath(Raw(latex)))
+                cursor = max(cursor, last)
+            if cursor >= end:
+                continue
+            if cursor == start:
+                yield self.inline(child)
+            else:
+                yield _inline_text(source[cursor:end])
 
     # -- blocks -----------------------------------------------------------
 
@@ -480,7 +581,8 @@ class MarkdownConverter:
         if kind == "Heading":
             return self._heading(node)
         if kind == "Paragraph":
-            return self.inlines(node)
+            display = _display_math(node)
+            return display if display is not None else self.inlines(node)
         if kind == "List":
             return self._list(node)
         if kind == "Quote":
