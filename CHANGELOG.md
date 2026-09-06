@@ -4,6 +4,18 @@ This file lists each notable change to PyTeX. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **TeX math in a Markdown document.** `$…$` sets a formula in the line and a
+  paragraph `$$…$$` sets one on its own line, the syntax that KaTeX and pandoc
+  use. The body reaches LaTeX unescaped, and each formula loads amsmath and
+  amsfonts. A price such as "$5 und $6" stays prose: the opening `$` takes no
+  space behind it, the closing `$` no space in front of it and no digit behind
+  it. A `\$` stays a dollar sign. The converter rebuilds the Markdown source of
+  the inline nodes first, so an escape inside a formula (`\,`) keeps its
+  backslash.
+
 ## [1.1.0] - 2026-08-06
 
 ### Added
